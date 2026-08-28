@@ -1,7 +1,7 @@
 // style-controls.spec.ts
 // Regression guard for src/style.css: the 44px control floor, the
-// horizontal-overflow guard, and the Creva semantic-family wiring for each
-// proof phase must stay in the source, not just in memory.
+// horizontal-overflow guard, the Creva semantic-family wiring for each
+// proof phase, and the axe-core-measured AA contrast fixes below.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -61,5 +61,33 @@ describe('style.css Creva token wiring', () => {
 
   it('keys the degraded phase off --cr-info-*', () => {
     expect(source).toMatch(/\[data-phase='degraded'\]\s*{[^}]*--cr-info/);
+  });
+});
+
+// Measured with axe-core (color-contrast rule) across every screen, phase,
+// width (320/375/390) and theme (light/dark): each of these selectors used
+// to sit under AA's 4.5:1 at their rendered size. Pin the fix so a future
+// edit can't quietly put the *-text/*-subtle token back.
+describe('style.css AA contrast fixes (axe-core measured)', () => {
+  it('.progress uses --cr-text-secondary, not the failing --cr-text-subtle', () => {
+    expect(source).toMatch(/\.progress\s*{[^}]*color:\s*var\(--cr-text-secondary\)/);
+  });
+
+  it('.compare-counterparty uses --cr-text, not the failing --cr-danger-text', () => {
+    expect(source).toMatch(/\.compare-counterparty\s*{[^}]*color:\s*var\(--cr-text\)/);
+  });
+
+  it('.compare-item--crossed no longer dims text opacity on top of the tint', () => {
+    expect(source).not.toMatch(/\.compare-item--crossed\s*{\s*opacity:/);
+  });
+
+  it('.disclaimer uses --cr-text, not the failing --cr-info-text', () => {
+    expect(source).toMatch(/\.disclaimer\s*{[^}]*color:\s*var\(--cr-text\)/);
+  });
+
+  it('.demo-control > span, .badge-synthetic and .status use --cr-text-muted, not the failing --cr-text-secondary', () => {
+    expect(source).toMatch(/\.demo-control > span\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
+    expect(source).toMatch(/\.badge-synthetic\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
+    expect(source).toMatch(/\.status\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
   });
 });
