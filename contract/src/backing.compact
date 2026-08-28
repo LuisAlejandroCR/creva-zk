@@ -1,6 +1,7 @@
-// Creva ZK — backing predicate, thin vertical slice.
-// Proves that a private collateral amount clears a publicly requested limit,
-// disclosing the outcome and never the amount.
+// backing.compact
+// Backing predicate circuit, thin vertical slice: proves a private
+// collateral amount clears a publicly requested limit, disclosing only
+// the outcome and never the amount.
 
 pragma language_version 0.23;
 
