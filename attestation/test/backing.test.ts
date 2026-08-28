@@ -1,0 +1,108 @@
+// backing.test.ts
+// Covers the real Creva signer (origin "creva", degrades on client
+// failure), the synthetic fallback (origin "synthetic"), and
+// CrevaAwareBackingIssuer routing between them based on Creva API status —
+// proving the flow keeps running end to end when Creva's API is down.
+
+import { describe, expect, it, vi } from "vitest";
+import { CrevaCollateralSigner, type CrevaSigningClient } from "../src/backing/crevaCollateralSigner.js";
+import { SyntheticBackingIssuer } from "../src/backing/syntheticBackingIssuer.js";
+import { CrevaAwareBackingIssuer } from "../src/backing/crevaAwareBackingIssuer.js";
+import type { CrevaApiPort, CrevaApiStatus } from "../src/crevaApi/types.js";
+import type { JubjubPoint, SchnorrSignature } from "../src/types.js";
+import type { CollateralClaim, BackingIssuerPort } from "../src/backing/types.js";
+
+const subjectKey: JubjubPoint = { compressed: "33".repeat(32) };
+const claim: CollateralClaim = { collateral: 5_000_000n };
+const fakeSignature: SchnorrSignature = { announcement: { compressed: "44".repeat(32) }, response: "55".repeat(32) };
+
+describe("CrevaCollateralSigner", () => {
+  it("issues a real attestation from Creva's signing client", async () => {
+    const client: CrevaSigningClient = {
+      signCollateralClaim: async (payload) => {
+        expect(payload).toEqual({ subjectKey, claim });
+        return { signature: fakeSignature };
+      },
+    };
+    const signer = new CrevaCollateralSigner(client);
+
+    const result = await signer.issue(subjectKey, claim);
+
+    expect(result).toEqual({
+      status: "issued",
+      issued: { origin: "creva", attestation: { payload: { subjectKey, claim }, signature: fakeSignature } },
+    });
+  });
+
+  it("degrades instead of throwing when Creva's signing client fails", async () => {
+    const client: CrevaSigningClient = {
+      signCollateralClaim: async () => {
+        throw new Error("connection refused to signing.creva.internal");
+      },
+    };
+    const logError = vi.fn();
+    const signer = new CrevaCollateralSigner(client, logError);
+
+    const result = await signer.issue(subjectKey, claim);
+
+    expect(result).toEqual({ status: "degraded", reason: "signer_unavailable" });
+    expect(logError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SyntheticBackingIssuer", () => {
+  it("issues an attestation tagged synthetic", async () => {
+    const issuer = new SyntheticBackingIssuer();
+
+    const result = await issuer.issue(subjectKey, claim);
+
+    expect(result.status).toEqual("issued");
+    if (result.status === "issued") {
+      expect(result.issued.origin).toEqual("synthetic");
+      expect(result.issued.attestation.payload).toEqual({ subjectKey, claim });
+    }
+  });
+});
+
+describe("CrevaAwareBackingIssuer", () => {
+  function makeIssuers(apiStatus: CrevaApiStatus) {
+    const api: CrevaApiPort = { checkStatus: async () => apiStatus };
+    const real: BackingIssuerPort = {
+      issue: vi.fn(async () => ({
+        status: "issued" as const,
+        issued: { origin: "creva" as const, attestation: { payload: { subjectKey, claim }, signature: fakeSignature } },
+      })),
+    };
+    const synthetic: BackingIssuerPort = {
+      issue: vi.fn(async () => ({
+        status: "issued" as const,
+        issued: { origin: "synthetic" as const, attestation: { payload: { subjectKey, claim }, signature: fakeSignature } },
+      })),
+    };
+    return { api, real, synthetic };
+  }
+
+  it("routes to the real Creva signer when the API is available", async () => {
+    const { api, real, synthetic } = makeIssuers({ status: "available" });
+    const issuer = new CrevaAwareBackingIssuer(api, real, synthetic);
+
+    const result = await issuer.issue(subjectKey, claim);
+
+    expect(result.status).toEqual("issued");
+    if (result.status === "issued") expect(result.issued.origin).toEqual("creva");
+    expect(real.issue).toHaveBeenCalledTimes(1);
+    expect(synthetic.issue).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the synthetic issuer, never throwing, when the API is degraded", async () => {
+    const { api, real, synthetic } = makeIssuers({ status: "degraded", reason: "api_unreachable" });
+    const issuer = new CrevaAwareBackingIssuer(api, real, synthetic);
+
+    const result = await issuer.issue(subjectKey, claim);
+
+    expect(result.status).toEqual("issued");
+    if (result.status === "issued") expect(result.issued.origin).toEqual("synthetic");
+    expect(synthetic.issue).toHaveBeenCalledTimes(1);
+    expect(real.issue).not.toHaveBeenCalled();
+  });
+});

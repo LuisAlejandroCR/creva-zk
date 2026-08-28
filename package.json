@@ -13,6 +13,7 @@
     "api",
     "anchoring",
     "advisor",
+    "attestation",
     "web"
   ],
   "scripts": {
