@@ -1,12 +1,12 @@
 {
   "name": "Creva ZK",
   "short_name": "Creva ZK",
-  "description": "Zero-knowledge backing and identity checks for a collateralized card, on Midnight.",
+  "description": "Respaldo e identidad con pruebas de conocimiento cero para una tarjeta colateralizada, sobre Midnight.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#17130F",
+  "theme_color": "#17130F",
   "orientation": "portrait",
   "icons": [
     {

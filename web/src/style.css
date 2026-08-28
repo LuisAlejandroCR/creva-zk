@@ -1,64 +1,468 @@
 /* style.css
-   Shell styling for the PWA placeholder screen: dark theme tokens, the
-   centered card layout, and the install-status banner states. */
+   Creva brand tokens and component styles, ported verbatim (names and
+   values) from creva_finance/frontend/app/globals.css — the single source
+   of truth for this palette. No token is invented here. */
 
 :root {
-  color-scheme: dark;
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --fg: #e2e8f0;
-  --muted: #94a3b8;
-  --accent: #2dd4bf;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Brand */
+  --cr-crimson: #C41E3A;
+  --cr-crimson-dark: #9E1329;
+  --cr-inactive: #DED7C8;
+  --cr-gradient: linear-gradient(135deg, #D62E52 0%, #9E1329 100%);
+  --cr-on-brand: #FFFFFF;
+  --cr-shadow-brand-sm: 0 8px 24px rgba(158, 19, 41, 0.24);
+
+  /* Motion */
+  --cr-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --cr-dur-fast: 140ms;
+  --cr-dur: 240ms;
+  --cr-dur-slow: 420ms;
+
+  /* Semantic backgrounds/borders — identical in both themes */
+  --cr-success: #2E6A48;
+  --cr-success-bg: rgba(46, 106, 72, 0.15);
+  --cr-success-border: rgba(46, 106, 72, 0.30);
+
+  --cr-danger: #C41E3A;
+  --cr-danger-bg: rgba(196, 30, 58, 0.12);
+  --cr-danger-border: rgba(196, 30, 58, 0.25);
+
+  --cr-warning: #E8A020;
+  --cr-warning-bg: rgba(232, 160, 32, 0.10);
+  --cr-warning-border: rgba(232, 160, 32, 0.20);
+
+  --cr-info: #3A5FD8;
+  --cr-info-bg: rgba(58, 95, 216, 0.10);
+  --cr-info-border: rgba(58, 95, 216, 0.20);
+
+  /* Fonts: variable names kept identical to app/layout.tsx, which binds
+     --font-playfair to Montserrat (titles/numbers) and --font-inter to
+     Manrope (UI/body) — not a Vite next/font pipeline, so loaded from
+     Google Fonts in index.html instead. */
+  --font-playfair: 'Montserrat', Georgia, serif;
+  --font-inter: 'Manrope', system-ui, sans-serif;
+
+  /* Default: Light / Cream palette */
+  --cr-bg: #F6F1E7;
+  --cr-surface-1: #FFFFFF;
+  --cr-surface-2: #FFE8EE;
+  --cr-text: #1A1613;
+  --cr-text-secondary: #6F675C;
+  --cr-text-muted: rgba(26, 22, 19, 0.72);
+  --cr-text-subtle: rgba(26, 22, 19, 0.60);
+  --cr-border: rgba(26, 22, 19, 0.10);
+
+  --cr-success-text: #2E6A48;
+  --cr-warning-text: #8A5A00;
+  --cr-danger-text: #C41E3A;
+  --cr-info-text: #3A5FD8;
 }
 
-* {
+/* Dark mode — Ink palette. This app has no manual theme toggle (unlike
+   creva_finance's .dark class), so it follows the system preference. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cr-bg: #17130F;
+    --cr-surface-1: #211B16;
+    --cr-surface-2: #2A2118;
+    --cr-text: #F6F1E7;
+    --cr-text-secondary: #8A8175;
+    --cr-text-muted: rgba(246, 241, 231, 0.72);
+    --cr-text-subtle: rgba(246, 241, 231, 0.58);
+    --cr-border: rgba(246, 241, 231, 0.08);
+
+    --cr-success-text: #4ade80;
+    --cr-warning-text: #fbbf24;
+    --cr-danger-text: #FF8FAE;
+    --cr-info-text: #93b4ff;
+  }
+}
+
+*, *::before, *::after {
   box-sizing: border-box;
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--cr-bg);
+  color: var(--cr-text);
+  font-family: var(--font-inter);
   display: flex;
-  align-items: center;
   justify-content: center;
+  -webkit-font-smoothing: antialiased;
 }
 
 #app {
-  width: min(420px, 100%);
-  padding: 2rem 1.5rem;
-  text-align: center;
+  width: min(480px, 100%);
+  min-width: 0;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-playfair);
+  font-weight: 800;
+  color: var(--cr-text);
+  margin-bottom: 1.5rem;
 }
 
 .mark {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 1.5rem;
-  border-radius: 16px;
+  border-radius: 8px;
+  flex: none;
+  box-shadow: var(--cr-shadow-brand-sm);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.progress {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--cr-text-subtle);
 }
 
 h1 {
-  font-size: 1.5rem;
-  margin: 0 0 0.5rem;
+  font-family: var(--font-playfair);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--cr-text);
+  margin: 0 0 0.25rem;
+  line-height: 1.2;
 }
 
-p {
-  color: var(--muted);
+.intro {
+  color: var(--cr-text-muted);
+  line-height: 1.55;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.demo-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: var(--cr-surface-1);
+  border: 1px solid var(--cr-border);
+  font-size: 0.85rem;
+}
+
+.demo-control > span {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  color: var(--cr-text-secondary);
+}
+
+.cr-select {
+  width: 100%;
+  min-height: 44px;
+  background: var(--cr-surface-1);
+  border: 1px solid var(--cr-border);
+  border-radius: 12px;
+  padding: 10px 40px 10px 14px;
+  color: var(--cr-text);
+  font-size: 0.95rem;
+  font-family: var(--font-inter);
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%238A8175' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.cr-select:focus-visible {
+  border-color: var(--cr-crimson);
+  box-shadow: 0 0 0 3px var(--cr-danger-bg);
+}
+
+/* Status panel: the semantic family carries the proof phase — warning while
+   generating, danger on failure, success when ready, info when degraded.
+   Idle gets a plain card since nothing has happened yet. */
+.status-panel {
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--cr-border);
+  background: var(--cr-surface-1);
+}
+
+.status-panel[data-phase='generating'] {
+  background: var(--cr-warning-bg);
+  border-color: var(--cr-warning-border);
+}
+
+.status-panel[data-phase='failed'] {
+  background: var(--cr-danger-bg);
+  border-color: var(--cr-danger-border);
+}
+
+.status-panel[data-phase='ready'] {
+  background: var(--cr-success-bg);
+  border-color: var(--cr-success-border);
+}
+
+.status-panel[data-phase='degraded'] {
+  background: var(--cr-info-bg);
+  border-color: var(--cr-info-border);
+}
+
+.status-heading {
+  margin: 0 0 0.35rem;
+  font-weight: 700;
+  color: var(--cr-text);
+}
+
+.status-panel[data-phase='failed'] .status-heading {
+  color: var(--cr-danger-text);
+}
+
+.status-panel[data-phase='ready'] .status-heading {
+  color: var(--cr-success-text);
+}
+
+.status-panel[data-phase='degraded'] .status-heading {
+  color: var(--cr-info-text);
+}
+
+/* Warning text intentionally stays neutral, matching alert-warning in
+   globals.css — --cr-warning-text does not clear 4.5:1 at this size on the
+   warning tint in the light theme. */
+.status-body {
+  margin: 0;
+  color: var(--cr-text-muted);
   line-height: 1.5;
+  font-size: 0.88rem;
+}
+
+.badge-synthetic {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+  background: var(--cr-surface-2);
+  border: 1px solid var(--cr-border);
+  color: var(--cr-text-secondary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.badge-success {
+  display: inline-flex;
+  align-items: center;
+  background: var(--cr-success-bg);
+  color: var(--cr-success-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.btn-primary {
+  width: 100%;
+  min-height: 52px;
+  background: var(--cr-gradient);
+  color: var(--cr-on-brand);
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font-inter);
+  cursor: pointer;
+  transition: opacity var(--cr-dur-fast) var(--cr-ease), transform var(--cr-dur-fast) var(--cr-ease);
+}
+
+.btn-primary:active {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--cr-crimson);
+  outline-offset: 2px;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.compare-col {
+  border-radius: 16px;
+  padding: 0.9rem 0.7rem;
+  min-width: 0;
+  border: 1px solid;
+}
+
+.compare-col h2 {
+  font-family: var(--font-playfair);
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  color: var(--cr-text);
+}
+
+.compare-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--cr-text-muted);
+}
+
+.compare-col li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.compare-icon {
+  flex: none;
+  position: relative;
+  font-size: 1.1rem;
+}
+
+/* Left: the item is legible and an arrow carries it across to the
+   counterparty — nothing here needs to be read to understand it leaves. */
+.compare-arrow {
+  margin-left: auto;
+  color: var(--cr-danger-text);
+  font-weight: 700;
+}
+
+.compare-counterparty {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--cr-danger-border);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--cr-danger-text);
+}
+
+/* Right: the same icon, struck through — a diagonal bar across it reads as
+   "blocked" without needing the label at all. */
+.compare-item--crossed {
+  opacity: 0.6;
+}
+
+.compare-item--crossed .compare-icon::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 2px;
+  background: var(--cr-success-text);
+  transform: rotate(-35deg);
+}
+
+.compare-item--crossed {
+  text-decoration: line-through;
+  text-decoration-color: var(--cr-success-border);
+}
+
+/* Right: the one thing that actually crosses — a single chip, not a list. */
+.compare-outcome-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  background: var(--cr-gradient);
+  color: var(--cr-on-brand);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+/* Handing over too much reads as risk: the danger family. */
+.compare-col--exposed {
+  background: var(--cr-danger-bg);
+  border-color: var(--cr-danger-border);
+}
+
+/* Minimal, verified disclosure reads as the safe outcome: the success family. */
+.compare-col--sealed {
+  background: var(--cr-success-bg);
+  border-color: var(--cr-success-border);
+}
+
+.tier-badge {
+  font-family: var(--font-playfair);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--cr-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* No catalogue is connected: a plain disclosure, styled as information
+   rather than a warning — nothing here is wrong, only absent. */
+.disclaimer {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--cr-info-bg);
+  border: 1px solid var(--cr-info-border);
+  color: var(--cr-info-text);
+  line-height: 1.5;
+  font-size: 0.88rem;
 }
 
 .status {
   margin-top: 1.5rem;
   padding: 0.75rem 1rem;
-  border-radius: 10px;
-  background: var(--surface);
-  font-size: 0.875rem;
-  color: var(--muted);
+  border-radius: 12px;
+  background: var(--cr-surface-1);
+  border: 1px solid var(--cr-border);
+  font-size: 0.78rem;
+  color: var(--cr-text-secondary);
+  text-align: center;
 }
 
 .status[data-state='ready']::before {
   content: '● ';
-  color: var(--accent);
+  color: var(--cr-success-text);
+}
+
+@media (max-width: 340px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
 }

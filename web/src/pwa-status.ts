@@ -8,13 +8,13 @@ export type PwaStatus = {
 };
 
 export function unsupportedStatus(): PwaStatus {
-  return { message: 'offline support not available in this browser' };
+  return { message: 'este navegador no admite el modo sin conexión' };
 }
 
 export function readyStatus(): PwaStatus {
-  return { state: 'ready', message: 'installable — works offline' };
+  return { state: 'ready', message: 'instalable — funciona sin conexión' };
 }
 
 export function failedStatus(): PwaStatus {
-  return { message: 'offline support failed to register' };
+  return { message: 'no se pudo activar el modo sin conexión' };
 }
