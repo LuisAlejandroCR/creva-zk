@@ -10,7 +10,8 @@
   },
   "workspaces": [
     "contract",
-    "api"
+    "api",
+    "anchoring"
   ],
   "scripts": {
     "compact:build": "npm run compact --workspace contract",
