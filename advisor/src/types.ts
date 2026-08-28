@@ -40,7 +40,7 @@ export interface Recommendation {
   readonly reason: string;
 }
 
-export type AdvisorFailureReason = "model_unavailable" | "invalid_tier";
+export type AdvisorFailureReason = "model_unavailable" | "invalid_tier" | "unsafe_model_endpoint";
 
 export type AdvisorResult =
   | { readonly status: "advised"; readonly recommendation: Recommendation }

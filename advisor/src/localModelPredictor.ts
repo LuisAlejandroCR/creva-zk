@@ -15,6 +15,36 @@ export interface LocalModelOptions {
 const DEFAULT_BASE_URL = "http://127.0.0.1:8477";
 const DEFAULT_TIMEOUT_MS = 2000;
 
+// Hostnames that count as "this machine" — the only place the "local"
+// model is allowed to live. IPv6 loopback appears bracketed in a parsed
+// URL's hostname (e.g. "[::1]"), so it's matched as-is.
+const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(["127.0.0.1", "[::1]", "localhost"]);
+
+// Thrown when `baseUrl` does not resolve to a loopback hostname. Kept
+// distinct from ordinary network failures so LocalTierAdvisor can surface
+// it as its own typed degraded reason instead of a generic
+// "model_unavailable" — a misconfigured non-local endpoint should never
+// look like a normal outage, and it is never masked by falling back to
+// the stub.
+export class UnsafeModelEndpointError extends Error {
+  constructor(baseUrl: string) {
+    super(`local model endpoint must be loopback (127.0.0.1, ::1, localhost); got: ${baseUrl}`);
+    this.name = "UnsafeModelEndpointError";
+  }
+}
+
+function assertLoopbackEndpoint(baseUrl: string): void {
+  let hostname: string;
+  try {
+    hostname = new URL(baseUrl).hostname.toLowerCase();
+  } catch {
+    throw new UnsafeModelEndpointError(baseUrl);
+  }
+  if (!LOOPBACK_HOSTNAMES.has(hostname)) {
+    throw new UnsafeModelEndpointError(baseUrl);
+  }
+}
+
 function isRecommendationShape(value: unknown): value is Recommendation {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Record<string, unknown>;
@@ -35,6 +65,8 @@ function createRemotePredictor(options: LocalModelOptions): LocalTierPredictor {
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return async (input: AdvisorInput) => {
+    assertLoopbackEndpoint(baseUrl);
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -64,15 +96,20 @@ function createRemotePredictor(options: LocalModelOptions): LocalTierPredictor {
 // The predictor wired into LocalTierAdvisor by default: tries the real
 // local model first and, if it is unreachable or returns something we
 // cannot trust, falls back to the deterministic stub rather than
-// throwing. The advisor's own try/catch (for genuinely unrecoverable
-// errors) and its tier validation are unaffected either way.
+// throwing. The one case that is never silently swapped for the stub is
+// a non-loopback `baseUrl` (UnsafeModelEndpointError) — that is a
+// configuration error, not an outage, so it is rethrown for
+// LocalTierAdvisor to surface as its own typed degraded reason.
 export function createLocalModelPredictor(options: LocalModelOptions = {}): LocalTierPredictor {
   const remotePredict = createRemotePredictor(options);
 
   return async (input: AdvisorInput) => {
     try {
       return await remotePredict(input);
-    } catch {
+    } catch (error) {
+      if (error instanceof UnsafeModelEndpointError) {
+        throw error;
+      }
       return stubPredictor(input);
     }
   };
