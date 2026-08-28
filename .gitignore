@@ -25,6 +25,9 @@ seed*
 logs/
 *.log
 .private-state/
+# LevelDB del private state provider, creada al correr la demo
+midnight-level-db/
+.states/
 
 # Sistema
 .DS_Store

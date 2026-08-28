@@ -9,11 +9,15 @@
 // wallet sync) so every entry point returns a typed degraded result instead
 // of throwing.
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   FluentWalletBuilder,
+  getContainersConfiguration,
   getTestEnvironment,
   LocalTestEnvironment,
   MidnightWalletProvider,
+  setContainersConfiguration,
   type DustWalletOptions,
   type EnvironmentConfiguration,
 } from "@midnight-ntwrk/testkit-js";
@@ -25,6 +29,23 @@ export interface LocalEnvironmentHandle {
   readonly configuration: EnvironmentConfiguration;
   readonly walletProvider: MidnightWalletProvider;
   shutdown(): Promise<void>;
+}
+
+// The api workspace root, where compose.yml and the proof-server yml live.
+const API_DIR = fileURLToPath(new URL("..", import.meta.url));
+
+// testkit-js captures process.cwd() when its module is first evaluated and
+// resolves compose.yml against that, so the demo would only work when
+// launched from the api workspace. Pin the compose directory explicitly
+// instead — process.chdir() cannot help, it runs after that capture.
+function pinComposeDirectory(): void {
+  const current = getContainersConfiguration();
+  setContainersConfiguration({
+    ...current,
+    proofServer: { ...current.proofServer, path: API_DIR },
+    standalone: { ...current.standalone, path: API_DIR },
+    log: { ...current.log, path: path.resolve(API_DIR, "logs") },
+  });
 }
 
 // Matches example-bboard's bboard-cli/src/midnight-wallet-provider.ts: on
@@ -43,6 +64,7 @@ function dustOptionsFor(configuration: EnvironmentConfiguration): DustWalletOpti
 // degraded result naming which of the two external dependents (the
 // network, the wallet) failed. Never throws.
 export async function startLocalEnvironment(logger: Logger): Promise<ApiResult<LocalEnvironmentHandle>> {
+  pinComposeDirectory();
   const environment = getTestEnvironment(logger);
   if (!(environment instanceof LocalTestEnvironment)) {
     return degraded("start", "environment_unavailable");

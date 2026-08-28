@@ -43,8 +43,14 @@ npm install && npm run verify
 
 Once the circuit is compiled, `npm run demo` deploys `backing.compact` on the local
 `undeployed` network, calls `proveBacking` twice with synthetic collateral, and prints
-proof latency in milliseconds for each call — the number that decides whether the demo
-video is filmable in two minutes.
+proof latency in milliseconds for each call.
+
+**Measured: ~23.7 s per proof**, on top of a ~52 s environment cold start and a ~19.5 s
+deploy. Reproduced independently through
+[`example-bboard`](https://github.com/midnightntwrk/example-bboard)'s own harness with
+`npm run measure`. See [`tools/PROOF-LATENCY.md`](tools/PROOF-LATENCY.md) for both runs
+and for the duplicated-WASM-runtime bug that blocked every circuit call until it was
+pinned in `overrides`.
 
 ### What it does **not** do
 
@@ -97,6 +103,11 @@ npm install && npm run verify
 Una vez compilado el circuito, `npm run demo` despliega `backing.compact` en la red
 local `undeployed`, llama a `proveBacking` dos veces con colateral sintético, e
 imprime la latencia de cada prueba en milisegundos.
+
+**Medido: ~23.7 s por prueba**, más ~52 s de arranque en frío del entorno y ~19.5 s de
+despliegue. Reproducido de forma independiente con el propio harness de
+[`example-bboard`](https://github.com/midnightntwrk/example-bboard) vía `npm run measure`.
+Ver [`tools/PROOF-LATENCY.md`](tools/PROOF-LATENCY.md).
 
 `verify` compila el circuito **antes** de typechequear: el compilador genera las APIs de TypeScript
 contra las que compila el resto.

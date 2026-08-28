@@ -1,37 +1,52 @@
 // api/test/contract.test.ts
-// Exercises the "external dependent is down" path without Docker, a proof
-// server, or the compact toolchain: contract/src/managed/backing does not
-// exist in this sandbox, so every entry point must degrade, never throw.
+// Checks the never-throw contract of the deploy/call wrappers and that the ZK
+// config path points at the compiler's output. Requires `npm run compact:build`
+// to have run — the compiled circuit is a build artifact, not an external
+// service, so a missing one is a build error rather than a degraded result.
 
 import { describe, expect, it } from "vitest";
 import pino from "pino";
-import { deployBacking, isContractCompiled, zkConfigPath } from "../src/contract.js";
-import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
+import { callProveBacking, deployBacking, zkConfigPath, type BackingProviders } from "../src/contract.js";
+import type { DeployedBacking } from "../src/contract.js";
 
 const logger = pino({ enabled: false });
 
-describe("contract loading", () => {
-  it("reports whether the compact compiler has produced the generated module", () => {
-    // This assertion documents the sandbox's actual state rather than
-    // forcing one outcome: on a machine that has run `compact compile`,
-    // this is true and deployBacking proceeds past the load step.
-    expect(typeof isContractCompiled()).toBe("boolean");
-  });
-
-  it("points zkConfigPath at contract/src/managed/backing", () => {
+describe("zkConfigPath", () => {
+  it("points at the compiler's output directory for the backing circuit", () => {
     expect(zkConfigPath().replace(/\\/g, "/")).toMatch(/contract\/src\/managed\/backing$/);
   });
+});
 
-  it("degrades instead of throwing when the contract has not been compiled", async () => {
-    if (isContractCompiled()) return; // nothing to assert on a machine that did compile it
+describe("deployBacking", () => {
+  it("degrades instead of throwing when the providers are unusable", async () => {
+    // Stands in for "everything external is down": the providers object has
+    // none of the methods deployContract reaches for.
+    const providers = {} as BackingProviders;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const providers = {} as MidnightProviders<any, string, { collateralAmount: bigint }>;
     const result = await deployBacking(providers, 5_000n, logger);
 
     expect(result.status).toBe("degraded");
     if (result.status === "degraded") {
-      expect(result.degraded.reason).toBe("contract_not_compiled");
+      expect(result.degraded.reason).toBe("deploy_failed");
+      expect(result.degraded.step).toBe("deploy");
+    }
+  });
+});
+
+describe("callProveBacking", () => {
+  it("degrades instead of throwing when the call transaction fails", async () => {
+    const deployed = {
+      callTx: {
+        proveBacking: () => Promise.reject(new Error("proof server unreachable")),
+      },
+    } as unknown as DeployedBacking;
+
+    const result = await callProveBacking(deployed, 3_000n, logger);
+
+    expect(result.status).toBe("degraded");
+    if (result.status === "degraded") {
+      expect(result.degraded.reason).toBe("call_failed");
+      expect(result.degraded.step).toBe("call");
     }
   });
 });

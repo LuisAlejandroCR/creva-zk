@@ -28,11 +28,11 @@ function ephemeralStoragePasswordProvider(): () => string {
 // on-disk storage paths, it never identifies a real account.
 const ACCOUNT_ID = "creva-zk-api-demo";
 
-export function createProviders<CircuitId extends string, PrivateState>(
+export function createProviders<CircuitId extends string, PrivateStateId extends string, PrivateState>(
   environment: EnvironmentConfiguration,
   walletProvider: MidnightWalletProvider,
   zkConfigPath: string,
-): MidnightProviders<CircuitId, string, PrivateState> {
+): MidnightProviders<CircuitId, PrivateStateId, PrivateState> {
   const zkConfigProvider = new NodeZkConfigProvider<CircuitId>(zkConfigPath);
 
   return {

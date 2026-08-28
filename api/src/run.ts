@@ -13,7 +13,14 @@
 import pino from "pino";
 import { startLocalEnvironment } from "./localEnvironment.js";
 import { createProviders } from "./providers.js";
-import { deployBacking, callProveBacking, zkConfigPath, type BackingPrivateState } from "./contract.js";
+import {
+  deployBacking,
+  callProveBacking,
+  zkConfigPath,
+  BACKING_CIRCUIT_ID,
+  BACKING_PRIVATE_STATE_ID,
+  type BackingPrivateState,
+} from "./contract.js";
 import { measureMs, measureCircuitCall } from "./measure.js";
 import type { BackingCheck, BackingCheckOutcome, DemoReport } from "./types.js";
 
@@ -58,11 +65,11 @@ async function run(): Promise<DemoReport> {
     // never measuring a warmed-up prover from the first — every call in
     // `outcomes` is a cold `proveBacking` invocation.
     for (const check of CHECKS) {
-      const providers = createProviders<string, BackingPrivateState>(
-        env.configuration,
-        env.walletProvider,
-        zkConfigPath(),
-      );
+      const providers = createProviders<
+        typeof BACKING_CIRCUIT_ID,
+        typeof BACKING_PRIVATE_STATE_ID,
+        BackingPrivateState
+      >(env.configuration, env.walletProvider, zkConfigPath());
 
       const deployStart = await measureMs(() => deployBacking(providers, check.collateralAmount, logger));
       if (deployStart.value.status === "degraded") return deployStart.value;
