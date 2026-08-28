@@ -1,6 +1,13 @@
 // Creva ZK — app-shell service worker.
-// Cache-first for the shell so the PWA still opens offline; everything else
-// falls back to the network.
+//
+// Only the app shell (this fixed list of paths) is ever cached. Everything
+// else — proof outcomes, attestation responses, any future API call — is
+// network-only and never touches on-device storage.
+//
+// Navigations go network-first (fresh index.html when online, so a deploy
+// is never frozen behind a stale cache) with the cached shell as an
+// offline fallback. Shell assets themselves are cache-first for fast,
+// offline-capable loads.
 
 const CACHE_NAME = 'creva-zk-shell-v1';
 const SHELL_ASSETS = [
@@ -27,22 +34,53 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+async function networkFirstNavigation(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put('/index.html', response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match('/index.html');
+    return cached ?? Response.error();
+  }
+}
+
+async function cacheFirstShellAsset(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return Response.error();
+  }
+}
+
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  const { request } = event;
+  if (request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
-      return fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-    }),
-  );
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirstNavigation(request));
+    return;
+  }
+
+  if (SHELL_ASSETS.includes(url.pathname)) {
+    event.respondWith(cacheFirstShellAsset(request));
+    return;
+  }
+
+  // Not shell, not a navigation: leave it alone. The browser fetches it
+  // from the network directly, and it never gets written to the cache.
 });
