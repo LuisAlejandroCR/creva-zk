@@ -22,8 +22,8 @@ public predicate, and disclose **only the outcome**.
 ### Workspaces
 
 - [`contract/`](contract/README.md) — the Compact circuit and its disclosure boundary.
-- [`api/`](api/README.md) — shared domain types for the other workspaces. Declared as an npm
-  workspace; not implemented yet.
+- [`api/`](api/README.md) — the Midnight client: the typed proof ports, their stub/real/bridge
+  implementations, and the local HTTP proof server the browser reaches through the bridge.
 - [`anchoring/`](anchoring/README.md) — chain-agnostic commitment scheme and anchoring port, with
   Cardano and EVM adapters.
 - [`advisor/`](advisor/README.md) — local tier advisor for the Integrate Midnight AI track.
