@@ -1,0 +1,43 @@
+// Attestation.compact
+// Creva ZK primitive, written once: one struct shape and one verification
+// circuit, imported by every predicate. An issuer signs a claim about a
+// subject off-device; the subject supplies the whole package as a
+// witness; the circuit recomputes the signed message and checks it
+// against the issuer's known key before the claim is trusted for
+// anything. The claim's shape (`T`) is chosen by each predicate — this
+// module never looks inside it.
+
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+module Attestation {
+  export { Attestation, SignedPayload, verifyAttestation };
+
+  // Everything the issuer actually signs: whose attestation this is, and
+  // what is being attested. Kept separate from the signature itself so
+  // `verifyAttestation` can hash exactly this and nothing else.
+  export struct SignedPayload<T> {
+    subjectKey: JubjubPoint;
+    claim: T;
+  }
+
+  // subjectKey ties the attestation to whoever is proving with it, so an
+  // attestation issued for one person cannot be replayed by another.
+  // claim carries the predicate-specific private facts. signature is the
+  // issuer's Schnorr signature over the payload above.
+  export struct Attestation<T> {
+    payload: SignedPayload<T>;
+    signature: JubjubSchnorrSignature;
+  }
+
+  // Recomputes the signed message from the attestation's own fields —
+  // never from anything the caller asserts separately — and checks it
+  // against the issuer's known verifying key. This is the only place a
+  // signature is ever checked: inside the circuit, before the claim is
+  // used for anything else.
+  export circuit verifyAttestation<T>(att: Attestation<T>, issuerKey: JubjubPoint): Boolean {
+    const msg: Vector<1, Field> = [transientHash<SignedPayload<T>>(att.payload)];
+    return jubjubSchnorrVerify<1>(msg, att.signature, issuerKey);
+  }
+}

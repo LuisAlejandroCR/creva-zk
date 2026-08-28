@@ -7,6 +7,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "compact": "compact compile src/backing.compact ./src/managed/backing",
+    "compact:backing-tier": "compact compile src/backing-tier.compact ./src/managed/backing-tier",
+    "compact:identity-check": "compact compile src/identity-check.compact ./src/managed/identity-check",
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }

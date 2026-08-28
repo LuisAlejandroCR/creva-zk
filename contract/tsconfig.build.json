@@ -3,5 +3,5 @@
   // Build variant of contract/tsconfig.json: same settings, minus the test
   // files, so specs never land in the published dist/ output.
   "extends": "./tsconfig.json",
-  "exclude": ["dist", "node_modules", "src/**/*.spec.ts", "src/**/*.test.ts"]
+  "exclude": ["dist", "node_modules", "src/**/*.spec.ts", "src/**/*.test.ts", "test"]
 }

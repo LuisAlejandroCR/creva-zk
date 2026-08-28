@@ -1,0 +1,48 @@
+// identity-check.compact
+// Predicate B — identity: verified AND of age AND tax ID matches. Proves
+// a signed identity attestation clears all three checks and discloses
+// only that single boolean as the exported circuit's return value.
+//
+// This predicate has NO ledger declarations and NO constructor. That is
+// deliberate: "verified" is never written to chain, so there is no public
+// record linking a key to a verification event. The caller reads the
+// returned boolean off the proof itself; nothing here is anchored.
+//
+// Disclosure table (field -> private / disclosed / derived):
+//   claim.verified, claim.ofAge     -> private   read only inside the AND below
+//   claim.taxId                     -> private   compared, never surfaced on its own
+//   subjectKey, signature           -> private   consumed only by verifyAttestation
+//   issuerKey, expectedTaxIdHash    -> public     caller-supplied, never witness-derived
+//   outcome (return value)          -> disclosed  the sole output; never written to a ledger
+
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+import Attestation;
+
+// The private facts an issuer attests to. Never appears outside this
+// file, and never on any ledger.
+struct IdentityClaim {
+  verified: Boolean;
+  ofAge: Boolean;
+  taxId: Bytes<32>;
+}
+
+// The signed attestation never leaves the device except as this witness.
+witness identityAttestation(): Attestation<IdentityClaim>;
+
+export circuit proveIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: Bytes<32>): Boolean {
+  const att = identityAttestation();
+  assert(
+    verifyAttestation<IdentityClaim>(att, issuerKey),
+    "Identity attestation failed signature verification"
+  );
+
+  const claim = att.payload.claim;
+
+  // Declared once, here: this boolean is the only witness-derived value
+  // that ever becomes public, and it is returned, never anchored.
+  const outcome = disclose(claim.verified && claim.ofAge && claim.taxId == expectedTaxIdHash);
+
+  return outcome;
+}
