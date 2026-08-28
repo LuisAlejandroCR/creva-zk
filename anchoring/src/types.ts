@@ -25,11 +25,16 @@ export interface AnchorReceipt {
   readonly anchoredAt: number; // unix seconds
 }
 
+// Fixed set of degraded reasons. A port never surfaces a raw provider error
+// message here — that could carry internal detail (endpoints, stack
+// fragments, account state). Raw errors go to a logger, not the result.
+export type AnchorFailureReason = "provider_unavailable" | "invalid_response";
+
 // A degraded result is the only failure mode a port may surface: never a
 // thrown error, never a synthesized zero receipt.
 export interface AnchorDegraded {
   readonly chain: ChainId;
-  readonly reason: string;
+  readonly reason: AnchorFailureReason;
 }
 
 export type AnchorResult =

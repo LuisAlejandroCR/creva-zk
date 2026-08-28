@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { commitBackingOutcome } from "../src/commitment.js";
 import { CardanoAnchorAdapter, type CardanoTxSubmitter } from "../src/adapters/cardano.js";
 import { EvmAnchorAdapter, type EvmTxSubmitter } from "../src/adapters/evm.js";
 
-const commitment = commitBackingOutcome({ tier: 2, timestamp: 1_700_000_000 });
+const { commitment } = commitBackingOutcome({ tier: 2, timestamp: 1_700_000_000 });
 
 describe("CardanoAnchorAdapter", () => {
   it("returns an anchored receipt on success", async () => {
@@ -25,21 +25,37 @@ describe("CardanoAnchorAdapter", () => {
     }
   });
 
-  it("degrades instead of throwing when the provider is down", async () => {
+  it("degrades with a fixed reason and logs the raw error separately", async () => {
+    const rawError = new Error("connection refused to node at 10.0.0.4:1442");
     const submitter: CardanoTxSubmitter = {
       submitMetadata: async () => {
-        throw new Error("node unreachable");
+        throw rawError;
       },
+    };
+    const logError = vi.fn();
+    const adapter = new CardanoAnchorAdapter(submitter, logError);
+
+    const result = await adapter.anchor(commitment);
+
+    expect(result).toEqual({
+      status: "degraded",
+      degraded: { chain: "cardano", reason: "provider_unavailable" },
+    });
+    expect(logError).toHaveBeenCalledWith(rawError);
+  });
+
+  it("degrades with invalid_response when the submitter returns no txHash", async () => {
+    const submitter: CardanoTxSubmitter = {
+      submitMetadata: async () => ({ txHash: "" }),
     };
     const adapter = new CardanoAnchorAdapter(submitter);
 
     const result = await adapter.anchor(commitment);
 
-    expect(result.status).toEqual("degraded");
-    if (result.status === "degraded") {
-      expect(result.degraded.chain).toEqual("cardano");
-      expect(result.degraded.reason).toEqual("node unreachable");
-    }
+    expect(result).toEqual({
+      status: "degraded",
+      degraded: { chain: "cardano", reason: "invalid_response" },
+    });
   });
 });
 
@@ -62,36 +78,54 @@ describe("EvmAnchorAdapter", () => {
     }
   });
 
-  it("degrades instead of throwing when the provider is down", async () => {
+  it("degrades with a fixed reason and logs the raw error separately", async () => {
+    const rawError = new Error("rpc timeout at https://internal-evm-rpc.local");
     const submitter: EvmTxSubmitter = {
       sendWithCalldata: async () => {
-        throw new Error("rpc timeout");
+        throw rawError;
       },
     };
-    const adapter = new EvmAnchorAdapter(submitter);
+    const logError = vi.fn();
+    const adapter = new EvmAnchorAdapter(submitter, logError);
 
     const result = await adapter.anchor(commitment);
 
-    expect(result.status).toEqual("degraded");
-    if (result.status === "degraded") {
-      expect(result.degraded.chain).toEqual("evm");
-      expect(result.degraded.reason).toEqual("rpc timeout");
-    }
+    expect(result).toEqual({
+      status: "degraded",
+      degraded: { chain: "evm", reason: "provider_unavailable" },
+    });
+    expect(logError).toHaveBeenCalledWith(rawError);
   });
 
-  it("degrades with a generic reason when a non-Error is thrown", async () => {
+  it("degrades with a fixed reason when a non-Error is thrown", async () => {
     const submitter: EvmTxSubmitter = {
       sendWithCalldata: async () => {
         throw "rejected";
       },
     };
+    const logError = vi.fn();
+    const adapter = new EvmAnchorAdapter(submitter, logError);
+
+    const result = await adapter.anchor(commitment);
+
+    expect(result).toEqual({
+      status: "degraded",
+      degraded: { chain: "evm", reason: "provider_unavailable" },
+    });
+    expect(logError).toHaveBeenCalledWith("rejected");
+  });
+
+  it("degrades with invalid_response when the submitter returns no txHash", async () => {
+    const submitter: EvmTxSubmitter = {
+      sendWithCalldata: async () => ({ txHash: "" }),
+    };
     const adapter = new EvmAnchorAdapter(submitter);
 
     const result = await adapter.anchor(commitment);
 
-    expect(result.status).toEqual("degraded");
-    if (result.status === "degraded") {
-      expect(result.degraded.reason).toEqual("evm provider unavailable");
-    }
+    expect(result).toEqual({
+      status: "degraded",
+      degraded: { chain: "evm", reason: "invalid_response" },
+    });
   });
 });
