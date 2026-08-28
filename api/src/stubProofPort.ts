@@ -1,10 +1,11 @@
 // api/src/stubProofPort.ts
 // The synthetic implementation of both proof ports: deterministic outcomes
-// derived from requestedLimit alone, no network or provider involved. This
-// is the default until the real port's call path is finished.
+// derived from each circuit's own public arguments alone, no network or
+// provider involved. This is the default until the real port's call path
+// is finished.
 
 import type { ApiResult } from "./types.js";
-import type { BackingProofPort, IdentityProofPort, Tier } from "./proofPort.js";
+import type { BackingProofPort, IdentityProofPort, JubjubPoint, Tier } from "./proofPort.js";
 
 const STUB_CLEAR_THRESHOLD = 3_000n;
 
@@ -19,8 +20,8 @@ export function createStubBackingPort(): BackingProofPort {
 
 export function createStubIdentityPort(): IdentityProofPort {
   return {
-    async checkIdentity(requestedLimit: bigint): Promise<ApiResult<boolean>> {
-      return { status: "ok", value: requestedLimit >= 0n };
+    async checkIdentity(_issuerKey: JubjubPoint, _expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
+      return { status: "ok", value: true };
     },
   };
 }

@@ -5,11 +5,16 @@
 
 import { describe, expect, it } from 'vitest';
 import { createRealBackingPort, createRealIdentityPort, createStubBackingPort, createStubIdentityPort } from '@creva-zk/api';
-import type { BackingProofPort, IdentityProofPort } from '@creva-zk/api';
+import type { BackingProofPort, IdentityProofPort, JubjubPoint } from '@creva-zk/api';
 import { toProofState } from '../src/proofPort';
 import { buildBackingContent } from '../src/screens/backingContent';
 import { buildIdentityContent } from '../src/screens/identityContent';
 import { idleProof, settleDegraded, startGenerating } from '../src/domain/proofState';
+
+// Synthetic public arguments only — no real issuer key or tax ID anywhere
+// in this test.
+const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: 'ab'.repeat(32) };
+const SYNTHETIC_TAX_ID_HASH = 'cd'.repeat(32);
 
 async function renderBacking(port: BackingProofPort) {
   const result = await port.checkBacking(3_000n);
@@ -17,7 +22,7 @@ async function renderBacking(port: BackingProofPort) {
 }
 
 async function renderIdentity(port: IdentityProofPort) {
-  const result = await port.checkIdentity(3_000n);
+  const result = await port.checkIdentity(SYNTHETIC_ISSUER_KEY, SYNTHETIC_TAX_ID_HASH);
   return buildIdentityContent(toProofState(result), Date.now());
 }
 
