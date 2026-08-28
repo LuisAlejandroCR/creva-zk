@@ -40,6 +40,13 @@ states.
    No interactive control smaller than 44×44px. Exactly one `h1` per screen.
    Text and interactive colors meet WCAG AA contrast against their
    background.
+7. **Brand palette.** Colors and type come from
+   `creva_finance/frontend/app/globals.css` — the palette's source of truth,
+   light (cream) and dark (ink) — never invented. `generating` renders with
+   `--cr-warning-*`, `verification failed` with `--cr-danger-*`, `ready` with
+   `--cr-success-*`, `degraded` with `--cr-info-*`. Titles use `--font-playfair`
+   (Montserrat), body/UI use `--font-inter` (Manrope), loaded from Google
+   Fonts since this app has no next/font pipeline.
 
 ## Out of scope
 

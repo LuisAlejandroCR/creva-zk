@@ -8,7 +8,7 @@ import { DEMO_SCENARIOS, DEMO_SCENARIO_LABELS } from './domain/demoOutcome';
 import type { OffersContent } from './screens/offersContent';
 import type { ProofScreenContent } from './screens/proofScreen';
 
-const SYNTHETIC_BADGE = '<span class="badge-synthetic">SYNTHETIC</span>';
+const SYNTHETIC_BADGE = '<span class="badge-synthetic">Synthetic</span>';
 
 function scenarioOptions(selected: DemoScenario): string {
   return DEMO_SCENARIOS.map(
@@ -28,14 +28,14 @@ export function renderProofScreen(
     <p class="intro">${content.intro}</p>
     <label class="demo-control">
       <span>Demo outcome (synthetic — for review only) ${SYNTHETIC_BADGE}</span>
-      <select data-role="scenario-select">${scenarioOptions(scenario)}</select>
+      <select class="cr-select" data-role="scenario-select">${scenarioOptions(scenario)}</select>
     </label>
-    <div class="status-panel" data-phase="${content.ctaAction === 'start' && content.ctaDisabled ? 'generating' : ''}">
+    <div class="status-panel" data-phase="${content.phase}">
       <p class="status-heading">${content.statusHeading}</p>
       <p class="status-body">${content.statusBody}</p>
       ${content.synthetic ? `<p>${SYNTHETIC_BADGE}</p>` : ''}
     </div>
-    <button class="btn" data-role="cta" ${content.ctaDisabled ? 'disabled' : ''}>${content.ctaLabel}</button>
+    <button class="btn-primary" data-role="cta" ${content.ctaDisabled ? 'disabled' : ''}>${content.ctaLabel}</button>
   `;
 }
 
@@ -56,7 +56,7 @@ export function renderCompareScreen(content: CompareContent, stepLabel: string):
         <ul>${rows(content.rightRows)}</ul>
       </section>
     </div>
-    <button class="btn" data-role="cta">${content.ctaLabel}</button>
+    <button class="btn-primary" data-role="cta">${content.ctaLabel}</button>
   `;
 }
 
@@ -64,8 +64,8 @@ export function renderOffersScreen(content: OffersContent, stepLabel: string): s
   return `
     <p class="progress">${stepLabel}</p>
     <h1>${content.h1}</h1>
-    <p class="tier-badge">${content.tierLabel} ${SYNTHETIC_BADGE}</p>
+    <p class="tier-badge">${content.tierLabel} <span class="badge-success">Proven tier</span> ${SYNTHETIC_BADGE}</p>
     <p class="disclaimer">${content.disclaimer}</p>
-    <button class="btn" data-role="cta">${content.ctaLabel}</button>
+    <button class="btn-primary" data-role="cta">${content.ctaLabel}</button>
   `;
 }

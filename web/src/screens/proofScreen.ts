@@ -10,6 +10,7 @@ export type CtaAction = 'start' | 'retry' | 'continue' | 'continue-anyway';
 export interface ProofScreenContent {
   readonly h1: string;
   readonly intro: string;
+  readonly phase: ProofPhase;
   readonly statusHeading: string;
   readonly statusBody: string;
   readonly ctaLabel: string;
@@ -44,6 +45,7 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
     return {
       h1: opts.h1,
       intro: opts.intro,
+      phase,
       statusHeading: 'Not started',
       statusBody: 'Press start to generate this proof. Nothing is sent yet.',
       ctaLabel: CTA_LABELS.start,
@@ -58,6 +60,7 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
     return {
       h1: opts.h1,
       intro: opts.intro,
+      phase,
       statusHeading: `Generating your proof… ${elapsed}`,
       statusBody:
         'This runs entirely on this device and takes tens of seconds — verifying a signed attestation and evaluating a predicate, without revealing the underlying data.',
@@ -72,6 +75,7 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
     return {
       h1: opts.h1,
       intro: opts.intro,
+      phase,
       statusHeading: 'Verification failed',
       statusBody: 'The proof did not verify. No partial data was disclosed. You can retry.',
       ctaLabel: CTA_LABELS.retry,
@@ -90,6 +94,7 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
     return {
       h1: opts.h1,
       intro: opts.intro,
+      phase,
       statusHeading: 'Degraded — verified via fallback path',
       statusBody: opts.degradedBody(value),
       ctaLabel: CTA_LABELS['continue-anyway'],
@@ -102,6 +107,7 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
   return {
     h1: opts.h1,
     intro: opts.intro,
+    phase,
     statusHeading: opts.readyHeading(value),
     statusBody: opts.readyBody(value),
     ctaLabel: CTA_LABELS.continue,
