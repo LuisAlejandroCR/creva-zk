@@ -1,3 +1,9 @@
+// main.ts
+// Web workspace entry point: renders the placeholder shell and registers
+// the offline service worker, reporting install status in the UI.
+
+import { failedStatus, readyStatus, unsupportedStatus, type PwaStatus } from './pwa-status';
+
 const app = document.querySelector<HTMLDivElement>('#app');
 
 if (app) {
@@ -13,21 +19,26 @@ if (app) {
   `;
 }
 
-async function registerServiceWorker() {
+function applyStatus(status: PwaStatus) {
   const statusEl = document.querySelector<HTMLDivElement>('#pwa-status');
   if (!statusEl) return;
 
+  if (status.state) statusEl.dataset.state = status.state;
+  else delete statusEl.dataset.state;
+  statusEl.textContent = status.message;
+}
+
+async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
-    statusEl.textContent = 'offline support not available in this browser';
+    applyStatus(unsupportedStatus());
     return;
   }
 
   try {
     await navigator.serviceWorker.register('/sw.js');
-    statusEl.dataset.state = 'ready';
-    statusEl.textContent = 'installable — works offline';
+    applyStatus(readyStatus());
   } catch {
-    statusEl.textContent = 'offline support failed to register';
+    applyStatus(failedStatus());
   }
 }
 

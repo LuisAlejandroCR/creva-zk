@@ -1,13 +1,8 @@
-// Creva ZK — app-shell service worker.
-//
-// Only the app shell (this fixed list of paths) is ever cached. Everything
-// else — proof outcomes, attestation responses, any future API call — is
-// network-only and never touches on-device storage.
-//
-// Navigations go network-first (fresh index.html when online, so a deploy
-// is never frozen behind a stale cache) with the cached shell as an
-// offline fallback. Shell assets themselves are cache-first for fast,
-// offline-capable loads.
+// sw.js
+// App-shell service worker. Only the fixed SHELL_ASSETS list is ever
+// cached — proof outcomes, attestation responses, and any future API call
+// stay network-only and never touch on-device storage. Navigations go
+// network-first with the cached shell as an offline fallback.
 
 const CACHE_NAME = 'creva-zk-shell-v1';
 const SHELL_ASSETS = [
