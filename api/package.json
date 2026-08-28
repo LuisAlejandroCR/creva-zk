@@ -8,6 +8,7 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "demo": "tsx src/run.ts"
+    "demo": "tsx src/run.ts",
+    "serve": "tsx src/serve.ts"
   }
 }
