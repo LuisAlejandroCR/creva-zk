@@ -19,6 +19,16 @@ public predicate, and disclose **only the outcome**.
 | **Backing** | seeing what she qualifies for | collateral ≥ requested limit → tier |
 | **Identity** | applying for the card | verified ∧ of age ∧ tax ID matches |
 
+### Workspaces
+
+- [`contract/`](contract/README.md) — the Compact circuit and its disclosure boundary.
+- [`api/`](api/README.md) — shared domain types for the other workspaces. Declared as an npm
+  workspace; not implemented yet.
+- [`anchoring/`](anchoring/README.md) — chain-agnostic commitment scheme and anchoring port, with
+  Cardano and EVM adapters.
+- [`advisor/`](advisor/README.md) — local tier advisor for the Integrate Midnight AI track.
+- [`web/`](web/README.md) — the installable PWA shell.
+
 ### Prior work declaration
 
 Submitted to the **Integrate Midnight** track, where prior work is allowed when declared.
@@ -39,12 +49,19 @@ Submitted to the **Integrate Midnight** track, where prior work is allowed when 
 
 ### Running it
 
-Requires **Node 24.11.1+**, Docker, and the Compact toolchain pinned at `0.31.1`. Linux or WSL only —
-Compact ships no Windows binary.
+Requires **Node 24.11.1+**, Docker, and the Compact toolchain pinned at `0.31.1` — `0.34.0` requires
+ledger 9, for which no stable proof server exists yet.
+
+**Linux or WSL only** — Compact ships no Windows binary. Two dependencies the official docs don't
+mention, without which install fails: `unzip` (`compact update` needs it to unpack the toolchain),
+and approving npm 11's install scripts by name: `npm install-scripts approve <pkg>`.
 
 ```bash
 npm install && npm run verify
 ```
+
+`verify` compiles the circuit before typechecking: the compiler generates the TypeScript APIs the
+rest of the workspace compiles against.
 
 ### What it does **not** do
 
@@ -69,6 +86,16 @@ circuito, evaluar un predicado público, y divulgar **solo el desenlace**.
 | **Respaldo** | ver a qué califica | colateral ≥ límite solicitado → tramo |
 | **Identidad** | pedir la tarjeta | verificada ∧ mayor de edad ∧ RFC coincide |
 
+### Workspaces
+
+- [`contract/`](contract/README.md) — el circuito Compact y su frontera de divulgación.
+- [`api/`](api/README.md) — tipos de dominio compartidos por los demás workspaces. Declarado como
+  workspace de npm; aún sin implementar.
+- [`anchoring/`](anchoring/README.md) — esquema de compromiso y puerto de anclaje agnóstico de
+  cadena, con adaptadores para Cardano y EVM.
+- [`advisor/`](advisor/README.md) — asesor local de tramo para el track Integrate Midnight AI.
+- [`web/`](web/README.md) — la shell de la PWA instalable.
+
 ### Declaración de trabajo previo
 
 Entregado al track **Integrate Midnight**, donde el trabajo previo se permite si se declara.
@@ -90,7 +117,8 @@ Entregado al track **Integrate Midnight**, donde el trabajo previo se permite si
 
 ### Correrlo
 
-Requiere **Node 24.11.1+**, Docker y el toolchain de Compact fijado en `0.31.1`.
+Requiere **Node 24.11.1+**, Docker y el toolchain de Compact fijado en `0.31.1` — `0.34.0` exige
+ledger 9, para el que todavía no hay un proof server estable.
 
 **Linux o WSL**: el compilador de Compact no publica binario para Windows. Dos dependencias que no
 aparecen en la documentación oficial y sin las cuales la instalación falla: `unzip`, y aprobar los
