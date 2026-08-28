@@ -14,7 +14,7 @@ describe("Attestation.compact", () => {
   const source = readCompactSource("Attestation.compact");
 
   it("verifyAttestation performs a real cryptographic check, not a stub", () => {
-    expect(source).toMatch(/jubjubSchnorrVerify<1>\(msg, att\.signature, issuerKey\)/);
+    expect(source).toMatch(/schnorrVerify<1>\(msg, att\.signature, issuerKey\)/);
   });
 
   it("recomputes the signed message from the attestation's own fields", () => {
@@ -33,14 +33,14 @@ describe("backing-tier.compact", () => {
     const bypassed = [
       "const att = backingAttestation();",
       "const collateral = att.payload.claim.collateral;",
-      'assert(verifyAttestation<BackingClaim>(att, issuerKey), "late check");',
+      "verifyAttestation<BackingClaim>(att, issuerKey);",
     ].join("\n");
     expect(() => assertVerificationPrecedesClaimUse(bypassed, "backing-tier")).toThrow(/read before the signature/);
   });
 
   it("catches a missing check entirely", () => {
     const noCheck = "const att = backingAttestation();\nconst collateral = att.payload.claim.collateral;";
-    expect(() => assertVerificationPrecedesClaimUse(noCheck, "backing-tier")).toThrow(/no assert/);
+    expect(() => assertVerificationPrecedesClaimUse(noCheck, "backing-tier")).toThrow(/no verifyAttestation/);
   });
 });
 

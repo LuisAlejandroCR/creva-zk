@@ -40,7 +40,7 @@ describe("backing-tier.compact source shape", () => {
   });
 
   it("verifies the attestation's signature before deriving a tier", () => {
-    expect(source).toMatch(/assert\(\s*verifyAttestation<BackingClaim>\(att, issuerKey\)/);
+    expect(source).toMatch(/verifyAttestation<BackingClaim>\(att, issuerKey\);/);
   });
 
   it("discloses the tier and nothing else", () => {

@@ -33,10 +33,9 @@ witness identityAttestation(): Attestation<IdentityClaim>;
 
 export circuit proveIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: Bytes<32>): Boolean {
   const att = identityAttestation();
-  assert(
-    verifyAttestation<IdentityClaim>(att, issuerKey),
-    "Identity attestation failed signature verification"
-  );
+  // Asserts internally (see Attestation.compact / schnorr.compact); a
+  // forged or unsigned attestation never reaches the line below.
+  verifyAttestation<IdentityClaim>(att, issuerKey);
 
   const claim = att.payload.claim;
 

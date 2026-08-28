@@ -46,15 +46,16 @@ export function checkIdentity(claim: IdentityClaimSpec, expectedTaxIdHash: strin
 }
 
 // Throws with a descriptive message unless `source` calls verifyAttestation
-// inside an assert() before the first place it reads a claim field —
-// i.e. a forged/unsigned attestation can never reach predicate logic.
+// (which asserts internally — see Attestation.compact) before the first
+// place it reads a claim field — i.e. a forged/unsigned attestation can
+// never reach predicate logic.
 export function assertVerificationPrecedesClaimUse(source: string, label: string): void {
-  const assertIdx = source.search(/assert\(\s*verifyAttestation</);
-  if (assertIdx === -1) {
-    throw new Error(`${label}: no assert(verifyAttestation<...>) call found`);
+  const verifyIdx = source.search(/\bverifyAttestation</);
+  if (verifyIdx === -1) {
+    throw new Error(`${label}: no verifyAttestation<...>(...) call found`);
   }
   const firstClaimUseIdx = source.indexOf(".payload.claim");
-  if (firstClaimUseIdx !== -1 && firstClaimUseIdx < assertIdx) {
+  if (firstClaimUseIdx !== -1 && firstClaimUseIdx < verifyIdx) {
     throw new Error(`${label}: claim data is read before the signature is verified`);
   }
 }

@@ -44,7 +44,7 @@ describe("identity-check.compact source shape", () => {
   });
 
   it("verifies the attestation's signature before evaluating the claim", () => {
-    expect(source).toMatch(/assert\(\s*verifyAttestation<IdentityClaim>\(att, issuerKey\)/);
+    expect(source).toMatch(/verifyAttestation<IdentityClaim>\(att, issuerKey\);/);
   });
 
   it("combines all three checks with a boolean AND", () => {

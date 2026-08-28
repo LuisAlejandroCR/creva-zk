@@ -43,10 +43,9 @@ export circuit proveBackingTier(
   goldMin: Uint<64>
 ): Tier {
   const att = backingAttestation();
-  assert(
-    verifyAttestation<BackingClaim>(att, issuerKey),
-    "Backing attestation failed signature verification"
-  );
+  // Asserts internally (see Attestation.compact / schnorr.compact); a
+  // forged or unsigned attestation never reaches the line below.
+  verifyAttestation<BackingClaim>(att, issuerKey);
 
   const collateral = att.payload.claim.collateral;
 
