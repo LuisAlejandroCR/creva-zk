@@ -1,0 +1,12 @@
+# The toolchain runs on Linux/WSL. Keep LF in the repository so a checkout on
+# Windows never ships CRLF into a shell script or a Compact source file.
+* text=auto eol=lf
+
+# Binary artifacts, never normalized.
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.prover binary
+*.verifier binary
+*.zkir binary
+*.bzkir binary

@@ -1,0 +1,33 @@
+// Creva ZK — backing predicate, thin vertical slice.
+// Proves that a private collateral amount clears a publicly requested limit,
+// disclosing the outcome and never the amount.
+
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+// The only thing the chain ever learns: whether the last check cleared.
+export ledger cleared: Boolean;
+
+// How many checks have been answered. Public by design, carries no amount.
+export ledger answered: Counter;
+
+// The collateral never leaves the device. It enters the circuit as a witness.
+witness collateralAmount(): Uint<64>;
+
+constructor() {
+  cleared = false;
+}
+
+export circuit proveBacking(requestedLimit: Uint<64>): Boolean {
+  const collateral = collateralAmount();
+
+  // Declared once, here: the comparison outcome is the only witness-derived
+  // value that ever becomes public. The amount itself never does.
+  const outcome = disclose(collateral >= requestedLimit);
+
+  cleared = outcome;
+  answered.increment(1);
+
+  return outcome;
+}

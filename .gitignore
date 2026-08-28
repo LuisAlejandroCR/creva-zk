@@ -1,0 +1,31 @@
+node_modules/
+dist/
+build/
+.turbo/
+
+# Worktrees de agentes paralelos — ver docs/agentes-paralelos.md del expediente
+.claude/worktrees/
+
+# Compact — artefactos generados por el compilador
+contract/src/managed/
+**/*.zkir
+**/*.bzkir
+keys/
+
+# Entorno y secretos — nunca, bajo ningún nombre
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+wallet.json
+seed*
+
+# Logs y estado local
+logs/
+*.log
+.private-state/
+
+# Sistema
+.DS_Store
+Thumbs.db
