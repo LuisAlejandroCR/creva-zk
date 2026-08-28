@@ -95,12 +95,21 @@ async function run(): Promise<DemoReport> {
   }
 }
 
-const report = await run();
+// A throw anywhere in run() is still a degraded result, never an escaping
+// exception: an unhandled rejection here would skip the exit-code handling
+// below and could let a broken run turn a CI gate green.
+const report: DemoReport = await run().catch((error: unknown) => {
+  logger.error({ err: error }, "demo threw instead of degrading");
+  return { status: "degraded", degraded: { step: "run", reason: "call_failed" } } as const;
+});
 
 if (report.status === "degraded") {
   logger.error({ degraded: report.degraded }, "demo did not complete");
   process.stdout.write(`${JSON.stringify(report, jsonReplacer, 2)}\n`);
-  process.exitCode = 1;
+  // Explicit exit, not `process.exitCode`: pino's pino-pretty transport runs
+  // in a worker thread whose own exit can land before the assignment takes
+  // effect, which is how a broken run was exiting 0.
+  process.exit(1);
 } else {
   const upperBoundMs = Math.max(...report.outcomes.map((o) => o.latency.ms));
   logger.info(
@@ -119,6 +128,7 @@ if (report.status === "degraded") {
     );
   }
   process.stdout.write(`${JSON.stringify(report, jsonReplacer, 2)}\n`);
+  process.exit(0);
 }
 
 function jsonReplacer(_key: string, value: unknown): unknown {

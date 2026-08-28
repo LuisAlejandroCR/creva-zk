@@ -22,6 +22,7 @@
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspace web",
     "demo": "npm run demo --workspace api",
+    "measure": "bash tools/measure-proof-latency.sh",
     "verify": "npm run compact:build && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
