@@ -1,0 +1,4 @@
+# .worktreeinclude
+# Gitignored files copied into every worktree Claude Code creates, so a
+# fresh agent checkout does not start without its local configuration.
+.env
