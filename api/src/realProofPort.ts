@@ -4,7 +4,6 @@
 // path belongs to another agent — so this always returns a typed degraded
 // result today, honestly and without throwing, until that wiring lands.
 
-import { isContractCompiled } from "./contract.js";
 import type { ApiDegraded, ApiResult } from "./types.js";
 import type { BackingProofPort, IdentityProofPort, JubjubPoint, Tier } from "./proofPort.js";
 
@@ -17,8 +16,11 @@ export interface PortLogger {
 
 const noopLogger: PortLogger = { info: () => undefined };
 
+// The contract module is imported statically at module scope now, so
+// "not compiled" is no longer a runtime state: the import itself would
+// fail first. Every failure reaching here is a call failure.
 function notWiredYet(step: string): ApiDegraded {
-  return isContractCompiled() ? { step, reason: "call_failed" } : { step, reason: "contract_not_compiled" };
+  return { step, reason: "call_failed" };
 }
 
 export function createRealBackingPort(logger: PortLogger = noopLogger): BackingProofPort {
