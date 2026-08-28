@@ -9,6 +9,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "preview": "vite preview"
   },
+  "dependencies": {
+    "@creva-zk/api": "*"
+  },
   "devDependencies": {
     "typescript": "^5.9.3",
     "vite": "^6.3.5"
