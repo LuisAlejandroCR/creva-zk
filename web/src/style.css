@@ -132,7 +132,9 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 700;
-  color: var(--cr-text-subtle);
+  /* --cr-text-subtle measures 4.49:1 here — a hair under AA's 4.5:1 at this
+     size. --cr-text-secondary clears it (4.95 light / 4.82 dark). */
+  color: var(--cr-text-secondary);
 }
 
 h1 {
@@ -168,7 +170,9 @@ h1 {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.4rem;
-  color: var(--cr-text-secondary);
+  /* --cr-text-secondary measures 4.44:1 on --cr-surface-1 in dark mode,
+     under AA. --cr-text-muted clears both surfaces in both themes. */
+  color: var(--cr-text-muted);
 }
 
 .cr-select {
@@ -258,7 +262,9 @@ h1 {
   border-radius: 20px;
   background: var(--cr-surface-2);
   border: 1px solid var(--cr-border);
-  color: var(--cr-text-secondary);
+  /* --cr-text-secondary measures 4.12:1 on --cr-surface-2 in dark mode,
+     under AA. --cr-text-muted clears both surfaces in both themes. */
+  color: var(--cr-text-muted);
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -368,15 +374,16 @@ h1 {
   border-top: 1px dashed var(--cr-danger-border);
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--cr-danger-text);
+  /* --cr-danger-text on this card's tinted background measures 4.3:1, under
+     AA. The danger border/icon already carry the warning; the text reads
+     in the neutral, high-contrast ink instead. */
+  color: var(--cr-text);
 }
 
 /* Right: the same icon, struck through — a diagonal bar across it reads as
-   "blocked" without needing the label at all. */
-.compare-item--crossed {
-  opacity: 0.6;
-}
-
+   "blocked" without needing the label at all. The de-emphasis is carried by
+   the strike and the line-through below, not by opacity: fading the text
+   dropped it to 2.62:1 on this card's tinted background, under AA. */
 .compare-item--crossed .compare-icon::after {
   content: '';
   position: absolute;
@@ -440,7 +447,9 @@ h1 {
   border-radius: 12px;
   background: var(--cr-info-bg);
   border: 1px solid var(--cr-info-border);
-  color: var(--cr-info-text);
+  /* --cr-info-text on this tint measures 4.27:1, under AA — same fix as
+     .status-body below: the tint carries the meaning, the ink stays neutral. */
+  color: var(--cr-text);
   line-height: 1.5;
   font-size: 0.88rem;
 }
@@ -452,7 +461,9 @@ h1 {
   background: var(--cr-surface-1);
   border: 1px solid var(--cr-border);
   font-size: 0.78rem;
-  color: var(--cr-text-secondary);
+  /* --cr-text-secondary measures 4.44:1 on --cr-surface-1 in dark mode,
+     under AA. --cr-text-muted clears both surfaces in both themes. */
+  color: var(--cr-text-muted);
   text-align: center;
 }
 
