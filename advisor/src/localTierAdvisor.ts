@@ -1,6 +1,6 @@
 import type { AdvisorInput, AdvisorPort, AdvisorResult, Recommendation } from "./types.js";
 import { isTier } from "./types.js";
-import { createLocalModelPredictor } from "./localModelPredictor.js";
+import { createLocalModelPredictor, UnsafeModelEndpointError } from "./localModelPredictor.js";
 
 // Represents a call into a local inference process (e.g. a small model
 // running on-device or in-cluster). Never a hosted/third-party API — no
@@ -28,7 +28,10 @@ export class LocalTierAdvisor implements AdvisorPort {
     try {
       const recommendation = await this.predict({ tier: input.tier });
       return { status: "advised", recommendation };
-    } catch {
+    } catch (error) {
+      if (error instanceof UnsafeModelEndpointError) {
+        return { status: "degraded", reason: "unsafe_model_endpoint" };
+      }
       // Never a 500, never a fabricated recommendation: an unavailable
       // model degrades to a typed result the caller must handle.
       return { status: "degraded", reason: "model_unavailable" };

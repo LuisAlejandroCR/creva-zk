@@ -59,6 +59,19 @@ describe("createLocalModelPredictor", () => {
     }
   });
 
+  it("refuses a non-loopback baseUrl instead of calling out to it", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ tier: "gold", offerAvailable: false, reason: "should never be reached" }),
+    );
+    const predict = createLocalModelPredictor({ baseUrl: "http://evil.example.com:8477", fetchImpl });
+    const advisor = new LocalTierAdvisor(predict);
+
+    const result = await advisor.advise({ tier: "gold" });
+
+    expect(result).toEqual({ status: "degraded", reason: "unsafe_model_endpoint" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("degrades through the advisor's own guard for a request tier the port never accepted", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({ tier: "none", offerAvailable: false, reason: "unused" }),
