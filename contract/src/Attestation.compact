@@ -1,0 +1,45 @@
+// Attestation.compact
+// Creva ZK primitive, written once: one struct shape and one verification
+// circuit, imported by every predicate. An issuer signs a claim about a
+// subject off-device; the subject supplies the whole package as a
+// witness; the circuit recomputes the signed message and checks it
+// against the issuer's known key before the claim is trusted for
+// anything. The claim's shape (`T`) is chosen by each predicate — this
+// module never looks inside it.
+//
+// A module file (as opposed to a top-level program) carries no `pragma`
+// and imports from inside its own `module { ... }` block — confirmed
+// against the compiler, not assumed.
+
+module Attestation {
+  import CompactStandardLibrary;
+  import schnorr;
+
+  // Everything the issuer actually signs: whose attestation this is, and
+  // what is being attested. Kept separate from the signature itself so
+  // `verifyAttestation` can hash exactly this and nothing else.
+  export struct SignedPayload<T> {
+    subjectKey: JubjubPoint;
+    claim: T;
+  }
+
+  // subjectKey ties the attestation to whoever is proving with it, so an
+  // attestation issued for one person cannot be replayed by another.
+  // claim carries the predicate-specific private facts. signature is the
+  // issuer's Schnorr signature over the payload above.
+  export struct Attestation<T> {
+    payload: SignedPayload<T>;
+    signature: SchnorrSignature;
+  }
+
+  // Recomputes the signed message from the attestation's own fields —
+  // never from anything the caller asserts separately — and checks it
+  // against the issuer's known verifying key. This is the only place a
+  // signature is ever checked: inside the circuit, before the claim is
+  // used for anything else. schnorrVerify asserts internally, so a call
+  // that returns at all means the signature held.
+  export circuit verifyAttestation<T>(att: Attestation<T>, issuerKey: JubjubPoint): [] {
+    const msg: Vector<1, Field> = [transientHash<SignedPayload<T>>(att.payload)];
+    schnorrVerify<1>(msg, att.signature, issuerKey);
+  }
+}

@@ -31,6 +31,11 @@ Submitted to the **Integrate Midnight** track, where prior work is allowed when 
 - **Scaffold:** the project structure starts from
   [`midnightntwrk/example-bboard`](https://github.com/midnightntwrk/example-bboard) (Apache-2.0),
   Midnight's official example.
+- **Reused circuit code:** `contract/src/schnorr.compact` is
+  [`midnightntwrk/example-zkloan`](https://github.com/midnightntwrk/example-zkloan)'s
+  `contract/src/schnorr.compact` (Apache-2.0), unmodified except for its header comment. Compact
+  0.31.1 has no signature-verification primitive yet, so this Schnorr-over-JubJub polyfill is the
+  official example's answer to that gap, not ours.
 
 ### Running it
 
@@ -76,6 +81,12 @@ Entregado al track **Integrate Midnight**, donde el trabajo previo se permite si
 - **Andamio:** la estructura del proyecto parte de
   [`midnightntwrk/example-bboard`](https://github.com/midnightntwrk/example-bboard) (Apache-2.0),
   el ejemplo oficial de Midnight.
+- **Código de circuito reutilizado:** `contract/src/schnorr.compact` es el
+  `contract/src/schnorr.compact` de
+  [`midnightntwrk/example-zkloan`](https://github.com/midnightntwrk/example-zkloan) (Apache-2.0),
+  sin modificar salvo el comentario de encabezado. Compact 0.31.1 todavía no tiene un primitivo de
+  verificación de firmas, así que este polyfill de Schnorr sobre JubJub es la respuesta del ejemplo
+  oficial a ese vacío, no la nuestra.
 
 ### Correrlo
 

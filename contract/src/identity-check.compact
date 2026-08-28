@@ -1,0 +1,55 @@
+// identity-check.compact
+// Predicate B — identity: verified AND of age AND tax ID matches. Proves
+// a signed identity attestation clears all three checks and discloses
+// only that single boolean as the exported circuit's return value.
+//
+// The ledger holds one Counter and nothing else. A ledger write is what
+// makes proveIdentity a provable circuit at all — a circuit with no
+// public effect gets no prover key, so there is nothing a counterparty
+// could verify. A count is not a linkable record of "this key was
+// verified": it carries no subject key, no nullifier, no timestamp, and
+// no outcome. The verified/ofAge/taxId result itself is still returned
+// only from the proof, never written anywhere.
+//
+// Disclosure table (field -> private / disclosed / derived):
+//   claim.verified, claim.ofAge     -> private   read only inside the AND below
+//   claim.taxId                     -> private   compared, never surfaced on its own
+//   subjectKey, signature           -> private   consumed only by verifyAttestation
+//   issuerKey, expectedTaxIdHash    -> public     caller-supplied, never witness-derived
+//   outcome (return value)          -> disclosed  the sole output; never written to a ledger
+//   answered                        -> derived    a call count; carries no identity or outcome
+
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+import Attestation;
+
+// The private facts an issuer attests to. Never appears outside this
+// file, and never on any ledger.
+struct IdentityClaim {
+  verified: Boolean;
+  ofAge: Boolean;
+  taxId: Bytes<32>;
+}
+
+// derived: how many times this contract has answered; carries no identity.
+export ledger answered: Counter;
+
+// The signed attestation never leaves the device except as this witness.
+witness identityAttestation(): Attestation<IdentityClaim>;
+
+export circuit proveIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: Bytes<32>): Boolean {
+  const att = identityAttestation();
+  // Asserts internally (see Attestation.compact / schnorr.compact); a
+  // forged or unsigned attestation never reaches the line below.
+  verifyAttestation<IdentityClaim>(att, issuerKey);
+
+  const claim = att.payload.claim;
+
+  // Declared once, here: this boolean is the only witness-derived value
+  // that ever becomes public, and it is returned, never anchored.
+  const outcome = disclose(claim.verified && claim.ofAge && claim.taxId == expectedTaxIdHash);
+
+  answered.increment(1);
+  return outcome;
+}

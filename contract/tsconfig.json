@@ -1,14 +1,13 @@
 {
   // contract/tsconfig.json
-  // Typechecks the witnesses and anything hand-written under src/. The
-  // generated managed/ output is produced by `npm run compact`, which is why
-  // verify compiles the circuit before it ever reaches tsc.
+  // Typechecks the witnesses and tests hand-written under src/ and test/.
+  // The generated managed/ output is produced by `npm run compact`, which is
+  // why verify compiles the circuit before it ever reaches tsc.
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "./src",
     "outDir": "./dist",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "test/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }

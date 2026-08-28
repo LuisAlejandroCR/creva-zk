@@ -1,0 +1,64 @@
+// backing-tier.compact
+// Predicate A — backing: collateral >= requested limit -> tier. Proves a
+// signed collateral attestation clears one of a set of PUBLIC tier
+// thresholds, disclosing only the tier the subject qualifies for. The
+// collateral amount itself never leaves the witness.
+//
+// Disclosure table (field -> private / disclosed / derived):
+//   collateral (claim.collateral)   -> private   never read outside the comparison below
+//   subjectKey, signature           -> private   consumed only by verifyAttestation
+//   issuerKey, *Min thresholds      -> public     caller-supplied, never witness-derived
+//   tier                            -> disclosed  the sole purpose of this circuit
+//   answered                        -> derived    a call count; carries no amount or identity
+
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+import Attestation;
+
+export enum Tier { NONE, BRONZE, SILVER, GOLD }
+
+// The private fact an issuer attests to: how much collateral the subject
+// holds. Never appears outside this file, and never on the ledger.
+struct BackingClaim {
+  collateral: Uint<64>;
+}
+
+// disclosed: the tier is the only thing this predicate ever proves.
+export ledger tier: Tier;
+// derived: how many times this contract has answered; carries no amount.
+export ledger answered: Counter;
+
+// The signed attestation never leaves the device except as this witness.
+witness backingAttestation(): Attestation<BackingClaim>;
+
+constructor() {
+  tier = Tier.NONE;
+}
+
+export circuit proveBackingTier(
+  issuerKey: JubjubPoint,
+  bronzeMin: Uint<64>,
+  silverMin: Uint<64>,
+  goldMin: Uint<64>
+): Tier {
+  const att = backingAttestation();
+  // Asserts internally (see Attestation.compact / schnorr.compact); a
+  // forged or unsigned attestation never reaches the line below.
+  verifyAttestation<BackingClaim>(att, issuerKey);
+
+  const collateral = att.payload.claim.collateral;
+
+  // Declared once, here: the tier is the only witness-derived value that
+  // ever becomes public. The collateral amount itself never does.
+  const outcome = disclose(
+    collateral >= goldMin ? Tier.GOLD :
+    collateral >= silverMin ? Tier.SILVER :
+    collateral >= bronzeMin ? Tier.BRONZE :
+    Tier.NONE
+  );
+
+  tier = outcome;
+  answered.increment(1);
+  return outcome;
+}
