@@ -1,6 +1,7 @@
 // identity-check.spec.ts
 // The promise: the identity check is true only when verified, of age,
-// and tax ID match all hold at once — and it is never anchored anywhere.
+// and tax ID match all hold at once — and the outcome itself is never
+// anchored anywhere, only the presence of a call is.
 
 import { describe, expect, it } from "vitest";
 import { checkIdentity, readCompactSource } from "../support/circuitSpec.js";
@@ -51,8 +52,14 @@ describe("identity-check.compact source shape", () => {
     expect(source).toMatch(/claim\.verified && claim\.ofAge && claim\.taxId == expectedTaxIdHash/);
   });
 
-  it("declares no ledger state at all — the outcome is never anchored", () => {
-    expect(source).not.toMatch(/export ledger/);
+  it("exposes only a call counter on the ledger — no constructor, no outcome", () => {
+    const ledgerFields = [...source.matchAll(/export ledger (\w+):/g)].map((m) => m[1]);
+    expect(ledgerFields).toEqual(["answered"]);
     expect(source).not.toMatch(/\bconstructor\s*\(/);
+  });
+
+  it("never assigns the return value or any claim field to the ledger", () => {
+    expect(source).not.toMatch(/^\s*answered\s*=/m);
+    expect(source).not.toMatch(/answered\.increment\(.*(outcome|claim|verified|ofAge|taxId)/);
   });
 });

@@ -3,10 +3,13 @@
 // a signed identity attestation clears all three checks and discloses
 // only that single boolean as the exported circuit's return value.
 //
-// This predicate has NO ledger declarations and NO constructor. That is
-// deliberate: "verified" is never written to chain, so there is no public
-// record linking a key to a verification event. The caller reads the
-// returned boolean off the proof itself; nothing here is anchored.
+// The ledger holds one Counter and nothing else. A ledger write is what
+// makes proveIdentity a provable circuit at all — a circuit with no
+// public effect gets no prover key, so there is nothing a counterparty
+// could verify. A count is not a linkable record of "this key was
+// verified": it carries no subject key, no nullifier, no timestamp, and
+// no outcome. The verified/ofAge/taxId result itself is still returned
+// only from the proof, never written anywhere.
 //
 // Disclosure table (field -> private / disclosed / derived):
 //   claim.verified, claim.ofAge     -> private   read only inside the AND below
@@ -14,6 +17,7 @@
 //   subjectKey, signature           -> private   consumed only by verifyAttestation
 //   issuerKey, expectedTaxIdHash    -> public     caller-supplied, never witness-derived
 //   outcome (return value)          -> disclosed  the sole output; never written to a ledger
+//   answered                        -> derived    a call count; carries no identity or outcome
 
 pragma language_version 0.23;
 
@@ -27,6 +31,9 @@ struct IdentityClaim {
   ofAge: Boolean;
   taxId: Bytes<32>;
 }
+
+// derived: how many times this contract has answered; carries no identity.
+export ledger answered: Counter;
 
 // The signed attestation never leaves the device except as this witness.
 witness identityAttestation(): Attestation<IdentityClaim>;
@@ -43,5 +50,6 @@ export circuit proveIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: Bytes<32
   // that ever becomes public, and it is returned, never anchored.
   const outcome = disclose(claim.verified && claim.ofAge && claim.taxId == expectedTaxIdHash);
 
+  answered.increment(1);
   return outcome;
 }

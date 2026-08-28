@@ -1,6 +1,7 @@
 // witness-never-reaches-the-ledger.invariant.spec.ts
 // The promise: nothing a witness returns ever lands on a ledger field
-// undisclosed, and the identity predicate exposes no ledger at all — so
+// undisclosed, and the identity predicate's ledger is limited to a bare
+// call counter — never the subject key, the claim, or the outcome — so
 // there is never a public record of a verification event.
 //
 // This is a source-level static check, not a circuit execution, because
@@ -32,8 +33,14 @@ describe("backing-tier.compact", () => {
 describe("identity-check.compact", () => {
   const source = readCompactSource("identity-check.compact");
 
-  it("declares no ledger fields, so there is nothing for a witness to reach", () => {
-    expect(source).not.toMatch(/export ledger/);
+  it("exposes only a bare call counter — no subject key, claim, or outcome", () => {
+    const ledgerFields = [...source.matchAll(/export ledger (\w+):/g)].map((m) => m[1]);
+    expect(ledgerFields).toEqual(["answered"]);
+  });
+
+  it("never assigns anything witness-derived to that counter", () => {
+    expect(source).toMatch(/^\s*answered\.increment\(1\);\s*$/m);
+    expect(source).not.toMatch(/^\s*answered\s*=/m);
   });
 });
 
