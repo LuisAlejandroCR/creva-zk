@@ -30,7 +30,7 @@ export async function startLocalEnvironment(logger: Logger): Promise<ApiResult<L
   try {
     configuration = await environment.start();
   } catch (error) {
-    logger.error({ error }, "local network (docker) failed to start");
+    logger.error({ err: error }, "local network (docker) failed to start");
     return degraded("start_network", "environment_unavailable");
   }
 
@@ -45,7 +45,7 @@ export async function startLocalEnvironment(logger: Logger): Promise<ApiResult<L
       },
     };
   } catch (error) {
-    logger.error({ error }, "genesis wallet failed to start or sync");
+    logger.error({ err: error }, "genesis wallet failed to start or sync");
     try {
       await environment.shutdown();
     } catch {

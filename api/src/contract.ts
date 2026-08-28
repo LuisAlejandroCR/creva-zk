@@ -26,7 +26,7 @@ export interface BackingLedger {
   readonly answered: bigint;
 }
 
-const CONTRACT_MODULE_URL = new URL("../../contract/src/managed/backing/contract/index.cjs", import.meta.url);
+const CONTRACT_MODULE_URL = new URL("../../contract/src/managed/backing/contract/index.js", import.meta.url);
 const ZK_CONFIG_DIR = fileURLToPath(new URL("../../contract/src/managed/backing", import.meta.url));
 
 export function zkConfigPath(): string {
@@ -75,6 +75,7 @@ async function loadBackingContract(): Promise<ApiResult<LoadedBackingContract>> 
     ) => BackingContractType;
     const compiledContract = CompiledContract.make<BackingContractType>("backing", ctor).pipe(
       CompiledContract.withWitnesses(backingWitnesses()),
+      CompiledContract.withCompiledFileAssets(ZK_CONFIG_DIR),
     );
     return { status: "ok", value: { compiledContract, ledger: generated.ledger } };
   } catch {
@@ -107,7 +108,7 @@ export async function deployBacking(
     } as never);
     return { status: "ok", value: { deployedContract, ledger: loaded.value.ledger } };
   } catch (error) {
-    logger.error({ error }, "deployContract failed");
+    logger.error({ err: error }, "deployContract failed");
     return degraded("deploy", "deploy_failed");
   }
 }
@@ -134,7 +135,7 @@ export async function callProveBacking(
       value: { cleared: ledgerState.cleared, answered: ledgerState.answered },
     };
   } catch (error) {
-    logger.error({ error }, "proveBacking call failed");
+    logger.error({ err: error }, "proveBacking call failed");
     return degraded("call", "call_failed");
   }
 }
