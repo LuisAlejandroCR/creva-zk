@@ -16,7 +16,7 @@
     "web"
   ],
   "scripts": {
-    "compact:build": "npm run compact --workspace contract",
+    "compact:build": "npm run compact --workspace contract && npm run compact:backing-tier --workspace contract && npm run compact:identity-check --workspace contract",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "build": "npm run build --workspaces --if-present",
