@@ -6,7 +6,7 @@
 
 import { isContractCompiled } from "./contract.js";
 import type { ApiDegraded, ApiResult } from "./types.js";
-import type { BackingProofPort, IdentityProofPort, Tier } from "./proofPort.js";
+import type { BackingProofPort, IdentityProofPort, JubjubPoint, Tier } from "./proofPort.js";
 
 // The subset of pino's Logger this file needs. Kept local rather than
 // importing pino's type so a browser caller (web/) never has to bundle
@@ -32,8 +32,8 @@ export function createRealBackingPort(logger: PortLogger = noopLogger): BackingP
 
 export function createRealIdentityPort(logger: PortLogger = noopLogger): IdentityProofPort {
   return {
-    async checkIdentity(requestedLimit: bigint): Promise<ApiResult<boolean>> {
-      logger.info({ requestedLimit: requestedLimit.toString() }, "real identity port called before the identity circuit is wired");
+    async checkIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
+      logger.info({ issuerKey: issuerKey.compressed, expectedTaxIdHash }, "real identity port called before the identity circuit is wired");
       return { status: "degraded", degraded: { step: "checkIdentity", reason: "contract_not_compiled" } };
     },
   };
