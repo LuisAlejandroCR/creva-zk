@@ -1,0 +1,12 @@
+# api/proof-server-local.yml
+# Proof server pinned to the fixed host port 6300, for pointing a local dev
+# client at a manually-started server instead of testkit's random port.
+# Ported from midnightntwrk/example-bboard (bboard-cli/proof-server-local.yml,
+# Apache-2.0).
+services:
+  proof-server:
+    image: midnightntwrk/proof-server:8.0.3
+    command: ['midnight-proof-server', '-v']
+    container_name: "proof-server-local"
+    ports:
+      - '6300:6300'

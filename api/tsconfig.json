@@ -1,0 +1,14 @@
+{
+  // api/tsconfig.json
+  // Typechecks everything under src/ and test/. The Midnight providers this
+  // workspace wires (deploy, indexer, proof server) are real network/process
+  // dependents that npx tsc --noEmit cannot exercise — that's covered by
+  // `npm run demo` on a machine with the compact toolchain and Docker.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

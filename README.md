@@ -128,6 +128,10 @@ install scripts de npm 11 con `npm install-scripts approve <pkg>`.
 npm install && npm run verify
 ```
 
+Una vez compilado el circuito, `npm run demo` despliega `backing.compact` en la red
+local `undeployed`, llama a `proveBacking` dos veces con colateral sintético, e
+imprime la latencia de cada prueba en milisegundos.
+
 `verify` compila el circuito **antes** de typechequear: el compilador genera las APIs de TypeScript
 contra las que compila el resto.
 

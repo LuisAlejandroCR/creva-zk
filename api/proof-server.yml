@@ -1,0 +1,11 @@
+# api/proof-server.yml
+# Standalone proof-server compose file, for when only the proof server (not
+# the full local network) needs restarting. Ported from
+# midnightntwrk/example-bboard (bboard-cli/proof-server.yml, Apache-2.0).
+services:
+  proof-server:
+    image: midnightntwrk/proof-server:8.0.3
+    command: ['midnight-proof-server', '-v']
+    container_name: "proof-server_$TESTCONTAINERS_UID"
+    ports:
+      - '0:6300'
