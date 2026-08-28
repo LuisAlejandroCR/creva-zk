@@ -2,7 +2,52 @@
 
 **Midnight Hackathon: August 2026** — Major League Hacking.
 
-[Español](#español) | [English](#english)
+[English](#english) | [Español](#español) 
+
+---
+
+## English
+
+An entrepreneur applies for a collateralized card and sees what she qualifies for **without handing
+anyone her ID or her balance**.
+
+Two zero-knowledge proofs, one primitive: verify a signed attestation inside the circuit, evaluate a
+public predicate, and disclose **only the outcome**.
+
+| Proof | Moment | Predicate |
+|---|---|---|
+| **Backing** | seeing what she qualifies for | collateral ≥ requested limit → tier |
+| **Identity** | applying for the card | verified ∧ of age ∧ tax ID matches |
+
+### Prior work declaration
+
+Submitted to the **Integrate Midnight** track, where prior work is allowed when declared.
+
+- **What existed before:** Creva, a financial platform for women entrepreneurs in Mexico. This
+  repository contains **none of its code**; it consumes Creva as an external system through its
+  public API, behind a single adapter.
+- **What was written during the event:** everything in this repository — the Compact circuit, the
+  witnesses, the Midnight client, the interface, and the anchoring port.
+- **Scaffold:** the project structure starts from
+  [`midnightntwrk/example-bboard`](https://github.com/midnightntwrk/example-bboard) (Apache-2.0),
+  Midnight's official example.
+
+### Running it
+
+Requires **Node 24.11.1+**, Docker, and the Compact toolchain pinned at `0.31.1`. Linux or WSL only —
+Compact ships no Windows binary.
+
+```bash
+npm install && npm run verify
+```
+
+### What it does **not** do
+
+- **Not** a cross-chain bridge. A commitment is anchored; nothing moves between chains.
+- **Not** a native app. It is an installable PWA.
+- Runs on **testnet**, never mainnet.
+- Weekend prototype. The circuit has **no** cryptographic audit.
+- Every value on screen is **synthetic**. None belongs to a real person.
 
 ---
 
@@ -54,51 +99,6 @@ contra las que compila el resto.
 - Corre en **testnet**, nunca en mainnet.
 - El circuito es un prototipo de fin de semana y **no** tiene auditoría criptográfica.
 - Todos los datos que se ven en pantalla son **sintéticos**. Ninguno pertenece a una persona real.
-
----
-
-## English
-
-An entrepreneur applies for a collateralized card and sees what she qualifies for **without handing
-anyone her ID or her balance**.
-
-Two zero-knowledge proofs, one primitive: verify a signed attestation inside the circuit, evaluate a
-public predicate, and disclose **only the outcome**.
-
-| Proof | Moment | Predicate |
-|---|---|---|
-| **Backing** | seeing what she qualifies for | collateral ≥ requested limit → tier |
-| **Identity** | applying for the card | verified ∧ of age ∧ tax ID matches |
-
-### Prior work declaration
-
-Submitted to the **Integrate Midnight** track, where prior work is allowed when declared.
-
-- **What existed before:** Creva, a financial platform for women entrepreneurs in Mexico. This
-  repository contains **none of its code**; it consumes Creva as an external system through its
-  public API, behind a single adapter.
-- **What was written during the event:** everything in this repository — the Compact circuit, the
-  witnesses, the Midnight client, the interface, and the anchoring port.
-- **Scaffold:** the project structure starts from
-  [`midnightntwrk/example-bboard`](https://github.com/midnightntwrk/example-bboard) (Apache-2.0),
-  Midnight's official example.
-
-### Running it
-
-Requires **Node 24.11.1+**, Docker, and the Compact toolchain pinned at `0.31.1`. Linux or WSL only —
-Compact ships no Windows binary.
-
-```bash
-npm install && npm run verify
-```
-
-### What it does **not** do
-
-- **Not** a cross-chain bridge. A commitment is anchored; nothing moves between chains.
-- **Not** a native app. It is an installable PWA.
-- Runs on **testnet**, never mainnet.
-- Weekend prototype. The circuit has **no** cryptographic audit.
-- Every value on screen is **synthetic**. None belongs to a real person.
 
 ---
 
