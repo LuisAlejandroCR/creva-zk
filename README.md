@@ -41,6 +41,11 @@ Compact ships no Windows binary.
 npm install && npm run verify
 ```
 
+Once the circuit is compiled, `npm run demo` deploys `backing.compact` on the local
+`undeployed` network, calls `proveBacking` twice with synthetic collateral, and prints
+proof latency in milliseconds for each call — the number that decides whether the demo
+video is filmable in two minutes.
+
 ### What it does **not** do
 
 - **Not** a cross-chain bridge. A commitment is anchored; nothing moves between chains.
@@ -88,6 +93,10 @@ install scripts de npm 11 con `npm install-scripts approve <pkg>`.
 ```bash
 npm install && npm run verify
 ```
+
+Una vez compilado el circuito, `npm run demo` despliega `backing.compact` en la red
+local `undeployed`, llama a `proveBacking` dos veces con colateral sintético, e
+imprime la latencia de cada prueba en milisegundos.
 
 `verify` compila el circuito **antes** de typechequear: el compilador genera las APIs de TypeScript
 contra las que compila el resto.
