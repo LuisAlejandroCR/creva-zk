@@ -1,19 +1,28 @@
 /* style.css
-   Shell styling for the PWA placeholder screen: dark theme tokens, the
-   centered card layout, and the install-status banner states. */
+   Styling for the app shell and the four-screen journey: dark theme tokens,
+   proof-state panel, the before/after split, and the 44px control floor. */
 
 :root {
   color-scheme: dark;
   --bg: #0f172a;
   --surface: #1e293b;
+  --surface-alt: #27364a;
   --fg: #e2e8f0;
   --muted: #94a3b8;
   --accent: #2dd4bf;
+  --accent-ink: #06251f;
+  --warn: #f87171;
+  --warn-ink: #3b0a0a;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -22,31 +31,184 @@ body {
   background: var(--bg);
   color: var(--fg);
   display: flex;
-  align-items: center;
   justify-content: center;
 }
 
 #app {
-  width: min(420px, 100%);
-  padding: 2rem 1.5rem;
-  text-align: center;
+  width: min(480px, 100%);
+  min-width: 0;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
 }
 
 .mark {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 1.5rem;
-  border-radius: 16px;
+  border-radius: 8px;
+  flex: none;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.progress {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
+  margin: 0 0 0.25rem;
+}
+
+.intro {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.demo-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--surface-alt);
+  font-size: 0.85rem;
+}
+
+.demo-control select {
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--muted);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 1rem;
+  padding: 0 0.75rem;
+  width: 100%;
+}
+
+.status-panel {
+  padding: 1rem;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.status-heading {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+}
+
+.status-body {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.badge-synthetic {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  background: var(--surface-alt);
+  color: var(--muted);
+  cursor: progress;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.compare-col {
+  border-radius: 12px;
+  padding: 0.85rem 0.65rem;
+  min-width: 0;
+}
+
+.compare-col h2 {
+  font-size: 0.9rem;
   margin: 0 0 0.5rem;
 }
 
-p {
+.compare-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.compare-col li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.compare-icon {
+  flex: none;
+}
+
+.compare-col--exposed {
+  background: var(--warn-ink);
+  border: 1px solid var(--warn);
+}
+
+.compare-col--sealed {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+}
+
+.tier-badge {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.disclaimer {
+  margin: 0;
   color: var(--muted);
   line-height: 1.5;
+  font-size: 0.9rem;
 }
 
 .status {
@@ -54,11 +216,18 @@ p {
   padding: 0.75rem 1rem;
   border-radius: 10px;
   background: var(--surface);
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: var(--muted);
+  text-align: center;
 }
 
 .status[data-state='ready']::before {
   content: '● ';
   color: var(--accent);
+}
+
+@media (max-width: 340px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
 }
