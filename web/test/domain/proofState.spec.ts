@@ -48,11 +48,11 @@ describe('proof state transitions', () => {
 
 describe('formatElapsed', () => {
   it('floors partial seconds', () => {
-    expect(formatElapsed(1000, 1999)).toBe('0s elapsed');
-    expect(formatElapsed(1000, 12400)).toBe('11s elapsed');
+    expect(formatElapsed(1000, 1999)).toBe('0 s transcurridos');
+    expect(formatElapsed(1000, 12400)).toBe('11 s transcurridos');
   });
 
   it('never returns a negative elapsed time', () => {
-    expect(formatElapsed(5000, 4000)).toBe('0s elapsed');
+    expect(formatElapsed(5000, 4000)).toBe('0 s transcurridos');
   });
 });

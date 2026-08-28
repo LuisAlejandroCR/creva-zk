@@ -347,6 +347,65 @@ h1 {
 
 .compare-icon {
   flex: none;
+  position: relative;
+  font-size: 1.1rem;
+}
+
+/* Left: the item is legible and an arrow carries it across to the
+   counterparty — nothing here needs to be read to understand it leaves. */
+.compare-arrow {
+  margin-left: auto;
+  color: var(--cr-danger-text);
+  font-weight: 700;
+}
+
+.compare-counterparty {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--cr-danger-border);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--cr-danger-text);
+}
+
+/* Right: the same icon, struck through — a diagonal bar across it reads as
+   "blocked" without needing the label at all. */
+.compare-item--crossed {
+  opacity: 0.6;
+}
+
+.compare-item--crossed .compare-icon::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 2px;
+  background: var(--cr-success-text);
+  transform: rotate(-35deg);
+}
+
+.compare-item--crossed {
+  text-decoration: line-through;
+  text-decoration-color: var(--cr-success-border);
+}
+
+/* Right: the one thing that actually crosses — a single chip, not a list. */
+.compare-outcome-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  background: var(--cr-gradient);
+  color: var(--cr-on-brand);
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 /* Handing over too much reads as risk: the danger family. */

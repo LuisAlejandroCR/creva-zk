@@ -14,7 +14,7 @@ if (app) {
       <span>Creva ZK</span>
     </header>
     <main class="screen" id="screen-root"></main>
-    <div class="status" id="pwa-status">checking install support&hellip;</div>
+    <div class="status" id="pwa-status">comprobando compatibilidad de instalación&hellip;</div>
   `;
 
   const screenRoot = document.querySelector<HTMLElement>('#screen-root');

@@ -1,8 +1,14 @@
 // compareContent.ts
-// Static view model for the before/after split screen. Row counts and icon
-// classes are the point: the asymmetry must read even with text hidden.
+// View model for the before/after split screen. The same three items appear
+// on both sides — crossed out and sealed behind one outcome chip on the
+// right — so the meaning survives with every label hidden.
 
-export interface CompareRow {
+export interface CompareItem {
+  readonly icon: string;
+  readonly label: string;
+}
+
+export interface OutcomeChip {
   readonly icon: string;
   readonly label: string;
 }
@@ -10,29 +16,27 @@ export interface CompareRow {
 export interface CompareContent {
   readonly h1: string;
   readonly leftTitle: string;
-  readonly leftRows: readonly CompareRow[];
+  readonly items: readonly CompareItem[];
+  readonly counterpartyIcon: string;
+  readonly counterpartyLabel: string;
   readonly rightTitle: string;
-  readonly rightRows: readonly CompareRow[];
+  readonly outcomeChip: OutcomeChip;
   readonly ctaLabel: string;
 }
 
 export function buildCompareContent(): CompareContent {
   return {
-    h1: 'What you hand over',
-    leftTitle: 'A normal application',
-    leftRows: [
-      { icon: '📄', label: 'ID scan' },
-      { icon: '🧾', label: 'Pay stubs' },
-      { icon: '🏦', label: 'Bank statements' },
-      { icon: '💰', label: 'Full account balance' },
-      { icon: '🏠', label: 'Home address' },
-      { icon: '📞', label: 'Phone number' },
+    h1: 'Lo que entregas',
+    leftTitle: 'Solicitud tradicional',
+    items: [
+      { icon: '🪪', label: 'Identificación oficial' },
+      { icon: '🤳', label: 'Selfie de verificación' },
+      { icon: '💰', label: 'Saldo de tu cuenta' },
     ],
+    counterpartyIcon: '🏦',
+    counterpartyLabel: 'El banco',
     rightTitle: 'Creva ZK',
-    rightRows: [
-      { icon: '🔒', label: 'A verified check' },
-      { icon: '🔒', label: 'A proven tier' },
-    ],
-    ctaLabel: 'Continue to offers',
+    outcomeChip: { icon: '✓', label: 'Resultado verificado' },
+    ctaLabel: 'Continuar a las ofertas',
   };
 }

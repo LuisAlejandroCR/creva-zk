@@ -8,7 +8,7 @@ import { DEMO_SCENARIOS, DEMO_SCENARIO_LABELS } from './domain/demoOutcome';
 import type { OffersContent } from './screens/offersContent';
 import type { ProofScreenContent } from './screens/proofScreen';
 
-const SYNTHETIC_BADGE = '<span class="badge-synthetic">Synthetic</span>';
+const SYNTHETIC_BADGE = '<span class="badge-synthetic">Sintético</span>';
 
 function scenarioOptions(selected: DemoScenario): string {
   return DEMO_SCENARIOS.map(
@@ -27,7 +27,7 @@ export function renderProofScreen(
     <h1>${content.h1}</h1>
     <p class="intro">${content.intro}</p>
     <label class="demo-control">
-      <span>Demo outcome (synthetic — for review only) ${SYNTHETIC_BADGE}</span>
+      <span>Resultado de demostración (sintético — solo para revisión) ${SYNTHETIC_BADGE}</span>
       <select class="cr-select" data-role="scenario-select">${scenarioOptions(scenario)}</select>
     </label>
     <div class="status-panel" data-phase="${content.phase}">
@@ -40,8 +40,21 @@ export function renderProofScreen(
 }
 
 export function renderCompareScreen(content: CompareContent, stepLabel: string): string {
-  const rows = (items: CompareContent['leftRows']) =>
-    items.map((row) => `<li><span class="compare-icon" aria-hidden="true">${row.icon}</span>${row.label}</li>`).join('');
+  // Left: the item, legible, crossing over to the counterparty (an arrow per
+  // row). Right: the same item struck through — nothing here crosses.
+  const exposedRows = content.items
+    .map(
+      (item) =>
+        `<li><span class="compare-icon" aria-hidden="true">${item.icon}</span>${item.label}<span class="compare-arrow" aria-hidden="true">→</span></li>`,
+    )
+    .join('');
+
+  const sealedRows = content.items
+    .map(
+      (item) =>
+        `<li class="compare-item--crossed"><span class="compare-icon" aria-hidden="true">${item.icon}</span>${item.label}</li>`,
+    )
+    .join('');
 
   return `
     <p class="progress">${stepLabel}</p>
@@ -49,11 +62,13 @@ export function renderCompareScreen(content: CompareContent, stepLabel: string):
     <div class="compare-grid">
       <section class="compare-col compare-col--exposed">
         <h2>${content.leftTitle}</h2>
-        <ul>${rows(content.leftRows)}</ul>
+        <ul>${exposedRows}</ul>
+        <p class="compare-counterparty"><span aria-hidden="true">${content.counterpartyIcon}</span>${content.counterpartyLabel}</p>
       </section>
       <section class="compare-col compare-col--sealed">
         <h2>${content.rightTitle}</h2>
-        <ul>${rows(content.rightRows)}</ul>
+        <ul>${sealedRows}</ul>
+        <p class="compare-outcome-chip"><span aria-hidden="true">${content.outcomeChip.icon}</span>${content.outcomeChip.label}</p>
       </section>
     </div>
     <button class="btn-primary" data-role="cta">${content.ctaLabel}</button>
@@ -64,7 +79,7 @@ export function renderOffersScreen(content: OffersContent, stepLabel: string): s
   return `
     <p class="progress">${stepLabel}</p>
     <h1>${content.h1}</h1>
-    <p class="tier-badge">${content.tierLabel} <span class="badge-success">Proven tier</span> ${SYNTHETIC_BADGE}</p>
+    <p class="tier-badge">${content.tierLabel} <span class="badge-success">Nivel comprobado</span> ${SYNTHETIC_BADGE}</p>
     <p class="disclaimer">${content.disclaimer}</p>
     <button class="btn-primary" data-role="cta">${content.ctaLabel}</button>
   `;

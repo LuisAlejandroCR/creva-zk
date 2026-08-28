@@ -24,7 +24,7 @@ describe('buildProofScreenContent', () => {
   it('generating: disables the action and reports elapsed time', () => {
     const content = buildProofScreenContent({ ...base, phase: 'generating', now: 12_400, startedAt: 1_000 });
     expect(content.ctaDisabled).toBe(true);
-    expect(content.statusHeading).toContain('11s elapsed');
+    expect(content.statusHeading).toContain('11 s transcurridos');
     expect(content.synthetic).toBe(false);
   });
 
@@ -39,7 +39,7 @@ describe('buildProofScreenContent', () => {
     const content = buildProofScreenContent({ ...base, phase: 'failed', now: 0 });
     expect(content.ctaAction).toBe('retry');
     expect(content.ctaDisabled).toBe(false);
-    expect(content.statusHeading.toLowerCase()).toContain('failed');
+    expect(content.statusHeading.toLowerCase()).toContain('fallida');
   });
 
   it('degraded: offers continue anyway and marks the value synthetic', () => {

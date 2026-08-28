@@ -36,5 +36,5 @@ export const GENERATING_DURATION_MS = 32_000;
 
 export function formatElapsed(startedAt: number, now: number): string {
   const elapsedSeconds = Math.max(0, Math.floor((now - startedAt) / 1000));
-  return `${elapsedSeconds}s elapsed`;
+  return `${elapsedSeconds} s transcurridos`;
 }

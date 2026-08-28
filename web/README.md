@@ -16,20 +16,24 @@ states.
 
 ## Acceptance criteria
 
-1. **Journey.** "Apply for the card" (identity) → "see what you qualify for"
+1. **Journey.** "Solicita la tarjeta" (identity) → "Descubre a qué calificas"
    (backing) → a before/after comparison → an offers screen. The identity
    and backing screens each expose one primary action, whose label changes
-   with proof phase (Start → Retry / Continue / Continue anyway).
+   with proof phase (Iniciar → Reintentar / Continuar / Continuar de todas
+   formas). This README stays in English as project documentation; the
+   screens themselves are Spanish-only per criterion 8.
 2. **Four proof states.** Each proof (identity, backing) renders one of:
    `generating`, `ready`, `verification failed`, `degraded`. `generating` is
    its own screen state with an elapsed-time readout, not a spinner — real
    proofs here take tens of seconds, and the UI says so.
-3. **Split before/after screen.** Left: what a normal card application hands
-   over (ID scan, pay stubs, full balance, address, phone — many rows, an
-   "exposed" visual language). Right: what this flow hands over (a verified
-   check, a proven tier — two rows, a "sealed" visual language). The
-   asymmetry in row count, iconography, and color must read correctly with
-   the text hidden.
+3. **Split before/after screen.** The same three items — document, selfie,
+   balance — appear on both sides. Left: legible, each crossing over to the
+   counterparty (an arrow per row, the counterparty named at the bottom).
+   Right: the same three struck through, plus a single chip carrying the
+   outcome — nothing else crosses. Must read correctly with every label
+   hidden: blur the text and the icon shapes, the strikethrough, and the one
+   chip vs. many rows still tell the story to a judge who doesn't read
+   Spanish, without translating anything.
 4. **Offers screen.** Shows the proven tier and states plainly that no
    lending catalogue is connected — no rate, lender, or number is invented
    or shown.
@@ -47,6 +51,11 @@ states.
    `--cr-success-*`, `degraded` with `--cr-info-*`. Titles use `--font-playfair`
    (Montserrat), body/UI use `--font-inter` (Manrope), loaded from Google
    Fonts since this app has no next/font pipeline.
+8. **Language: Spanish only, decided.** Creva ships for Mexican
+   entrepreneurs; this is a Creva feature, not a standalone demo. Every
+   screen, label, button, and status message is in Spanish — no English, and
+   the two are never mixed on one screen. `test/i18n.spec.ts` renders every
+   screen in every reachable state and fails on a stray English word.
 
 ## Out of scope
 

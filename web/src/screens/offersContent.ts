@@ -14,10 +14,10 @@ export interface OffersContent {
 
 export function buildOffersContent(tier: Tier): OffersContent {
   return {
-    h1: 'What you may qualify for',
+    h1: 'Lo que podrías calificar',
     tierLabel: TIER_LABELS[tier],
     disclaimer:
-      'No lending catalogue is connected to this prototype. No rate, lender, or number is shown — only the tier the backing proof produced.',
-    ctaLabel: 'Start over',
+      'Este prototipo no está conectado a ningún catálogo de crédito. No se muestra tasa, acreedor ni cifra alguna — solo el nivel que produjo la prueba de respaldo.',
+    ctaLabel: 'Comenzar de nuevo',
   };
 }

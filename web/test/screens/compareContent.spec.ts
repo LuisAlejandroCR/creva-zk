@@ -1,21 +1,30 @@
 // compareContent.spec.ts
 // Unit test for the before/after split content in
-// src/screens/compareContent.ts: the asymmetry between columns is the point.
+// src/screens/compareContent.ts: the same three items appear on both sides,
+// with exactly one outcome chip standing in for the counterparty on the
+// right — the asymmetry a text-hidden reader has to pick up on.
 
 import { describe, expect, it } from 'vitest';
 import { buildCompareContent } from '../../src/screens/compareContent';
 
 describe('buildCompareContent', () => {
-  it('hands over far more on the left than the right', () => {
+  it('shows exactly three shared items — document, selfie, balance', () => {
     const content = buildCompareContent();
-    expect(content.leftRows.length).toBeGreaterThan(content.rightRows.length);
-    expect(content.rightRows.length).toBeLessThanOrEqual(2);
+    expect(content.items).toHaveLength(3);
   });
 
-  it('uses a distinct icon vocabulary per column', () => {
+  it('carries exactly one outcome chip, distinct from the three items', () => {
     const content = buildCompareContent();
-    const leftIcons = new Set(content.leftRows.map((row) => row.icon));
-    const rightIcons = new Set(content.rightRows.map((row) => row.icon));
-    for (const icon of rightIcons) expect(leftIcons.has(icon)).toBe(false);
+    expect(content.outcomeChip.icon).toBeTruthy();
+    expect(content.outcomeChip.label).toBeTruthy();
+    const itemIcons = new Set(content.items.map((item) => item.icon));
+    expect(itemIcons.has(content.outcomeChip.icon)).toBe(false);
+  });
+
+  it('names a counterparty distinct from the three items and the chip', () => {
+    const content = buildCompareContent();
+    const itemIcons = new Set(content.items.map((item) => item.icon));
+    expect(itemIcons.has(content.counterpartyIcon)).toBe(false);
+    expect(content.counterpartyIcon).not.toBe(content.outcomeChip.icon);
   });
 });

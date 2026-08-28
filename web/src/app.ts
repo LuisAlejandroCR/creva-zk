@@ -25,10 +25,10 @@ interface AppState {
 }
 
 const STEP_LABELS: Readonly<Record<Step, string>> = {
-  identity: 'Step 1 of 4 — Identity',
-  backing: 'Step 2 of 4 — Backing',
-  compare: 'Step 3 of 4 — Compare',
-  offers: 'Step 4 of 4 — Offers',
+  identity: 'Paso 1 de 4 — Identidad',
+  backing: 'Paso 2 de 4 — Respaldo',
+  compare: 'Paso 3 de 4 — Comparación',
+  offers: 'Paso 4 de 4 — Ofertas',
 };
 
 function initialState(): AppState {

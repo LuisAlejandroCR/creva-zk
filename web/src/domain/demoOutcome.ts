@@ -10,9 +10,9 @@ export type DemoScenario = 'ready' | 'failed' | 'degraded';
 export const DEMO_SCENARIOS: readonly DemoScenario[] = ['ready', 'failed', 'degraded'];
 
 export const DEMO_SCENARIO_LABELS: Readonly<Record<DemoScenario, string>> = {
-  ready: 'Ready',
-  failed: 'Verification failed',
-  degraded: 'Degraded',
+  ready: 'Listo',
+  failed: 'Verificación fallida',
+  degraded: 'Degradado',
 };
 
 // identity proof outcome: verified is a plain boolean, never a document or

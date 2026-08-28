@@ -32,10 +32,10 @@ export interface BuildProofScreenOptions<T> {
 }
 
 const CTA_LABELS: Readonly<Record<CtaAction, string>> = {
-  start: 'Start proof',
-  retry: 'Retry',
-  continue: 'Continue',
-  'continue-anyway': 'Continue anyway',
+  start: 'Iniciar prueba',
+  retry: 'Reintentar',
+  continue: 'Continuar',
+  'continue-anyway': 'Continuar de todas formas',
 };
 
 export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): ProofScreenContent {
@@ -46,8 +46,8 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
       h1: opts.h1,
       intro: opts.intro,
       phase,
-      statusHeading: 'Not started',
-      statusBody: 'Press start to generate this proof. Nothing is sent yet.',
+      statusHeading: 'Sin iniciar',
+      statusBody: 'Presiona iniciar para generar esta prueba. Todavía no se envía nada.',
       ctaLabel: CTA_LABELS.start,
       ctaAction: 'start',
       ctaDisabled: false,
@@ -56,15 +56,15 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
   }
 
   if (phase === 'generating') {
-    const elapsed = startedAt === undefined ? '0s elapsed' : formatElapsed(startedAt, now);
+    const elapsed = startedAt === undefined ? '0 s transcurridos' : formatElapsed(startedAt, now);
     return {
       h1: opts.h1,
       intro: opts.intro,
       phase,
-      statusHeading: `Generating your proof… ${elapsed}`,
+      statusHeading: `Generando tu prueba… ${elapsed}`,
       statusBody:
-        'This runs entirely on this device and takes tens of seconds — verifying a signed attestation and evaluating a predicate, without revealing the underlying data.',
-      ctaLabel: 'Generating…',
+        'Esto corre por completo en este dispositivo y toma decenas de segundos — se verifica una atestación firmada y se evalúa un predicado, sin revelar los datos subyacentes.',
+      ctaLabel: 'Generando…',
       ctaAction: 'start',
       ctaDisabled: true,
       synthetic: false,
@@ -76,8 +76,8 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
       h1: opts.h1,
       intro: opts.intro,
       phase,
-      statusHeading: 'Verification failed',
-      statusBody: 'The proof did not verify. No partial data was disclosed. You can retry.',
+      statusHeading: 'Verificación fallida',
+      statusBody: 'La prueba no se verificó. No se reveló ningún dato parcial. Puedes reintentar.',
       ctaLabel: CTA_LABELS.retry,
       ctaAction: 'retry',
       ctaDisabled: false,
@@ -95,7 +95,7 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
       h1: opts.h1,
       intro: opts.intro,
       phase,
-      statusHeading: 'Degraded — verified via fallback path',
+      statusHeading: 'Degradado — verificado por una vía alterna',
       statusBody: opts.degradedBody(value),
       ctaLabel: CTA_LABELS['continue-anyway'],
       ctaAction: 'continue-anyway',

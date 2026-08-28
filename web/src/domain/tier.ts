@@ -10,9 +10,11 @@ export function isTier(value: unknown): value is Tier {
   return typeof value === 'string' && KNOWN_TIERS.has(value);
 }
 
+// Labels are Spanish-only: Creva ships for Mexican entrepreneurs, and the
+// interface never mixes languages.
 export const TIER_LABELS: Readonly<Record<Tier, string>> = {
-  none: 'No tier',
-  bronze: 'Bronze',
-  silver: 'Silver',
-  gold: 'Gold',
+  none: 'Sin nivel',
+  bronze: 'Bronce',
+  silver: 'Plata',
+  gold: 'Oro',
 };

@@ -8,16 +8,16 @@ import { buildProofScreenContent, type ProofScreenContent } from './proofScreen'
 
 export function buildIdentityContent(proof: ProofState<boolean>, now: number): ProofScreenContent {
   return buildProofScreenContent<boolean>({
-    h1: 'Apply for the card',
+    h1: 'Solicita la tarjeta',
     intro:
-      'One proof: a signed identity attestation is verified, and a predicate — verified, of age, tax ID matches — is evaluated. Only the outcome leaves this device.',
+      'Una prueba: se verifica una atestación de identidad firmada y se evalúa un predicado — verificada, mayor de edad, RFC coincide. Solo el resultado sale de este dispositivo.',
     phase: proof.phase,
     now,
     startedAt: proof.startedAt,
     value: proof.value,
-    readyHeading: () => '✓ Identity verified',
-    readyBody: () => 'The predicate holds. No document, photo, or tax ID was disclosed to reach this result.',
+    readyHeading: () => '✓ Identidad verificada',
+    readyBody: () => 'El predicado se cumple. No se reveló ningún documento, foto ni RFC para llegar a este resultado.',
     degradedBody: () =>
-      'The predicate holds via a fallback verification path. Treat this as lower-confidence than a full verification.',
+      'El predicado se cumple mediante una vía de verificación alterna. Trátalo como de menor confianza que una verificación completa.',
   });
 }
