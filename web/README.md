@@ -50,7 +50,11 @@ states.
    `--cr-warning-*`, `verification failed` with `--cr-danger-*`, `ready` with
    `--cr-success-*`, `degraded` with `--cr-info-*`. Titles use `--font-playfair`
    (Montserrat), body/UI use `--font-inter` (Manrope), loaded from Google
-   Fonts since this app has no next/font pipeline.
+   Fonts since this app has no next/font pipeline. The app icons carry
+   `--cr-card-gradient` and no teal — Creva's palette has none. They are
+   drawn from token values by `scripts/generate-icons.py`, never copied out
+   of creva_finance: tokens are inherited by decision, image assets are not.
+   `manifest.webmanifest` carries `#17130F` (`--cr-bg` on the ink palette).
 8. **Language: Spanish only, decided.** Creva ships for Mexican
    entrepreneurs; this is a Creva feature, not a standalone demo. Every
    screen, label, button, and status message is in Spanish — no English, and
