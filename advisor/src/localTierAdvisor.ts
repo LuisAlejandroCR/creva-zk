@@ -1,3 +1,8 @@
+// advisor/src/localTierAdvisor.ts
+// The AdvisorPort implementation: validates the tier, delegates to a
+// predictor, and turns every failure into a typed degraded result. Exists so
+// a caller never sees a thrown error or a fabricated recommendation.
+
 import type { AdvisorInput, AdvisorPort, AdvisorResult, Recommendation } from "./types.js";
 import { isTier } from "./types.js";
 import { createLocalModelPredictor, UnsafeModelEndpointError } from "./localModelPredictor.js";

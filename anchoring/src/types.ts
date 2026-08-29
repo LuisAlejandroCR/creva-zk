@@ -1,3 +1,4 @@
+// anchoring/src/types.ts
 // Domain types for the anchoring port. No chain SDK may be imported here —
 // this module stays chain-agnostic; adapters/ hold the chain-specific code.
 

@@ -1,3 +1,8 @@
+// anchoring/src/adapters/cardano.ts
+// Anchors a commitment as Cardano transaction metadata behind the shared
+// AnchoringPort. Exists to keep chain-specific submission — and the raw
+// provider errors it can raise — out of the domain layer and out of results.
+
 import type { AnchorFailureReason, AnchorReceipt, AnchorResult, AnchoringPort, Commitment } from "../types.js";
 
 // Stub of what a real Cardano tx-submission client provides. No chain SDK

@@ -1,3 +1,8 @@
+// anchoring/test/commitment.test.ts
+// Checks that the commitment really hides the outcome: the same outcome under
+// a different blinding factor yields a different digest, and opening fails for
+// any wrong tier, timestamp, or blinding factor.
+
 import { describe, expect, it } from "vitest";
 import { commitBackingOutcome, verifyBackingCommitment } from "../src/commitment.js";
 

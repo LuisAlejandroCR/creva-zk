@@ -1,3 +1,4 @@
+// advisor/src/types.ts
 // Domain types for the AI advisor (Integrate Midnight AI track).
 //
 // ============================================================================

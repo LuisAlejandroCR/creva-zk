@@ -1,3 +1,8 @@
+// advisor/test/localTierAdvisor.test.ts
+// Guards the privacy boundary and the degrade-never-throw contract: the
+// predictor is shown to receive the tier and nothing else, and each failure
+// path is asserted to return a typed degraded result.
+
 import { describe, expect, it, vi } from "vitest";
 import { LocalTierAdvisor, type LocalTierPredictor } from "../src/localTierAdvisor.js";
 import type { AdvisorInput, Tier } from "../src/types.js";

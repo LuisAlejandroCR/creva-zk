@@ -1,3 +1,8 @@
+// anchoring/test/adapters.test.ts
+// Holds both chain adapters to the same contract: an anchored receipt on
+// success, a fixed degraded reason otherwise, and the raw provider error going
+// only to the logger — never into the returned result.
+
 import { describe, expect, it, vi } from "vitest";
 import { commitBackingOutcome } from "../src/commitment.js";
 import { CardanoAnchorAdapter, type CardanoTxSubmitter } from "../src/adapters/cardano.js";

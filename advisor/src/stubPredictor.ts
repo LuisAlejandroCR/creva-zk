@@ -1,3 +1,8 @@
+// advisor/src/stubPredictor.ts
+// Deterministic guidance table, used as the advisor's fallback when the local
+// model is unreachable and as a fixed reference in tests. Exists so an outage
+// degrades into truthful text rather than an invented offer.
+
 import type { Recommendation, Tier } from "./types.js";
 import type { LocalTierPredictor } from "./localTierAdvisor.js";
 

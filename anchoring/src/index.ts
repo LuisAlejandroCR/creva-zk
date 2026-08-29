@@ -1,3 +1,8 @@
+// anchoring/src/index.ts
+// Public surface of the anchoring workspace: the chain-agnostic types, the
+// commitment functions, and the two chain adapters. Consumers import from here
+// so no caller reaches into adapters/ directly.
+
 export type {
   AnchorDegraded,
   AnchorFailureReason,

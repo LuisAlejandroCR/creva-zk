@@ -1,3 +1,8 @@
+// anchoring/src/commitment.ts
+// Builds and opens the hiding commitment that is the only thing this system
+// ever puts on an external chain. Exists to keep the blinding factor and the
+// domain separation in one place, where the hiding property can be audited.
+
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { BackingOutcome, Commitment } from "./types.js";
 

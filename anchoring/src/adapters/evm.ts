@@ -1,3 +1,8 @@
+// anchoring/src/adapters/evm.ts
+// Anchors a commitment as the calldata of a zero-value EVM transaction behind
+// the shared AnchoringPort. Exists to keep chain-specific submission — and the
+// raw provider errors it can raise — out of the domain layer and out of results.
+
 import type { AnchorFailureReason, AnchorReceipt, AnchorResult, AnchoringPort, Commitment } from "../types.js";
 
 // Stub of what a real EVM tx-submission client provides. No chain SDK

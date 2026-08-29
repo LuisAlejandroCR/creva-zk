@@ -1,3 +1,8 @@
+// advisor/src/localModelPredictor.ts
+// Talks to the local inference process over HTTP and validates its answer
+// before trusting it. Exists so the "local, never hosted" rule is enforced in
+// one place: a non-loopback endpoint is refused instead of called.
+
 import type { AdvisorInput, Recommendation } from "./types.js";
 import { isTier } from "./types.js";
 import type { LocalTierPredictor } from "./localTierAdvisor.js";

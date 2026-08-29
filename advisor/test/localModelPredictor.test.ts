@@ -1,3 +1,8 @@
+// advisor/test/localModelPredictor.test.ts
+// Pins the predictor's trust rules: fall back to the stub when the model is
+// unreachable or answers with a shape we cannot trust, but never fall back for
+// a non-loopback baseUrl — a misconfiguration must not look like an outage.
+
 import { describe, expect, it, vi } from "vitest";
 import { createLocalModelPredictor } from "../src/localModelPredictor.js";
 import { LocalTierAdvisor } from "../src/localTierAdvisor.js";
