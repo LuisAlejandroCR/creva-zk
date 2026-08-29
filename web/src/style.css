@@ -510,3 +510,278 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── The wait ────────────────────────────────────────────────────────────
+   The ~24s a proof takes is the only moment the product's promise is
+   visible instead of asserted, so it gets a whole region rather than a
+   spinner: a standing promise, a meter, a seconds readout and the four
+   steps of the work, each one already on screen before its turn comes. */
+.wait {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--cr-warning-border);
+}
+
+.wait-promise {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--cr-text);
+}
+
+.wait-lock {
+  flex: none;
+  line-height: 1.45;
+}
+
+/* A timer, not a loading bar: it advances at the pace of the real run and
+   stops short of full, because the answer has not arrived yet. Its fill is
+   the one thing here that must not be eased — the bar reports elapsed time,
+   and easing it would report the wrong time. */
+.wait-meter {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--cr-inactive);
+  overflow: hidden;
+}
+
+.wait-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--cr-gradient);
+  transition: width var(--cr-dur) linear;
+}
+
+.wait-elapsed {
+  margin: 0.4rem 0 0.9rem;
+  font-family: var(--font-playfair);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--cr-text-muted);
+}
+
+.wait-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  counter-reset: none;
+}
+
+.wait-stage {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* The mark is the state: an empty ring ahead, a live ring now, a check
+   behind. Colour alone never carries it — the glyph changes too. */
+.wait-stage-mark {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 0.15rem;
+  border-radius: 999px;
+  border: 2px solid var(--cr-inactive);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  transition:
+    border-color var(--cr-dur) var(--cr-ease),
+    background-color var(--cr-dur) var(--cr-ease),
+    transform var(--cr-dur) var(--cr-ease);
+}
+
+.wait-stage[data-status='active'] .wait-stage-mark {
+  border-color: var(--cr-crimson);
+  background: var(--cr-danger-bg);
+  transform: scale(1.12);
+}
+
+.wait-stage[data-status='done'] .wait-stage-mark {
+  border-color: var(--cr-success-border);
+  background: var(--cr-success-bg);
+  color: var(--cr-success-text);
+}
+
+.wait-stage[data-status='done'] .wait-stage-mark::after {
+  content: '✓';
+}
+
+.wait-stage-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+/* --cr-text-muted clears AA on the warning tint in both themes; the
+   de-emphasis of a step not yet reached is carried by weight, not by a
+   lighter ink. */
+.wait-stage-label {
+  color: var(--cr-text-muted);
+  transition: color var(--cr-dur) var(--cr-ease);
+}
+
+.wait-stage[data-status='active'] .wait-stage-label {
+  color: var(--cr-text);
+  font-weight: 700;
+}
+
+/* The reassurance line belongs to the step actually running. */
+.wait-stage-detail {
+  display: none;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--cr-text-muted);
+}
+
+.wait-stage[data-status='active'] .wait-stage-detail {
+  display: block;
+  animation: cr-rise var(--cr-dur) var(--cr-ease) both;
+}
+
+/* Only when the run outlasts the measured one. Not an error: a longer proof
+   is still a proof. */
+.wait-overtime {
+  display: none;
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--cr-text-muted);
+}
+
+.wait[data-overtime='true'] .wait-overtime {
+  display: block;
+  animation: cr-rise var(--cr-dur) var(--cr-ease) both;
+}
+
+/* ── The technical disclosure ────────────────────────────────────────────
+   Closed on arrival. The first read has to work without it; the second read
+   is what opens it. The claim inside is never dropped. */
+.tech {
+  border: 1px solid var(--cr-border);
+  border-radius: 14px;
+  background: var(--cr-surface-1);
+  padding: 0 0.9rem;
+}
+
+.tech-summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--cr-text-muted);
+  list-style: none;
+}
+
+.tech-summary::-webkit-details-marker {
+  display: none;
+}
+
+.tech-summary::before {
+  content: '›';
+  display: inline-block;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--cr-text-muted);
+  transition: transform var(--cr-dur-fast) var(--cr-ease);
+}
+
+.tech[open] .tech-summary::before {
+  transform: rotate(90deg);
+}
+
+.tech-summary:focus-visible {
+  outline: 2px solid var(--cr-crimson);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+.tech-body {
+  padding: 0 0 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--cr-text-muted);
+  animation: cr-rise var(--cr-dur) var(--cr-ease) both;
+}
+
+.tech-body code {
+  font-size: 0.95em;
+  padding: 0.05rem 0.3rem;
+  border-radius: 6px;
+  background: var(--cr-surface-2);
+  color: var(--cr-text);
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────────
+   Every animation below marks a state change: a screen arriving, the two
+   halves of the split separating, the tier landing. None is decoration. */
+@keyframes cr-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-enter-left {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-enter-right {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-land {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A screen arriving: its blocks settle in reading order. */
+.screen > * {
+  animation: cr-rise var(--cr-dur) var(--cr-ease) both;
+}
+
+.screen > *:nth-child(2) { animation-delay: 40ms; }
+.screen > *:nth-child(3) { animation-delay: 80ms; }
+.screen > *:nth-child(4) { animation-delay: 120ms; }
+.screen > *:nth-child(n + 5) { animation-delay: 160ms; }
+
+/* The split reveal: the two halves arrive from their own sides, so the
+   comparison is read as two things being pulled apart. */
+.compare-col--exposed {
+  animation: cr-enter-left var(--cr-dur-slow) var(--cr-ease) both;
+}
+
+.compare-col--sealed {
+  animation: cr-enter-right var(--cr-dur-slow) var(--cr-ease) 80ms both;
+}
+
+/* The tier landing: the one number the whole journey produced. */
+.tier-badge {
+  animation: cr-land var(--cr-dur-slow) var(--cr-ease) 60ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

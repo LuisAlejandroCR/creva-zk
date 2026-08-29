@@ -31,9 +31,12 @@ const ENGLISH_TELLS =
   /\b(the|and|your|proof|card|tier|start|continue|retry|ready|failed|degraded|step|offers|identity|backing|synthetic|generating|verified|verification|balance|bank|document|outcome)\b/i;
 
 // class="…", data-role="…" etc. carry English identifiers by design (CSS
-// hooks, not copy) — strip every tag so only visible text is scanned.
+// hooks, not copy) — strip every tag so only visible text is scanned. <code>
+// spans go the same way: inside the technical disclosure they name real
+// artefacts (the identity-check and backing-tier circuits), and an artefact's
+// name is not a translation the interface gets to make.
 function visibleText(html: string): string {
-  return html.replace(/<[^>]*>/g, ' ');
+  return html.replace(/<code>[\s\S]*?<\/code>/g, ' ').replace(/<[^>]*>/g, ' ');
 }
 
 function assertSpanishOnly(html: string, label: string): void {

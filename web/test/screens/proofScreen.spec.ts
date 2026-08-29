@@ -8,6 +8,14 @@ import { buildProofScreenContent } from '../../src/screens/proofScreen';
 const base = {
   h1: 'Test screen',
   intro: 'intro text',
+  startLabel: 'start-label',
+  continueLabel: 'continue-label',
+  idleBody: 'idle-body',
+  stages: [
+    { label: 'stage-one', detail: 'detail-one', startFraction: 0 },
+    { label: 'stage-two', detail: 'detail-two', startFraction: 0.5 },
+  ],
+  tech: { summary: 'Ver el detalle técnico', body: 'tech-body' },
   readyHeading: (v: boolean) => `ready:${v}`,
   readyBody: (v: boolean) => `body:${v}`,
   failedBody: () => 'failed-body',
@@ -18,6 +26,7 @@ describe('buildProofScreenContent', () => {
   it('idle: offers a start action, enabled, not synthetic', () => {
     const content = buildProofScreenContent({ ...base, phase: 'idle', now: 0 });
     expect(content.ctaAction).toBe('start');
+    expect(content.ctaLabel).toBe('start-label');
     expect(content.ctaDisabled).toBe(false);
     expect(content.synthetic).toBe(false);
   });
@@ -25,13 +34,14 @@ describe('buildProofScreenContent', () => {
   it('generating: disables the action and reports elapsed time', () => {
     const content = buildProofScreenContent({ ...base, phase: 'generating', now: 12_400, startedAt: 1_000 });
     expect(content.ctaDisabled).toBe(true);
-    expect(content.statusHeading).toContain('11 s transcurridos');
+    expect(content.wait?.elapsedLabel).toContain('11 s');
     expect(content.synthetic).toBe(false);
   });
 
   it('ready: offers continue and shows the settled value, marked synthetic', () => {
     const content = buildProofScreenContent({ ...base, phase: 'ready', now: 0, value: true });
     expect(content.ctaAction).toBe('continue');
+    expect(content.ctaLabel).toBe('continue-label');
     expect(content.statusHeading).toBe('ready:true');
     expect(content.synthetic).toBe(true);
   });
@@ -41,14 +51,14 @@ describe('buildProofScreenContent', () => {
     expect(content.ctaAction).toBe('retry');
     expect(content.ctaDisabled).toBe(false);
     expect(content.statusBody).toBe('failed-body');
-    expect(content.statusHeading.toLowerCase()).toContain('no se cumple');
+    expect(content.statusHeading.toLowerCase()).toContain('todavía no se puede');
   });
 
   it('degraded: needs no value, offers retry, and never reads as a rejection', () => {
     const content = buildProofScreenContent({ ...base, phase: 'degraded', now: 0 });
     expect(content.ctaAction).toBe('retry');
     expect(content.statusBody).toBe('degraded-body');
-    expect(content.statusHeading.toLowerCase()).toContain('no pudimos');
+    expect(content.statusHeading.toLowerCase()).toContain('nadie pudo revisarlo');
     expect(content.synthetic).toBe(true);
   });
 

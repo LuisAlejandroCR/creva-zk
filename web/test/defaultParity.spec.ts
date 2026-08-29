@@ -1,13 +1,14 @@
 // defaultParity.spec.ts
-// Criterion 2, pinned: with VITE_PORT_SOURCE unset the journey must behave
-// exactly as it did before the screens were wired to the seam. The strings
-// below are the copy that shipped, written out literally so that changing
-// the default path fails here rather than surprising anyone on stage.
+// Criterion 2, pinned: with VITE_PORT_SOURCE unset the journey must select
+// the stub ports and touch no network. The strings below are the copy the
+// default path ships, written out literally so that changing it fails here
+// rather than surprising anyone on stage.
 
 import { describe, expect, it } from 'vitest';
 import { createStubBackingPort, createStubIdentityPort } from '@creva-zk/api';
 import type { Tier } from '../src/domain/tier';
 import { STUB_LATENCY_MS, idleProof, startGenerating } from '../src/domain/proofState';
+import { MEASURED_PROOF_MS } from '../src/domain/waitStages';
 import { activePortSource, resolvePortSource, selectBackingPort, selectIdentityPort, toProofState } from '../src/proofPort';
 import { runProof } from '../src/proofRun';
 import {
@@ -40,26 +41,34 @@ describe('with VITE_PORT_SOURCE unset', () => {
     );
   });
 
-  it('keeps the generating screen on for the same 32s it always was', () => {
-    expect(STUB_LATENCY_MS).toBe(32_000);
+  // The stub answers instantly, so the hold is what the wait screen is paced
+  // against. It is the measured latency of one real proof and nothing else:
+  // an invented hold would stage a story the real thing never tells.
+  it('holds the wait screen for exactly the measured proof latency', () => {
+    expect(STUB_LATENCY_MS).toBe(MEASURED_PROOF_MS);
+    expect(MEASURED_PROOF_MS).toBe(23_700);
   });
 });
 
 describe('the default journey renders the copy it always did', () => {
   it('identity: idle', () => {
     const content = buildIdentityContent(idleProof<boolean>(), 0);
-    expect(content.h1).toBe('Solicita la tarjeta');
-    expect(content.statusHeading).toBe('Sin iniciar');
-    expect(content.statusBody).toBe('Presiona iniciar para generar esta prueba. Todavía no se envía nada.');
-    expect(content.ctaLabel).toBe('Iniciar prueba');
+    expect(content.h1).toBe('Solicita tu tarjeta');
+    expect(content.statusHeading).toBe('Aún no empezamos');
+    expect(content.statusBody).toBe(
+      'Cuando toques el botón, tu teléfono empieza a revisar tu identificación. Tarda unos 24 segundos y no envía nada.',
+    );
+    expect(content.ctaLabel).toBe('Solicita la tarjeta');
     expect(content.ctaDisabled).toBe(false);
   });
 
-  it('identity: generating, with the elapsed readout', () => {
+  it('identity: generating, staged rather than spun', () => {
     const content = buildIdentityContent(startGenerating<boolean>(0), 11_000);
-    expect(content.statusHeading).toBe('Generando tu prueba… 11 s transcurridos');
-    expect(content.ctaLabel).toBe('Generando…');
+    expect(content.statusHeading).toBe('Trabajando en tu solicitud');
+    expect(content.ctaLabel).toBe('Trabajando en tu teléfono…');
     expect(content.ctaDisabled).toBe(true);
+    expect(content.wait?.elapsedLabel).toBe('11 s de unos 24 s');
+    expect(content.wait?.stages).toHaveLength(4);
   });
 
   it('identity: ready, from the stub port', async () => {
@@ -72,8 +81,8 @@ describe('the default journey renders the copy it always did', () => {
     const content = buildIdentityContent(settled, 0);
 
     expect(content.phase).toBe('ready');
-    expect(content.statusHeading).toBe('✓ Identidad verificada');
-    expect(content.ctaLabel).toBe('Continuar');
+    expect(content.statusHeading).toBe('✓ Listo, eres tú');
+    expect(content.ctaLabel).toBe('Ver a qué califico');
   });
 
   it('backing: ready at Plata, from the stub port', async () => {
@@ -88,8 +97,8 @@ describe('the default journey renders the copy it always did', () => {
     expect(content.phase).toBe('ready');
     expect(settled.value).toBe('silver');
     expect(content.h1).toBe('Descubre a qué calificas');
-    expect(content.statusHeading).toBe('✓ Prueba de respaldo lista — Plata');
-    expect(content.ctaLabel).toBe('Continuar');
+    expect(content.statusHeading).toBe('✓ Calificas en nivel Plata');
+    expect(content.ctaLabel).toBe('Ver qué compartí');
   });
 
   it('offers: the same proven tier the journey always ended on', async () => {
@@ -100,7 +109,7 @@ describe('the default journey renders the copy it always did', () => {
     const content = buildOffersContent(settled.value ?? 'none');
 
     expect(content.tierLabel).toBe('Plata');
-    expect(content.h1).toBe('Lo que podrías calificar');
+    expect(content.h1).toBe('Tu resultado');
   });
 
   it('never reaches a failure state on the default path', async () => {

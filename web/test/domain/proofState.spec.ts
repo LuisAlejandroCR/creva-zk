@@ -1,10 +1,10 @@
 // proofState.spec.ts
-// Unit tests for the proof lifecycle reducer helpers and elapsed-time
-// formatting in src/domain/proofState.ts.
+// Unit tests for the proof lifecycle reducer helpers in
+// src/domain/proofState.ts. The elapsed-time readout moved to
+// domain/waitStages.ts, which owns the wait screen's whole sequence.
 
 import { describe, expect, it } from 'vitest';
 import {
-  formatElapsed,
   idleProof,
   settleDegraded,
   settleFailed,
@@ -45,16 +45,5 @@ describe('proof state transitions', () => {
     expect(state.reason).toBe('call_failed');
     // Degraded means nobody answered, so there is no outcome to disclose.
     expect(state.value).toBeUndefined();
-  });
-});
-
-describe('formatElapsed', () => {
-  it('floors partial seconds', () => {
-    expect(formatElapsed(1000, 1999)).toBe('0 s transcurridos');
-    expect(formatElapsed(1000, 12400)).toBe('11 s transcurridos');
-  });
-
-  it('never returns a negative elapsed time', () => {
-    expect(formatElapsed(5000, 4000)).toBe('0 s transcurridos');
   });
 });

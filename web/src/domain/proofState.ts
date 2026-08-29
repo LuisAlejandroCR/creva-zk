@@ -5,6 +5,7 @@
 // means the predicate does not hold, degraded means nobody could check.
 
 import type { ApiFailureReason } from '@creva-zk/api';
+import { MEASURED_PROOF_MS } from './waitStages';
 
 export type ProofPhase = 'idle' | 'generating' | 'ready' | 'failed' | 'degraded';
 
@@ -39,12 +40,9 @@ export function settleDegraded<T>(reason?: ApiFailureReason): ProofState<T> {
   return { phase: 'degraded', reason };
 }
 
-// The stub port answers instantly, which would reduce the generating screen
-// to a flash. Only the stub source is held for this long, so a real proof
-// takes exactly as long as it takes and never has latency added to it.
-export const STUB_LATENCY_MS = 32_000;
-
-export function formatElapsed(startedAt: number, now: number): string {
-  const elapsedSeconds = Math.max(0, Math.floor((now - startedAt) / 1000));
-  return `${elapsedSeconds} s transcurridos`;
-}
+// The stub port answers instantly, which would reduce the wait screen to a
+// flash. It is held for exactly the measured latency of one real proof, so
+// the staged sequence on that screen is paced by the real thing instead of
+// by an invented number. Only the stub source is held: a real proof takes as
+// long as it takes and never has latency added to it.
+export const STUB_LATENCY_MS = MEASURED_PROOF_MS;
