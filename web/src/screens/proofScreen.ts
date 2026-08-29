@@ -1,15 +1,24 @@
 // proofScreen.ts
 // Pure view-model builder shared by the identity and backing screens: turns
-// a ProofState into copy and a single contextual CTA, with no DOM involved.
-// A degraded proof renders the copy for its own reason where there is one,
-// so "no wallet" and "your local proof server is down" are never the same
-// screen — but it stays a degraded screen, never a rejection.
+// a ProofState into plain-language copy, a staged wait, one contextual CTA
+// and a technical disclosure that starts closed. A degraded proof renders
+// the copy for its own reason where there is one, so "no wallet" and "your
+// local proof server is down" are never the same screen — but it stays a
+// degraded screen, never a rejection. No DOM involved.
 
 import type { ApiFailureReason } from '@creva-zk/api';
 import type { ProofPhase } from '../domain/proofState';
-import { formatElapsed } from '../domain/proofState';
+import { buildWaitProgress, type WaitProgress, type WaitStage } from '../domain/waitStages';
 
 export type CtaAction = 'start' | 'retry' | 'continue';
+
+// The disclosure keeps the exact technical claim a ZK jury needs, out of the
+// way of the entrepreneur who does not. Never empty: dropping the claim to
+// simplify the screen would be the one unacceptable simplification.
+export interface TechDetail {
+  readonly summary: string;
+  readonly body: string;
+}
 
 export interface ProofScreenContent {
   readonly h1: string;
@@ -17,10 +26,13 @@ export interface ProofScreenContent {
   readonly phase: ProofPhase;
   readonly statusHeading: string;
   readonly statusBody: string;
+  /** Only while generating: the staged sequence that is the wait screen. */
+  readonly wait?: WaitProgress;
   readonly ctaLabel: string;
   readonly ctaAction: CtaAction;
   readonly ctaDisabled: boolean;
   readonly synthetic: boolean;
+  readonly tech: TechDetail;
 }
 
 export interface BuildProofScreenOptions<T> {
@@ -34,22 +46,29 @@ export interface BuildProofScreenOptions<T> {
   // other reason falls through to degradedBody().
   readonly reason?: ApiFailureReason;
   // Where this proof is being generated. Optional, and the default is the
-  // sentence that shipped — saying the wrong thing here would be a privacy
-  // claim the app cannot keep.
+  // plain sentence every in-process source uses — saying the wrong thing
+  // here would be a privacy claim the app cannot keep.
   readonly generatingBody?: string;
+  /** What the button does before anything has run, in her words. */
+  readonly startLabel: string;
+  /** Where the button takes her once the answer is yes, in her words. */
+  readonly continueLabel: string;
+  /** Nothing has run yet: what she is about to do. */
+  readonly idleBody: string;
+  readonly stages: readonly WaitStage[];
   readonly readyHeading: (value: T) => string;
   readonly readyBody: (value: T) => string;
-  // The predicate was evaluated and does not hold.
+  /** The answer came back and it is no. */
   readonly failedBody: () => string;
-  // No value: a degraded proof has no outcome to describe.
+  /** No value: nobody could check, so there is no answer to describe. */
   readonly degradedBody: () => string;
+  readonly tech: TechDetail;
 }
 
 // True for every source that proves through a process this app itself
 // started, on this machine. proofProvenance.ts overrides it for the
 // browser-direct path, which proves against a server the user configured.
-export const DEFAULT_GENERATING_BODY =
-  'Esto corre por completo en este dispositivo y toma decenas de segundos — se verifica una atestación firmada y se evalúa un predicado, sin revelar los datos subyacentes.';
+export const DEFAULT_GENERATING_BODY = 'Tarda unos 24 segundos. No cierres esta pantalla.';
 
 interface DegradedCopy {
   readonly heading: string;
@@ -58,7 +77,7 @@ interface DegradedCopy {
 
 // The four the browser-direct path can tell apart before a proof is even
 // attempted. Each names the single thing the user has to fix and nothing
-// else — and none of them says she failed, because nothing was evaluated.
+// else — and none of them says she failed, because nobody checked anything.
 const DEGRADED_COPY: Partial<Readonly<Record<ApiFailureReason, DegradedCopy>>> = {
   wallet_absent: {
     heading: 'Falta la cartera',
@@ -66,11 +85,11 @@ const DEGRADED_COPY: Partial<Readonly<Record<ApiFailureReason, DegradedCopy>>> =
   },
   wallet_locked: {
     heading: 'Cartera bloqueada',
-    body: 'Lace está instalada pero no entregó una conexión, así que no se evaluó nada. Ábrela, desbloquéala, autoriza este sitio y vuelve a intentarlo. Tus datos siguen sin salir de este dispositivo.',
+    body: 'Lace está instalada pero no entregó una conexión, así que nadie pudo revisar nada. Ábrela, desbloquéala, autoriza este sitio y vuelve a intentarlo. Tus datos siguen sin salir de este dispositivo.',
   },
   wallet_wrong_network: {
     heading: 'Red equivocada',
-    body: 'Lace está conectada a otra red, así que no se evaluó nada. Cámbiala a la red de prueba de Midnight (preprod) y vuelve a intentarlo. Tus datos siguen sin salir de este dispositivo.',
+    body: 'Lace está conectada a otra red, así que nadie pudo revisar nada. Cámbiala a la red de prueba de Midnight (preprod) y vuelve a intentarlo. Tus datos siguen sin salir de este dispositivo.',
   },
   proof_server_unreachable: {
     heading: 'El servidor local no responde',
@@ -78,23 +97,22 @@ const DEGRADED_COPY: Partial<Readonly<Record<ApiFailureReason, DegradedCopy>>> =
   },
 };
 
-const CTA_LABELS: Readonly<Record<CtaAction, string>> = {
-  start: 'Iniciar prueba',
-  retry: 'Reintentar',
-  continue: 'Continuar',
-};
+// Failed and degraded are different answers and never share a word. Degraded
+// keeps the bare "Reintentar": nothing was decided, so there is nothing else
+// to offer.
+const FAILED_CTA_LABEL = 'Volver a intentarlo';
+const DEGRADED_CTA_LABEL = 'Reintentar';
 
 export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): ProofScreenContent {
   const { phase, now, startedAt, value } = opts;
+  const shared = { h1: opts.h1, intro: opts.intro, phase, tech: opts.tech };
 
   if (phase === 'idle') {
     return {
-      h1: opts.h1,
-      intro: opts.intro,
-      phase,
-      statusHeading: 'Sin iniciar',
-      statusBody: 'Presiona iniciar para generar esta prueba. Todavía no se envía nada.',
-      ctaLabel: CTA_LABELS.start,
+      ...shared,
+      statusHeading: 'Aún no empezamos',
+      statusBody: opts.idleBody,
+      ctaLabel: opts.startLabel,
       ctaAction: 'start',
       ctaDisabled: false,
       synthetic: false,
@@ -102,14 +120,16 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
   }
 
   if (phase === 'generating') {
-    const elapsed = startedAt === undefined ? '0 s transcurridos' : formatElapsed(startedAt, now);
+    const wait = buildWaitProgress(opts.stages, startedAt === undefined ? 0 : now - startedAt);
     return {
-      h1: opts.h1,
-      intro: opts.intro,
-      phase,
-      statusHeading: `Generando tu prueba… ${elapsed}`,
+      ...shared,
+      // Stable while the stages below carry the changing story: the panel is
+      // the frame, not the narrator.
+      statusHeading: 'Trabajando en tu solicitud',
       statusBody: opts.generatingBody ?? DEFAULT_GENERATING_BODY,
-      ctaLabel: 'Generando…',
+      wait,
+      // The wait is the screen; the button only says the work is still on.
+      ctaLabel: 'Trabajando en tu teléfono…',
       ctaAction: 'start',
       ctaDisabled: true,
       synthetic: false,
@@ -118,13 +138,11 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
 
   if (phase === 'failed') {
     return {
-      h1: opts.h1,
-      intro: opts.intro,
-      phase,
-      // The proof ran and the answer is no — not a malfunction.
-      statusHeading: 'El requisito no se cumple',
+      ...shared,
+      // The check ran and the answer is no — not a malfunction.
+      statusHeading: 'Todavía no se puede',
       statusBody: opts.failedBody(),
-      ctaLabel: CTA_LABELS.retry,
+      ctaLabel: FAILED_CTA_LABEL,
       ctaAction: 'retry',
       ctaDisabled: false,
       synthetic: true,
@@ -134,15 +152,13 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
   if (phase === 'degraded') {
     const specific = opts.reason === undefined ? undefined : DEGRADED_COPY[opts.reason];
     return {
-      h1: opts.h1,
-      intro: opts.intro,
-      phase,
-      // Not a rejection: nothing was evaluated, so the honest action is to
-      // try again, never to continue as though the predicate had held. That
-      // holds for the four named reasons too — they only say what to fix.
-      statusHeading: specific?.heading ?? 'No pudimos verificarlo',
+      ...shared,
+      // Not a rejection: nothing was checked, so the honest action is to try
+      // again, never a way past a question nobody answered. That holds for
+      // the four named reasons too — they only say what to fix.
+      statusHeading: specific?.heading ?? 'Nadie pudo revisarlo',
       statusBody: specific?.body ?? opts.degradedBody(),
-      ctaLabel: CTA_LABELS.retry,
+      ctaLabel: DEGRADED_CTA_LABEL,
       ctaAction: 'retry',
       ctaDisabled: false,
       synthetic: true,
@@ -155,12 +171,10 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
   }
 
   return {
-    h1: opts.h1,
-    intro: opts.intro,
-    phase,
+    ...shared,
     statusHeading: opts.readyHeading(value),
     statusBody: opts.readyBody(value),
-    ctaLabel: CTA_LABELS.continue,
+    ctaLabel: opts.continueLabel,
     ctaAction: 'continue',
     ctaDisabled: false,
     synthetic: true,

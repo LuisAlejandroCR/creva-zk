@@ -1,9 +1,9 @@
 <!--
   README.md
   Acceptance criteria for the web/ screen journey, written before the
-  screens were built, plus what a reviewer must have installed to exercise
-  the browser-direct (Lace) proof path. Update this file if a criterion
-  changes.
+  screens were built and revised when the journey was rewritten for plain
+  language, plus what a reviewer must have installed to exercise the
+  browser-direct (Lace) proof path. Update this file if a criterion changes.
 -->
 
 # Creva ZK — web screen journey
@@ -17,23 +17,29 @@ made with. No screen decides an outcome for itself.
 
 ## Acceptance criteria
 
-1. **Journey.** "Solicita la tarjeta" (identity) → "Descubre a qué calificas"
-   (backing) → a before/after comparison → an offers screen. The identity
-   and backing screens each expose one primary action, whose label changes
-   with proof phase (Iniciar → Reintentar / Continuar). This README stays in
-   English as project documentation; the screens themselves are Spanish-only
-   per criterion 8.
+1. **Journey.** "Solicita tu tarjeta" (identity) → "Descubre a qué
+   calificas" (backing) → a before/after comparison → a result screen. The
+   identity and backing screens each expose one primary action, whose label
+   changes with proof phase. No two steps share a button label, and none of
+   them says "Continuar": each names what happens next — *Solicita la
+   tarjeta* → *Ver a qué califico* → *Ver qué compartí* → *Ver mi resultado*
+   → *Empezar de nuevo*. This README stays in English as project
+   documentation; the screens themselves are Spanish-only per criterion 8.
 2. **Four proof states.** Each proof (identity, backing) renders one of:
-   `generating`, `ready`, `failed`, `degraded`. `generating` is its own
-   screen state with an elapsed-time readout, not a spinner — real proofs
-   here take tens of seconds, and the UI says so. `failed` and `degraded`
+   `generating`, `ready`, `failed`, `degraded`. `generating` is the screen
+   the product is judged on — see criterion 12. `failed` and `degraded`
    are different answers and never collapse into one another:
    - `failed` — the predicate was evaluated and does not hold. Her collateral
      falls short, or the attestation does not match.
    - `degraded` — nobody could check. The proof server did not answer. Only
      `ready` advances the journey; `degraded` offers retry, never a way past
      an unanswered check, because telling her she does not qualify when
-     nothing was evaluated is a lie.
+     nothing was evaluated is a lie. Four reasons the browser-direct path can
+     tell apart before a proof is even attempted — `wallet_absent`,
+     `wallet_locked`, `wallet_wrong_network`, `proof_server_unreachable` —
+     get a heading and body of their own, naming the one thing to fix. All
+     four are still degraded screens, still say nobody could check, and still
+     offer only `Reintentar`.
 3. **Split before/after screen.** The same three items — document, selfie,
    balance — appear on both sides. Left: legible, each crossing over to the
    counterparty (an arrow per row, the counterparty named at the bottom).
@@ -51,7 +57,12 @@ made with. No screen decides an outcome for itself.
 6. **Layout.** Zero horizontal overflow at 320 / 375 / 390px viewport width.
    No interactive control smaller than 44×44px. Exactly one `h1` per screen.
    Text and interactive colors meet WCAG AA contrast against their
-   background.
+   background. Both are measured, not assumed: axe-core's `color-contrast`
+   rule and a `scrollWidth`/`clientWidth` check run over every screen state
+   in both themes at all three widths, with the brand faces loaded and
+   motion settled — measuring a fade-in mid-flight reports a contrast nobody
+   ever sees. Control geometry is expressed in `em` rather than in fixed
+   pixels, so a gutter or a bullet shrinks with its own text at 320px.
 7. **Brand palette.** Colors and type come from
    `creva_finance/frontend/app/globals.css` — the palette's source of truth,
    light (cream) and dark (ink) — never invented. `generating` renders with
@@ -92,13 +103,54 @@ made with. No screen decides an outcome for itself.
    VITE_PORT_SOURCE=bridge npm run dev --workspace web  # a real ~23.7s proof
    ```
 
-   With nothing set the journey behaves exactly as it did before it was
-   wired — same copy, same states, same 32s hold on the generating screen —
-   pinned by `test/defaultParity.spec.ts`. That hold applies to the stub
-   *only*, so a real proof takes the time it takes and never has latency
-   added to it. Kill the proof server and both screens land on `degraded`;
+   With nothing set the journey selects the stub ports and touches no
+   network; its copy and states are pinned by `test/defaultParity.spec.ts`.
+   The stub answers instantly, so it is held for `MEASURED_PROOF_MS`
+   (23 700 ms — the measured latency of one real proof, from
+   `tools/measure-proof-latency.sh`), which is the same number the wait
+   sequence is paced against. That hold applies to the stub *only*, so a
+   real proof takes the time it takes and never has latency added to it.
+   Kill the proof server and both screens land on `degraded`;
    `test/proofRun.spec.ts` proves that, and proves generating is entered
    before the call and left only after it settles.
+10. **Named progress, and what is left.** Every screen says where she is
+    (`Paso 2 de 4 · Tu respaldo`) and, on a second line, what is behind her
+    and what remains (`1 listo · te faltan 3`) — the half a four-step form
+    usually leaves her to count herself. The first step never opens on
+    "0 listos"; it says how many there are and how many are left.
+    `src/domain/journeyProgress.ts` owns it, plural agreement included.
+11. **One earned celebration.** The tier reveal is the only moment the
+    journey celebrates, and it lands on the tier, not on the proof: that a
+    proof ran is not her achievement, knowing what she qualifies for is. The
+    card arrives, a single ring expands out of it once, and the tier appears
+    inside a beat later — an answer arriving, not a transition finishing.
+    Nothing repeats, and nothing celebrates on the way there.
+12. **The wait is the story.** A real proof takes ~23.7s. That wait is the
+    only moment the product's promise is visible instead of asserted, so it
+    is staged rather than hidden: a standing promise that nothing has left
+    the device, a meter paced against the measured run, a seconds readout,
+    and four named steps of the work — all four on screen from the first
+    millisecond, each marked done, running or still ahead. The model lives in
+    `src/domain/waitStages.ts` and is tested without waiting for it. Past the
+    measured run the last step holds and the meter stops short of full: a
+    slower proof has not failed, and claiming it finished would be a lie.
+    While a proof runs the region is patched field by field
+    (`src/waitView.ts`) rather than re-rendered, so no transition is ever
+    interrupted.
+13. **Plain language first, technical detail on demand.** Primary copy is
+    written for a Mexican entrepreneur applying for a card. No *predicado*,
+    *atestación*, *circuito*, *testigo*, *witness* or *disclose* appears
+    anywhere she has to read: every screen carries a `Ver el detalle técnico`
+    disclosure, closed on arrival, and the exact technical claim lives inside
+    it — moved, never deleted, because a ZK jury still has to see it.
+    `test/plainLanguage.spec.ts` asserts both halves on every screen in every
+    state.
+14. **Motion with intent.** Animation marks state changes only — a screen
+    arriving, the split's two halves separating, the tier landing, a wait step
+    becoming live. Every transition and animation is timed with `--cr-ease`
+    and a `--cr-dur*` token; the one exception is the wait meter's fill, which
+    is `linear` because it reports elapsed time and easing it would report the
+    wrong time. `prefers-reduced-motion: reduce` stands all of it down.
 
 ## Proof-port sources
 
@@ -107,7 +159,7 @@ unrecognised falls back to the stub.
 
 | `VITE_PORT_SOURCE` | Who proves | Needs |
 | --- | --- | --- |
-| unset / `stub` | nobody — a synthetic outcome, held 32s so the generating screen is seen | nothing |
+| unset / `stub` | nobody — a synthetic outcome, held `MEASURED_PROOF_MS` (23.7s) so the staged wait is seen at its real pace | nothing |
 | `real` | an in-process Node call path | Node, not a browser |
 | `bridge` | `api/`'s local HTTP proof server | `npm run serve --workspace api` |
 | `lace` | the browser itself, via Lace | the checklist below |

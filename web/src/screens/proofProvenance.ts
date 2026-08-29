@@ -7,19 +7,19 @@
 import type { PortSource } from '../proofPort';
 import { DEFAULT_GENERATING_BODY } from './proofScreen';
 
-// The address Lace's own "Ajustes » Midnight » Local" setting uses. Written
-// into the copy rather than linked, because a user watching a stalled proof
-// needs the number in front of her.
+// The address Lace's own "Ajustes » Midnight » Local" setting uses.
 export const LOCAL_PROOF_SERVER_URL = 'http://localhost:6300';
 
 // Every source but the browser-direct one proves on this machine through a
-// process the app itself started, which is exactly what the shipped sentence
-// already said — so the default path's copy is unchanged, byte for byte.
+// process the app itself started, which is what the default sentence already
+// says — so those three share it, byte for byte. Only the browser-direct
+// path names a server the user configured, and it names the address too:
+// someone watching a stalled proof needs the number in front of her.
 const GENERATING_BODY: Readonly<Record<PortSource, string>> = {
   stub: DEFAULT_GENERATING_BODY,
   real: DEFAULT_GENERATING_BODY,
   bridge: DEFAULT_GENERATING_BODY,
-  lace: `Se genera en el servidor local que configuraste en Lace (Ajustes » Midnight » Local, ${LOCAL_PROOF_SERVER_URL}): corre en esta computadora, nunca en un servicio remoto, y ahí está toda la promesa de privacidad de este producto. Toma decenas de segundos — se verifica una atestación firmada y se evalúa un predicado, sin revelar los datos subyacentes.`,
+  lace: `Todo se hace en el servidor que configuraste en Lace (Ajustes » Midnight » Local, ${LOCAL_PROOF_SERVER_URL}): corre en esta computadora, nunca en la de alguien más. Tarda unos 24 segundos. No cierres esta pantalla.`,
 };
 
 export function generatingBodyFor(source: PortSource): string {
