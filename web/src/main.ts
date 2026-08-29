@@ -8,12 +8,16 @@
 // worker registration and the status it reports.
 
 import { failedStatus, readyStatus, setPwaStatus, unsupportedStatus, type PwaStatus } from './pwa-status';
+import { renderProgressMomentHost } from './ui';
 import { mountApp } from './app';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
 if (app) {
-  app.innerHTML = '<main class="screen" id="screen-root"></main>';
+  // The moment host sits outside the screen and stays there: the navigation
+  // strip it hangs from is rebuilt on every render, and a popover living
+  // inside it would be torn off mid-life.
+  app.innerHTML = `<main class="screen" id="screen-root"></main>${renderProgressMomentHost()}`;
 
   const screenRoot = document.querySelector<HTMLElement>('#screen-root');
   if (screenRoot) mountApp(screenRoot);

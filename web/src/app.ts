@@ -24,6 +24,9 @@ import { buildOffersContent } from './screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from './render';
 import { buildStepProgress, type StepProgress } from './domain/journeyProgress';
 import { applyWaitProgress, type WaitPatch } from './waitView';
+import { createMomentTimer, type MomentTimer } from './momentView';
+import { momentForStep } from './content/financialFacts';
+import { PROGRESS_MOMENT_HOST_ID } from './ui';
 import { parseHelpRoute } from './help/helpRoute';
 import { renderHelpArticle, renderHelpCategory, renderHelpIndex } from './help/helpRender';
 
@@ -138,6 +141,21 @@ export function mountApp(root: HTMLElement): void {
   // ticker, and simply stops drawing. A proof started before she left is
   // still running when she comes back.
   let showingHelp = false;
+  // Which steps have already had their moment. A moment marks a completion,
+  // so a re-render — or coming back from the help centre — must never replay
+  // one she has already seen.
+  const momentsShown = new Set<number>();
+  const momentHost = document.getElementById(PROGRESS_MOMENT_HOST_ID);
+  const moments: MomentTimer | undefined = momentHost ? createMomentTimer(momentHost) : undefined;
+
+  // The step whose completion earned it, 1-based, matching STEP_NAMES order.
+  function celebrate(step: number): void {
+    if (momentsShown.has(step)) return;
+    const moment = momentForStep(step);
+    if (moment === undefined) return;
+    momentsShown.add(step);
+    moments?.show(moment);
+  }
 
   function stopTicking(): void {
     if (tickHandle !== undefined) clearInterval(tickHandle);
@@ -179,6 +197,9 @@ export function mountApp(root: HTMLElement): void {
           : { ...state, backing: next as ProofState<Tier> };
       if (next.phase !== 'generating') stopTicking();
       render();
+      // A proof that came back yes is that step finished. Degraded or failed
+      // is not, and gets no celebration.
+      if (next.phase === 'ready') celebrate(kind === 'identity' ? 1 : 2);
     };
 
     const run =
@@ -231,12 +252,17 @@ export function mountApp(root: HTMLElement): void {
       if (state.step === 'compare') {
         state = { ...state, step: 'offers' };
         render();
+        celebrate(3);
+        // The end of the journey, and the only moment about having arrived
+        // rather than about having advanced.
+        celebrate(4);
         return;
       }
 
       // offers: start over
       generation += 1;
       stopTicking();
+      momentsShown.clear();
       state = initialState();
       render();
     });

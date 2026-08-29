@@ -256,6 +256,36 @@ made with. No screen decides an outcome for itself.
     which `style-controls.spec.ts` pins. `render.spec.ts` pins that the four
     proof states resolve to four different archetypes.
 
+17. **Micro-momentos de progreso.** Al completar un paso sale un popover de la
+    franja de navegación — el mismo gesto que `icon-button-tip` — que dice lo
+    que acaba de lograr y se va solo. No es una tarjeta ni un modal, no pide
+    interacción y no tiene botón de cerrar. El copy vive entero en
+    `src/content/financialFacts.ts`; `src/ui/progressMoment.ts` sólo renderiza
+    lo que ese módulo le pasa, y `src/momentView.ts` lo ancla midiendo la
+    franja en vez de con una constante.
+
+    **Nunca se solapa con la acción.** Ancla arriba porque la franja es la
+    única parte del marco que ella no está buscando tocar; la acción principal
+    queda muy por debajo en todo ancho. Verificado con `elementFromPoint`
+    sobre el centro del CTA y con intersección de rectángulos, en 320/390/768
+    y en los dos temas: 18 de 18 despejados.
+
+    **Tiempos.** Entra en `--cr-dur` (240 ms), se queda 3 s, sale en 240 ms.
+    Bajo `prefers-reduced-motion` aparece y desaparece sin desplazarse, con el
+    mismo tiempo en pantalla: eso es un temporizador, no movimiento.
+
+    **La cadencia.** Paso 1 cifra, paso 2 ánimo, paso 3 el punto estructural
+    sin cifra, paso 4 celebración. **Una sola cifra en todo el recorrido**, y
+    `test/content/financialFacts.spec.ts` falla si aparece una segunda.
+
+    **Las cifras.** Sólo se publica lo verificado en fuente primaria. Hoy es
+    una: ENAFIN 2024 (INEGI, comunicado 62/25, 28 de mayo de 2025), con URL y
+    fecha de consulta en el módulo. Se usa el verbo del texto del comunicado,
+    "ha tenido financiamiento", y no el de la gráfica, "solicitado": haber
+    solicitado y haber tenido no son la misma medida. Una prueba lo pinea, y
+    otra falla si aparece cualquiera de las cifras que no se pudieron
+    verificar.
+
 ## Proof-port sources
 
 `VITE_PORT_SOURCE` picks which implementation backs the seam. Anything

@@ -1299,6 +1299,103 @@ h1 {
   animation: cr-land var(--cr-dur-slow) var(--cr-ease) var(--cr-dur) both;
 }
 
+/* ── El micro-momento ────────────────────────────────────────────────────
+   A popover that comes out of the navigation strip, the same gesture
+   .icon-button-tip uses, rather than a card floating over the flow. It hangs
+   from the strip because the strip is the one part of the frame she is never
+   reaching for: the primary action is far below it at every width, so nothing
+   she needs in order to continue is ever behind this.
+
+   The host is fixed and its position is measured from the strip at show time
+   (momentView.ts), so a change to the strip's height cannot leave this
+   floating in the wrong place. */
+.progress-moment-host {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+  /* Never takes a tap that belonged to the screen behind it. */
+  pointer-events: none;
+}
+
+.progress-moment {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-width: min(19rem, 100%);
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid var(--cr-border);
+  background: var(--cr-surface-1);
+  box-shadow: var(--cr-shadow-brand-sm);
+  /* Enters and leaves with the same 240ms as every other state change here,
+     and travels the same 4px the tip does. */
+  animation: cr-moment-enter var(--cr-dur) var(--cr-ease) both;
+}
+
+.progress-moment[data-leaving='true'] {
+  animation: cr-moment-leave var(--cr-dur) var(--cr-ease) both;
+}
+
+/* The glyph never carries the meaning on its own: the eyebrow or the title
+   beside it says the same thing in words. */
+.moment-mark {
+  flex: none;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  /* --cr-crimson is the brand ink and measures 2.91:1 on --cr-surface-1 in
+     the ink palette, under AA. --cr-danger-text is the same hue resolved per
+     theme and clears both. See DESIGN.md, "Las tres prohibiciones". */
+  color: var(--cr-danger-text);
+}
+
+.moment-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.moment-eyebrow {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--cr-text-muted);
+}
+
+.moment-title {
+  font-family: var(--font-playfair);
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--cr-text);
+}
+
+.moment-body {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--cr-text-muted);
+}
+
+.moment-source {
+  margin-top: 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--cr-text-muted);
+}
+
+@keyframes cr-moment-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-moment-leave {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-4px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 1ms !important;
@@ -1312,5 +1409,18 @@ h1 {
        means "already there", not "there, late". */
     animation-delay: 0ms !important;
     transition-delay: 0ms !important;
+  }
+
+  /* The popover appears and disappears without travelling. The rule above
+     already collapses the duration; this drops the 4px so nothing slides
+     under the eye. It still gets its full time on screen — that is a timer,
+     not motion. */
+  .progress-moment,
+  .progress-moment[data-leaving='true'] {
+    animation: none !important;
+  }
+
+  .progress-moment[data-leaving='true'] {
+    opacity: 0;
   }
 }
