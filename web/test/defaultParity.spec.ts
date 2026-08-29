@@ -41,22 +41,23 @@ describe('with VITE_PORT_SOURCE unset', () => {
     );
   });
 
-  // The stub answers instantly, so the hold is what the wait screen is paced
-  // against. It is the measured latency of one real proof and nothing else:
-  // an invented hold would stage a story the real thing never tells.
-  it('holds the wait screen for exactly the measured proof latency', () => {
+  // The stub answers instantly, so the hold is what the verification screen
+  // is paced against. It is the measured latency of one real proof and
+  // nothing else: an invented hold would stage a story the real thing never
+  // tells.
+  it('holds the verification screen for exactly the measured proof latency', () => {
     expect(STUB_LATENCY_MS).toBe(MEASURED_PROOF_MS);
     expect(MEASURED_PROOF_MS).toBe(23_700);
   });
 });
 
 describe('the default journey renders the copy it always did', () => {
-  it('identity: idle', () => {
+  it('identity: idle, an invitation with one thing to do', () => {
     const content = buildIdentityContent(idleProof<boolean>(), 0);
-    expect(content.h1).toBe('Solicita tu tarjeta');
-    expect(content.statusHeading).toBe('Aún no empezamos');
-    expect(content.statusBody).toBe(
-      'Cuando toques el botón, tu teléfono empieza a revisar tu identificación. Tarda unos 24 segundos y no envía nada.',
+    expect(content.archetype).toBe('intro');
+    expect(content.title).toBe('Solicita tu tarjeta');
+    expect(content.lede).toBe(
+      'Primero comprobamos que eres tú. Tu identificación se revisa aquí, en tu teléfono, y de aquí solo sale un sí o un no.',
     );
     expect(content.ctaLabel).toBe('Solicita la tarjeta');
     expect(content.ctaDisabled).toBe(false);
@@ -64,10 +65,12 @@ describe('the default journey renders the copy it always did', () => {
 
   it('identity: generating, staged rather than spun', () => {
     const content = buildIdentityContent(startGenerating<boolean>(0), 11_000);
-    expect(content.statusHeading).toBe('Trabajando en tu solicitud');
-    expect(content.ctaLabel).toBe('Trabajando en tu teléfono…');
-    expect(content.ctaDisabled).toBe(true);
-    expect(content.wait?.elapsedLabel).toBe('11 s de unos 24 s');
+    expect(content.archetype).toBe('verifying');
+    expect(content.title).toBe('Revisando tu identificación');
+    expect(content.lede).toBe('Tu teléfono está haciendo la revisión. No cierres esta pantalla.');
+    // No button while the work is on: the ring is the screen.
+    expect(content.ctaLabel).toBeUndefined();
+    expect(content.wait?.elapsedLabel).toBe('Llevamos 11 s');
     expect(content.wait?.stages).toHaveLength(4);
   });
 
@@ -81,7 +84,8 @@ describe('the default journey renders the copy it always did', () => {
     const content = buildIdentityContent(settled, 0);
 
     expect(content.phase).toBe('ready');
-    expect(content.statusHeading).toBe('✓ Listo, eres tú');
+    expect(content.archetype).toBe('confirm');
+    expect(content.title).toBe('Listo, eres tú');
     expect(content.ctaLabel).toBe('Ver a qué califico');
   });
 
@@ -96,9 +100,10 @@ describe('the default journey renders the copy it always did', () => {
 
     expect(content.phase).toBe('ready');
     expect(settled.value).toBe('silver');
-    expect(content.h1).toBe('Descubre a qué calificas');
-    expect(content.statusHeading).toBe('✓ Calificas en nivel Plata');
+    expect(content.archetype).toBe('confirm');
+    expect(content.title).toBe('Calificas en nivel Plata');
     expect(content.ctaLabel).toBe('Ver qué compartí');
+    expect(buildBackingContent(idleProof<Tier>(), 0).title).toBe('Descubre a qué calificas');
   });
 
   it('offers: the same proven tier the journey always ended on', async () => {
@@ -109,7 +114,8 @@ describe('the default journey renders the copy it always did', () => {
     const content = buildOffersContent(settled.value ?? 'none');
 
     expect(content.tierLabel).toBe('Plata');
-    expect(content.h1).toBe('Tu resultado');
+    expect(content.h1).toBe('¡Ya está!');
+    expect(content.milestone).toBe('Esto es a lo que calificas');
   });
 
   it('never reaches a failure state on the default path', async () => {

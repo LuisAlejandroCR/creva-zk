@@ -1,7 +1,9 @@
 // waitStages.ts
-// The staged model behind the wait screen: turns elapsed milliseconds into
-// the one step happening now, a meter and a plain-language seconds readout.
-// Pure and DOM-free, so the whole sequence is testable without waiting 24s.
+// The staged model behind the verification screen: turns elapsed
+// milliseconds into the one step happening now, the beat a finished step
+// holds its check for, a ring that advances with the measured run and a
+// plain-language seconds readout. Pure and DOM-free, so the whole sequence
+// is testable without waiting 24s.
 
 export type WaitStageStatus = 'done' | 'active' | 'pending';
 
@@ -10,9 +12,7 @@ export type WaitStageStatus = 'done' | 'active' | 'pending';
 // of it, so the sequence is paced by the real thing rather than invented.
 export const MEASURED_PROOF_MS = 23_700;
 
-const MEASURED_PROOF_SECONDS = Math.round(MEASURED_PROOF_MS / 1000);
-
-// The meter never fills while the answer is still coming: the last sliver is
+// The ring never closes while the answer is still coming: the last sliver is
 // the difference between "casi" and a claim we cannot make yet.
 const MAX_PERCENT = 96;
 
@@ -24,7 +24,7 @@ const MAX_PERCENT = 96;
 export const CELEBRATION_MS = 900;
 
 export interface WaitStage {
-  /** What is happening, in her words. */
+  /** What is happening, in her words. Short enough to read at a glance. */
   readonly label: string;
   /** One line on why that is safe. */
   readonly detail: string;
@@ -58,6 +58,10 @@ export interface WaitProgress {
   /** The displayed stage's label, repeated so the screen has one clear voice. */
   readonly headline: string;
   readonly detail: string;
+  /** "21 s" — the number the ring carries, on its own so it can be the
+   *  dominant element without the sentence around it competing. */
+  readonly elapsedValue: string;
+  /** "Llevamos 21 s" — the whole readout, for anyone who cannot see the ring. */
   readonly elapsedLabel: string;
   /** 0-100, capped below 100 for as long as the proof is still running. */
   readonly percent: number;
@@ -72,11 +76,6 @@ function statusAt(index: number, shownIndex: number, celebrating: boolean): Wait
   if (index < shownIndex) return 'done';
   if (index === shownIndex) return celebrating ? 'done' : 'active';
   return 'pending';
-}
-
-function elapsedLabel(elapsedSeconds: number, overtime: boolean): string {
-  if (overtime) return `${elapsedSeconds} s · ya casi`;
-  return `${elapsedSeconds} s de unos ${MEASURED_PROOF_SECONDS} s`;
 }
 
 export function buildWaitProgress(
@@ -106,6 +105,10 @@ export function buildWaitProgress(
   const shownIndex = celebrating ? activeIndex - 1 : activeIndex;
 
   const shown = stages[shownIndex]!;
+  // Elapsed time is a fact; the estimate it used to be measured against
+  // ("21 s de unos 24 s") was precision the app cannot promise on a source
+  // whose latency it does not control. What is left is what is true.
+  const elapsedValue = `${elapsedSeconds} s`;
 
   return {
     current: {
@@ -124,15 +127,23 @@ export function buildWaitProgress(
     celebrating,
     headline: shown.label,
     detail: shown.detail,
-    elapsedLabel: elapsedLabel(elapsedSeconds, overtime),
+    elapsedValue,
+    elapsedLabel: `Llevamos ${elapsedValue}`,
     percent,
     overtime,
   };
 }
 
-// The one promise the wait screen exists to make visible. It sits above the
-// meter and never changes, because it never stops being true.
-export const WAIT_PROMISE = 'Todo esto pasa en tu teléfono. Hasta ahora no se ha enviado nada a nadie.';
+// The one promise the verification screen exists to make visible. Short
+// enough to sit under the work rather than beside it; the rest of the
+// explanation is a tap away in the help centre.
+export const WAIT_PROMISE = 'Todo ocurre en tu teléfono. Hasta ahora no hemos enviado datos.';
 
-export const OVERTIME_NOTE =
-  'Está tardando un poco más de lo normal. Sigue trabajando aquí mismo, no lo cierres.';
+// Past the measured run the screen stops narrating the work and starts
+// telling her she has nothing to do. Same region, patched in place, so no
+// transition is interrupted at the moment the wait gets long.
+export const OVERTIME_HEADING = 'Estamos terminando';
+
+export const OVERTIME_LEDE = 'La revisión sigue en tu teléfono. No necesitas hacer nada.';
+
+export const OVERTIME_NOTE = 'Puedes esperar aquí mientras termina.';

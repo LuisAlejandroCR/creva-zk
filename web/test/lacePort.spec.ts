@@ -9,8 +9,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ApiFailureReason, JubjubPoint } from '@creva-zk/api';
 import { createLaceBackingPort, createLaceIdentityPort, type ConnectorHost } from '@creva-zk/api/lace';
 import { activePortSource, resolvePortSource, toProofState } from '../src/proofPort';
-import { generatingBodyFor, LOCAL_PROOF_SERVER_URL } from '../src/screens/proofProvenance';
-import { buildProofScreenContent, DEFAULT_GENERATING_BODY } from '../src/screens/proofScreen';
+import { verifyingLedeFor, LOCAL_PROOF_SERVER_URL } from '../src/screens/proofProvenance';
+import { buildProofScreenContent, DEFAULT_VERIFYING_LEDE } from '../src/screens/proofScreen';
 import { buildBackingContent } from '../src/screens/backingContent';
 import { buildIdentityContent } from '../src/screens/identityContent';
 import {
@@ -60,7 +60,7 @@ describe('a browser-direct reason is degraded, never failed', () => {
     for (const reason of LACE_REASONS) {
       const content = buildBackingContent(settleDegraded<Tier>(reason), 0);
       expect(content.phase).toBe('degraded');
-      expect(content.statusHeading).not.toContain('Todavía no se puede');
+      expect(content.title).not.toContain('Todavía no alcanza');
       expect(content.ctaAction).toBe('retry');
       expect(content.ctaDisabled).toBe(false);
     }
@@ -68,7 +68,7 @@ describe('a browser-direct reason is degraded, never failed', () => {
 
   it('leaves the failed screen exactly as it was — a real answer, not a malfunction', () => {
     const content = buildBackingContent(settleFailed<Tier>(), 0);
-    expect(content.statusHeading).toBe('Todavía no se puede');
+    expect(content.title).toBe('Todavía no alcanza');
   });
 });
 
@@ -78,8 +78,8 @@ describe('each reason renders as its own screen', () => {
       (reason: ApiFailureReason) => buildBackingContent(settleDegraded<Tier>(reason), 0),
       (reason: ApiFailureReason) => buildIdentityContent(settleDegraded<boolean>(reason), 0),
     ]) {
-      const headings = LACE_REASONS.map((reason) => build(reason).statusHeading);
-      const bodies = LACE_REASONS.map((reason) => build(reason).statusBody);
+      const headings = LACE_REASONS.map((reason) => build(reason).title);
+      const bodies = LACE_REASONS.map((reason) => build(reason).body);
       expect(new Set(headings).size).toBe(LACE_REASONS.length);
       expect(new Set(bodies).size).toBe(LACE_REASONS.length);
     }
@@ -89,64 +89,86 @@ describe('each reason renders as its own screen', () => {
     const specific = buildBackingContent(settleDegraded<Tier>('wallet_locked'), 0);
     const generic = buildBackingContent(settleDegraded<Tier>('call_failed'), 0);
     const none = buildBackingContent(settleDegraded<Tier>(), 0);
-    expect(generic.statusHeading).toBe('Nadie pudo revisarlo');
-    expect(generic.statusBody).toBe(none.statusBody);
-    expect(specific.statusBody).not.toBe(generic.statusBody);
+    expect(generic.title).toBe('No pudimos terminar la revisión');
+    expect(generic.body).toBe(none.body);
+    expect(specific.body).not.toBe(generic.body);
   });
 
   it('names the local proof server, and its address, when that is what is down', () => {
     const content = buildIdentityContent(settleDegraded<boolean>('proof_server_unreachable'), 0);
-    expect(content.statusBody).toContain(LOCAL_PROOF_SERVER_URL);
-    expect(content.statusBody).toContain('Lace');
+    expect(content.body).toContain(LOCAL_PROOF_SERVER_URL);
+    expect(content.body).toContain('Lace');
   });
 
   it('names Lace when the wallet is missing or locked, and the network when it is wrong', () => {
-    expect(buildBackingContent(settleDegraded<Tier>('wallet_absent'), 0).statusBody).toContain('Lace');
-    expect(buildBackingContent(settleDegraded<Tier>('wallet_locked'), 0).statusBody).toContain('Lace');
-    expect(buildBackingContent(settleDegraded<Tier>('wallet_wrong_network'), 0).statusBody).toContain('preprod');
+    expect(buildBackingContent(settleDegraded<Tier>('wallet_absent'), 0).body).toContain('Lace');
+    expect(buildBackingContent(settleDegraded<Tier>('wallet_locked'), 0).body).toContain('Lace');
+    expect(buildBackingContent(settleDegraded<Tier>('wallet_wrong_network'), 0).body).toContain('preprod');
   });
 });
 
 describe('where the proof is generated is stated, per source', () => {
   it('tells the user the lace proof comes from her own local server', () => {
-    const body = generatingBodyFor('lace');
-    expect(body).toContain(LOCAL_PROOF_SERVER_URL);
-    expect(body).toContain('Lace');
-    expect(body).toContain('Midnight');
+    const lede = verifyingLedeFor('lace');
+    expect(lede).toContain(LOCAL_PROOF_SERVER_URL);
+    expect(lede).toContain('Lace');
   });
 
   it('leaves the other three sources on the sentence that shipped', () => {
     for (const source of ['stub', 'real', 'bridge'] as const) {
-      expect(generatingBodyFor(source)).toBe(DEFAULT_GENERATING_BODY);
+      expect(verifyingLedeFor(source)).toBe(DEFAULT_VERIFYING_LEDE);
     }
   });
 
   it('reaches the generating screen, which is where the 23.7s is spent', () => {
     const content = buildProofScreenContent<boolean>({
-      h1: 'x',
-      intro: 'y',
       phase: 'generating',
       now: 24_000,
       startedAt: 0,
-      generatingBody: generatingBodyFor('lace'),
+      introTitle: 'x',
+      introLede: 'y',
+      verifyingTitle: 'Revisando',
+      verifyingLede: verifyingLedeFor('lace'),
       startLabel: 'start',
       continueLabel: 'continue',
-      idleBody: 'idle',
       stages: [{ label: 'uno', detail: 'detalle', startFraction: 0 }],
-      readyHeading: () => '',
+      readyTitle: () => '',
+      readyLede: () => '',
       readyBody: () => '',
+      failedTitle: '',
       failedBody: () => '',
       degradedBody: () => '',
-      tech: { summary: 'Ver el detalle técnico', body: 'tech' },
+      help: 'privacidad/que-ve-creva',
     });
-    // The seconds live on the staged wait now, not in the panel heading.
-    expect(content.wait?.elapsedLabel).toContain('24 s');
-    expect(content.statusBody).toContain(LOCAL_PROOF_SERVER_URL);
-    expect(content.ctaDisabled).toBe(true);
+    // The seconds live on the ring now, not in a panel heading.
+    expect(content.archetype).toBe('verifying');
+    expect(content.wait?.elapsedValue).toBe('24 s');
+    // Past the measured run the headline takes over, so the address moves to
+    // the help centre's article rather than staying on a screen that is now
+    // telling her she has nothing to do.
+    expect(buildProofScreenContent<boolean>({
+      phase: 'generating',
+      now: 11_000,
+      startedAt: 0,
+      introTitle: 'x',
+      introLede: 'y',
+      verifyingTitle: 'Revisando',
+      verifyingLede: verifyingLedeFor('lace'),
+      startLabel: 'start',
+      continueLabel: 'continue',
+      stages: [{ label: 'uno', detail: 'detalle', startFraction: 0 }],
+      readyTitle: () => '',
+      readyLede: () => '',
+      readyBody: () => '',
+      failedTitle: '',
+      failedBody: () => '',
+      degradedBody: () => '',
+      help: 'privacidad/que-ve-creva',
+    }).lede).toContain(LOCAL_PROOF_SERVER_URL);
   });
 
   it('keeps the default journey on the copy it always had', () => {
-    expect(buildIdentityContent(startGenerating<boolean>(0), 11_000).statusBody).toBe(DEFAULT_GENERATING_BODY);
+    expect(buildIdentityContent(startGenerating<boolean>(0), 11_000).lede).toBe(DEFAULT_VERIFYING_LEDE);
   });
 });
 
@@ -178,7 +200,7 @@ describe('lace ports reaching the screens', () => {
     const port = createLaceBackingPort({ connectorHost: noWallet, fetchImpl: anyFetch });
     const content = buildBackingContent(toProofState(await port.checkBacking(3_000n), backingHolds), 0);
     expect(content.phase).toBe('degraded');
-    expect(content.statusHeading).toBe(buildBackingContent(settleDegraded<Tier>('wallet_absent'), 0).statusHeading);
+    expect(content.title).toBe(buildBackingContent(settleDegraded<Tier>('wallet_absent'), 0).title);
   });
 
   it('renders the identity screen with the missing-wallet copy', async () => {
@@ -186,6 +208,6 @@ describe('lace ports reaching the screens', () => {
     const result = await port.checkIdentity(SYNTHETIC_ISSUER_KEY, SYNTHETIC_TAX_ID_HASH);
     const content = buildIdentityContent(toProofState(result, identityHolds), 0);
     expect(content.phase).toBe('degraded');
-    expect(content.statusHeading).toBe(buildIdentityContent(settleDegraded<boolean>('wallet_absent'), 0).statusHeading);
+    expect(content.title).toBe(buildIdentityContent(settleDegraded<boolean>('wallet_absent'), 0).title);
   });
 });

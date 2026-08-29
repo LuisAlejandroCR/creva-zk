@@ -20,13 +20,13 @@ export interface OffersContent {
 
 export function buildOffersContent(tier: Tier): OffersContent {
   return {
-    h1: 'Tu resultado',
-    milestone: '🎉 ¡Ya está! Esto es a lo que calificas',
+    h1: '¡Ya está!',
+    milestone: 'Esto es a lo que calificas',
     tierLabel: TIER_LABELS[tier],
     summary:
-      'Este es el nivel que quedó comprobado. Para llegar aquí no entregaste tu identificación, tu selfie ni cuánto tienes: nada de eso salió de tu teléfono.',
+      'Para llegar aquí no entregaste tu identificación, tu selfie ni cuánto tienes: nada de eso salió de tu teléfono.',
     disclaimer:
-      'Este prototipo no está conectado a ningún catálogo de crédito. Por eso no verás tasas, ni bancos, ni cantidades: solo el nivel que salió de la revisión.',
+      'Este prototipo no está conectado a ningún catálogo de crédito, así que no verás tasas ni bancos: solo el nivel que salió de la revisión.',
     ctaLabel: 'Empezar de nuevo',
     help: helpPath('resultado', 'que-es-un-nivel'),
   };

@@ -20,7 +20,7 @@ import {
   startGenerating,
   type ProofState,
 } from '../src/domain/proofState';
-import { generatingBodyFor } from '../src/screens/proofProvenance';
+import { verifyingLedeFor } from '../src/screens/proofProvenance';
 import type { PortSource } from '../src/proofPort';
 import type { ApiFailureReason } from '@creva-zk/api';
 import type { Tier } from '../src/domain/tier';
@@ -107,8 +107,8 @@ describe('interface language: Spanish only, never mixed', () => {
 
   const sources: readonly PortSource[] = ['stub', 'real', 'bridge', 'lace'];
 
-  it.each(sources)('generating copy for the %s source', (source) => {
-    assertSpanishOnly(generatingBodyFor(source), `generating copy, ${source}`);
+  it.each(sources)('verification lede for the %s source', (source) => {
+    assertSpanishOnly(verifyingLedeFor(source), `verification lede, ${source}`);
   });
 });
 

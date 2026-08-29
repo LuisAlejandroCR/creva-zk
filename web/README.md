@@ -54,7 +54,10 @@ made with. No screen decides an outcome for itself.
 5. **Synthetic labelling.** Every demo/stub value visible on screen (the
    demo-scenario selector, the identity outcome, the tier) carries a visible
    "SYNTHETIC" badge, not just an aria-label.
-6. **Layout.** Zero horizontal overflow at 320 / 375 / 390px viewport width.
+6. **Layout.** One focal point per screen: hierarchy and spacing carry the
+   state, not a stack of bordered cards. The only surfaces that still draw a
+   box are the two halves of the split, whose whole point is two things side
+   by side. Zero horizontal overflow at 320 / 375 / 390px viewport width.
    No interactive control smaller than 44×44px. Exactly one `h1` per screen.
    Text and interactive colors meet WCAG AA contrast against their
    background. Both are measured, not assumed: axe-core's `color-contrast`
@@ -113,12 +116,16 @@ made with. No screen decides an outcome for itself.
    Kill the proof server and both screens land on `degraded`;
    `test/proofRun.spec.ts` proves that, and proves generating is entered
    before the call and left only after it settles.
-10. **Named progress, and what is left.** Every screen says where she is
-    (`Paso 2 de 4 · Tu respaldo`) and, on a second line, what is behind her
-    and what remains (`1 listo · te faltan 3`) — the half a four-step form
-    usually leaves her to count herself. The first step never opens on
-    "0 listos"; it says how many there are and how many are left.
-    `src/domain/journeyProgress.ts` owns it, plural agreement included.
+10. **Progress, said once.** One compact treatment at the foot of the screen
+    — `1 de 4` beside a track of one segment per step, the current one wider
+    as well as darker so position never rests on colour alone. It used to be
+    said twice, in two competing lines above the title (`Paso 2 de 4 · Tu
+    respaldo` over `1 listo · te faltan 3`); the track now shows what is
+    behind her, and the sentence a screen reader hears
+    (`Paso 2 de 4: Tu respaldo`) is the group's accessible name.
+    `src/domain/journeyProgress.ts` owns it, and
+    `plainLanguage.spec.ts` fails if any screen states progress a second
+    time.
 11. **One earned celebration.** The tier reveal is the only moment the
     journey celebrates, and it lands on the tier, not on the proof: that a
     proof ran is not her achievement, knowing what she qualifies for is. The
@@ -126,14 +133,14 @@ made with. No screen decides an outcome for itself.
     inside a beat later — an answer arriving, not a transition finishing.
     Nothing repeats, and nothing celebrates on the way there.
 12. **The wait is the story.** A real proof takes ~23.7s. That wait is the
-    only moment the product's promise is visible instead of asserted, so it
-    is staged rather than hidden: a standing promise that nothing has left
-    the device, a meter paced against the measured run, a seconds readout,
-    and the **one** step of the work happening right now. Four steps stacked
-    read as a to-do list she still had to get through; one line reads as work
-    being done, so the meter and the seconds carry the sense of progress on
-    their own — which is why they must stay honest (`MAX_PERCENT = 96`, no
-    false "listo", the overtime line intact).
+    only moment the product's promise is visible instead of asserted, so the
+    verification itself is the screen's hero rather than a card on it: one
+    ring carrying the elapsed seconds, paced against the measured run, and
+    under it the **one** named step of the work happening right now. Four
+    steps stacked read as a to-do list she still had to get through; one line
+    reads as work being done, and what is still ahead is the ring's job.
+    There is no button while the work is on: a disabled "Trabajando en tu
+    teléfono…" only repeated the ring.
 
     When a step finishes it takes its check and holds it for
     `CELEBRATION_MS` before the next arrives. With one step on screen that
@@ -145,13 +152,25 @@ made with. No screen decides an outcome for itself.
 
     The model lives in `src/domain/waitStages.ts` and is tested without
     waiting for it, including a walk of the whole run at the app's own tick
-    rate. While a proof runs the region is patched field by field
+    rate.
+
+    Two things the readout will not do. It reports elapsed time only —
+    `Llevamos 21 s`, never `21 s de unos 24 s`, because the estimate is
+    precision the app cannot promise on a source whose latency it does not
+    control. And past the measured run the ring stops short of closing
+    (`MAX_PERCENT = 96`, so nothing on screen claims completion until the
+    answer lands) while the headline takes over (`Estamos terminando` / "No
+    necesitas hacer nada"): a slower proof has not failed, and claiming it
+    finished would be a lie.
+
+    While a proof runs the region is patched field by field
     (`src/waitView.ts`) rather than re-rendered, so no transition is ever
-    interrupted; a step swap inserts the arriving step into the flow and
-    lifts the departing one out of it, so the slot never jumps. Under
-    `prefers-reduced-motion` the swap happens without animating, still one
-    step at a time, and the held beat survives because it is timing rather
-    than motion.
+    interrupted: the headline swap, the ring, the readout and the step's
+    status all arrive in place, and a step swap inserts the arriving step
+    into the flow and lifts the departing one out of it, so the slot never
+    jumps. Under `prefers-reduced-motion` the swap happens without animating,
+    still one step at a time, and the held beat survives because it is timing
+    rather than motion.
 13. **Plain language, and an answer when she wants one.** Primary copy is
     written for a Mexican entrepreneur applying for a card, most of whom have
     never touched crypto. No *predicado*, *atestación*, *circuito*,
@@ -161,11 +180,13 @@ made with. No screen decides an outcome for itself.
     (criterion 15) and every screen carries a `?` that reaches it.
     `test/plainLanguage.spec.ts` scans every screen in every state.
 14. **Motion with intent.** Animation marks state changes only — a screen
-    arriving, the split's two halves separating, the tier landing, a wait step
-    becoming live. Every transition and animation is timed with `--cr-ease`
-    and a `--cr-dur*` token; the one exception is the wait meter's fill, which
-    is `linear` because it reports elapsed time and easing it would report the
-    wrong time. `prefers-reduced-motion: reduce` stands all of it down.
+    arriving, the split's two halves separating, the tier landing, one wait
+    step leaving as the next one arrives. Every transition and animation is timed with
+    `--cr-ease` and a `--cr-dur*` token; the one exception is the verification
+    ring's advance, which is `linear` because it reports elapsed time and
+    easing it would report the wrong time. `prefers-reduced-motion: reduce`
+    stands all of it down.
+
 15. **The help centre.** Mirrors what `creva_finance/frontend` already ships,
     so it migrates by copying files rather than by rewriting them:
 
@@ -175,7 +196,7 @@ made with. No screen decides an outcome for itself.
     | `app/help/page.tsx` | `renderHelpIndex()` at `#/ayuda` |
     | `app/help/[category]` | `renderHelpCategory()` at `#/ayuda/:category` |
     | `app/help/[category]/[article]` | `renderHelpArticle()` at `#/ayuda/:category/:article` |
-    | `components/help/HelpLink.tsx` | `renderHelpLink()`, 44px, same as the back link |
+    | `components/help/HelpLink.tsx` | `renderHelpButton()` in `src/ui/notices.ts`, 44px |
     | `test/lib/help-content.test.ts` | `test/help/helpContent.spec.ts` |
 
     `HelpArticle` is `{ slug, question, answer, steps?, note?, resolvedBy?,
@@ -202,6 +223,32 @@ made with. No screen decides an outcome for itself.
     Reading help does not interrupt a proof: the help centre renders over the
     journey's own root, so state and ticker survive the visit and a proof
     started before she left is still running when she returns.
+
+16. **A system, not six screens.** Each state of the flow is rendered in an
+    archetype of its own — `intro`, `verifying`, `confirm`, `recover`,
+    `compare`, `celebrate` — so no two steps read as the same card template
+    with different words in it. The archetype decides the spacing, the focal
+    element and where the action sits; the screens themselves write no markup.
+    Everything they are built from lives in `src/ui/`:
+
+    | component | what it is |
+    | --- | --- |
+    | `renderOnboardingShell` | the frame: navigation strip, body, step indicator |
+    | `renderStepIndicator` | `1 de 4` and its track, at the foot of the screen |
+    | `renderScreenHeader` | the mark, the headline and one short lede |
+    | `renderStatusState` | four tones, for a state that has an answer to give |
+    | `renderVerificationState` | the ring, the readout and the one step running now |
+    | `renderSecurityNotice` | the promise, as a line rather than a card |
+    | `renderHelpButton` / `renderHelpWhy` | the persistent `?`, and the second action `recover` gets |
+    | `renderPrimaryAction` | the one action per screen, and never two |
+    | `renderSystemStatus` | the install state, as a lock beside the `?` |
+
+    The tones map onto the proof phases and onto Creva's semantic families
+    exactly as they always did — `processing` → `--cr-warning-*`,
+    `success` → `--cr-success-*`, `warning` → `--cr-danger-*` (the check ran
+    and the answer is no), `error` → `--cr-info-*` (nobody could check) —
+    which `style-controls.spec.ts` pins. `render.spec.ts` pins that the four
+    proof states resolve to four different archetypes.
 
 ## Proof-port sources
 
