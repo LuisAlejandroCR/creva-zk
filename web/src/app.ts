@@ -22,6 +22,7 @@ import { buildBackingContent } from './screens/backingContent';
 import { buildCompareContent } from './screens/compareContent';
 import { buildOffersContent } from './screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from './render';
+import { buildStepProgress, type StepProgress } from './domain/journeyProgress';
 import { applyWaitProgress } from './waitView';
 
 type Step = 'identity' | 'backing' | 'compare' | 'offers';
@@ -32,14 +33,20 @@ interface AppState {
   backing: ProofState<Tier>;
 }
 
-// Where she is, named after what the step is about rather than after the
-// mechanism behind it.
-const STEP_LABELS: Readonly<Record<Step, string>> = {
-  identity: 'Paso 1 de 4 · Quién eres',
-  backing: 'Paso 2 de 4 · Tu respaldo',
-  compare: 'Paso 3 de 4 · Qué compartiste',
-  offers: 'Paso 4 de 4 · Tu resultado',
-};
+// Each step named after what it is about rather than after the mechanism
+// behind it. The order here is the journey's order, and the tally on every
+// screen is counted from it.
+const STEP_NAMES: readonly (readonly [Step, string])[] = [
+  ['identity', 'Quién eres'],
+  ['backing', 'Tu respaldo'],
+  ['compare', 'Qué compartiste'],
+  ['offers', 'Tu resultado'],
+];
+
+function progressFor(step: Step): StepProgress {
+  const index = STEP_NAMES.findIndex(([name]) => name === step);
+  return buildStepProgress(index + 1, STEP_NAMES.length, STEP_NAMES[index]![1]);
+}
 
 // Fast enough that the meter moves continuously rather than in one-second
 // jumps, and cheap because a tick only patches a few fields.
@@ -72,7 +79,7 @@ function buildView(state: AppState, now: number): ScreenView {
     const content = buildIdentityContent(state.identity, now);
     return {
       key: `identity:${content.phase}`,
-      html: renderProofScreen(content, STEP_LABELS.identity),
+      html: renderProofScreen(content, progressFor('identity')),
       wait: content.wait,
     };
   }
@@ -81,7 +88,7 @@ function buildView(state: AppState, now: number): ScreenView {
     const content = buildBackingContent(state.backing, now);
     return {
       key: `backing:${content.phase}`,
-      html: renderProofScreen(content, STEP_LABELS.backing),
+      html: renderProofScreen(content, progressFor('backing')),
       wait: content.wait,
     };
   }
@@ -89,7 +96,7 @@ function buildView(state: AppState, now: number): ScreenView {
   if (state.step === 'compare') {
     return {
       key: 'compare',
-      html: renderCompareScreen(buildCompareContent(), STEP_LABELS.compare),
+      html: renderCompareScreen(buildCompareContent(), progressFor('compare')),
     };
   }
 
@@ -97,7 +104,7 @@ function buildView(state: AppState, now: number): ScreenView {
   // offers screen with none.
   return {
     key: 'offers',
-    html: renderOffersScreen(buildOffersContent(state.backing.value ?? 'none'), STEP_LABELS.offers),
+    html: renderOffersScreen(buildOffersContent(state.backing.value ?? 'none'), progressFor('offers')),
   };
 }
 

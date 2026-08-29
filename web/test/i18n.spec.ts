@@ -9,6 +9,7 @@ import { buildBackingContent } from '../src/screens/backingContent';
 import { buildCompareContent } from '../src/screens/compareContent';
 import { buildOffersContent } from '../src/screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from '../src/render';
+import { buildStepProgress } from '../src/domain/journeyProgress';
 import {
   idleProof,
   settleDegraded,
@@ -54,7 +55,7 @@ describe('interface language: Spanish only, never mixed', () => {
   ];
 
   it.each(identityStates.map((state, i) => [i, state] as const))('identity screen, state %i', (_i, state) => {
-    const html = renderProofScreen(buildIdentityContent(state, 10_000), 'Paso 1 de 4');
+    const html = renderProofScreen(buildIdentityContent(state, 10_000), buildStepProgress(1, 4, 'x'));
     assertSpanishOnly(html, 'identity screen');
   });
 
@@ -67,17 +68,17 @@ describe('interface language: Spanish only, never mixed', () => {
   ];
 
   it.each(backingStates.map((state, i) => [i, state] as const))('backing screen, state %i', (_i, state) => {
-    const html = renderProofScreen(buildBackingContent(state, 10_000), 'Paso 2 de 4');
+    const html = renderProofScreen(buildBackingContent(state, 10_000), buildStepProgress(2, 4, 'x'));
     assertSpanishOnly(html, 'backing screen');
   });
 
   it('compare screen', () => {
-    const html = renderCompareScreen(buildCompareContent(), 'Paso 3 de 4');
+    const html = renderCompareScreen(buildCompareContent(), buildStepProgress(3, 4, 'x'));
     assertSpanishOnly(html, 'compare screen');
   });
 
   it('offers screen', () => {
-    const html = renderOffersScreen(buildOffersContent('gold'), 'Paso 4 de 4');
+    const html = renderOffersScreen(buildOffersContent('gold'), buildStepProgress(4, 4, 'x'));
     assertSpanishOnly(html, 'offers screen');
   });
 
@@ -93,11 +94,11 @@ describe('interface language: Spanish only, never mixed', () => {
 
   it.each(laceReasons)('degraded screen, reason %s', (reason) => {
     assertSpanishOnly(
-      renderProofScreen(buildIdentityContent(settleDegraded<boolean>(reason), 10_000), 'Paso 1 de 4'),
+      renderProofScreen(buildIdentityContent(settleDegraded<boolean>(reason), 10_000), buildStepProgress(1, 4, 'x')),
       `identity screen, ${reason}`,
     );
     assertSpanishOnly(
-      renderProofScreen(buildBackingContent(settleDegraded<Tier>(reason), 10_000), 'Paso 2 de 4'),
+      renderProofScreen(buildBackingContent(settleDegraded<Tier>(reason), 10_000), buildStepProgress(2, 4, 'x')),
       `backing screen, ${reason}`,
     );
   });

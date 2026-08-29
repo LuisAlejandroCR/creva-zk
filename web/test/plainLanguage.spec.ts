@@ -5,11 +5,14 @@
 // disclosure that starts closed. Both halves are asserted here.
 
 import { describe, expect, it } from 'vitest';
+import type { ApiFailureReason } from '@creva-zk/api';
 import { buildIdentityContent } from '../src/screens/identityContent';
 import { buildBackingContent } from '../src/screens/backingContent';
 import { buildCompareContent } from '../src/screens/compareContent';
 import { buildOffersContent } from '../src/screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from '../src/render';
+import { buildStepProgress } from '../src/domain/journeyProgress';
+import { generatingBodyFor } from '../src/screens/proofProvenance';
 import {
   idleProof,
   settleDegraded,
@@ -59,13 +62,13 @@ const BACKING_STATES: Array<ProofState<Tier>> = [
 function everyScreen(): Array<readonly [string, string]> {
   const screens: Array<readonly [string, string]> = [];
   IDENTITY_STATES.forEach((state, i) => {
-    screens.push([`identity/${i}`, renderProofScreen(buildIdentityContent(state, 10_000), 'Paso 1 de 4')]);
+    screens.push([`identity/${i}`, renderProofScreen(buildIdentityContent(state, 10_000), buildStepProgress(1, 4, 'x'))]);
   });
   BACKING_STATES.forEach((state, i) => {
-    screens.push([`backing/${i}`, renderProofScreen(buildBackingContent(state, 10_000), 'Paso 2 de 4')]);
+    screens.push([`backing/${i}`, renderProofScreen(buildBackingContent(state, 10_000), buildStepProgress(2, 4, 'x'))]);
   });
-  screens.push(['compare', renderCompareScreen(buildCompareContent(), 'Paso 3 de 4')]);
-  screens.push(['offers', renderOffersScreen(buildOffersContent('silver'), 'Paso 4 de 4')]);
+  screens.push(['compare', renderCompareScreen(buildCompareContent(), buildStepProgress(3, 4, 'x'))]);
+  screens.push(['offers', renderOffersScreen(buildOffersContent('silver'), buildStepProgress(4, 4, 'x'))]);
   return screens;
 }
 
@@ -91,7 +94,7 @@ describe('the technical claim is moved, never deleted', () => {
   });
 
   it('keeps the exact predicate claim on the identity screen', () => {
-    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), 'Paso 1 de 4');
+    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), buildStepProgress(1, 4, 'x'));
     const detail = insideDisclosure(html);
     expect(detail).toMatch(/atestaci[oó]n/i);
     expect(detail).toMatch(/predicado/i);
@@ -99,7 +102,7 @@ describe('the technical claim is moved, never deleted', () => {
   });
 
   it('keeps the exact disclosure claim on the backing screen', () => {
-    const html = renderProofScreen(buildBackingContent(idleProof<Tier>(), 0), 'Paso 2 de 4');
+    const html = renderProofScreen(buildBackingContent(idleProof<Tier>(), 0), buildStepProgress(2, 4, 'x'));
     const detail = insideDisclosure(html);
     expect(detail).toMatch(/circuito/i);
     expect(detail).toMatch(/testigo privado/i);
@@ -144,7 +147,7 @@ describe('buttons say what happens next', () => {
 describe('the wait is staged, not spun', () => {
   it('puts the whole sequence and the standing promise on the identity screen', () => {
     const content = buildIdentityContent(startGenerating<boolean>(0), 6_000);
-    const html = renderProofScreen(content, 'Paso 1 de 4');
+    const html = renderProofScreen(content, buildStepProgress(1, 4, 'x'));
 
     expect(content.wait?.stages.length).toBeGreaterThanOrEqual(4);
     expect(html).toContain('data-role="wait"');
@@ -175,7 +178,7 @@ describe('the wait is staged, not spun', () => {
 describe('the split screen reads with every label hidden', () => {
   it('carries icon, direction and outcome without a single word', () => {
     const content = buildCompareContent();
-    const html = renderCompareScreen(content, 'Paso 3 de 4');
+    const html = renderCompareScreen(content, buildStepProgress(3, 4, 'x'));
 
     // Strip every text node, keeping only the tags: what survives is what a
     // reader who cannot read the labels still sees.
@@ -189,5 +192,72 @@ describe('the split screen reads with every label hidden', () => {
     // The two halves are told apart by their own class, not by their titles.
     expect(structure).toContain('compare-col--exposed');
     expect(structure).toContain('compare-col--sealed');
+  });
+});
+
+// The four reasons the browser-direct path can tell apart before a proof is
+// even attempted. They are still degraded screens, and they still have to be
+// readable by someone who has never heard of a proof system.
+const LACE_REASONS: readonly ApiFailureReason[] = [
+  'wallet_absent',
+  'wallet_locked',
+  'wallet_wrong_network',
+  'proof_server_unreachable',
+];
+
+describe('the typed degraded reasons stay plain, and stay degraded', () => {
+  it.each(LACE_REASONS)('%s renders with no proof-system vocabulary', (reason) => {
+    for (const html of [
+      renderProofScreen(buildIdentityContent(settleDegraded<boolean>(reason), 0), buildStepProgress(1, 4, 'x')),
+      renderProofScreen(buildBackingContent(settleDegraded<Tier>(reason), 0), buildStepProgress(2, 4, 'x')),
+    ]) {
+      const match = aboveTheFold(html).match(JARGON);
+      expect(match, `${reason} says "${match?.[0]}" where she has to read it`).toBeNull();
+    }
+  });
+
+  it.each(LACE_REASONS)('%s says nobody could check, and offers only a retry', (reason) => {
+    const content = buildBackingContent(settleDegraded<Tier>(reason), 0);
+    expect(content.phase).toBe('degraded');
+    expect(content.ctaAction).toBe('retry');
+    expect(content.ctaLabel).toBe('Reintentar');
+    // Never the failed screen's words: nothing was evaluated.
+    expect(content.statusHeading).not.toBe(buildBackingContent(settleFailed<Tier>(), 0).statusHeading);
+    expect(content.statusBody.toLowerCase()).toMatch(/nadie pudo (comprobar|revisar)/);
+  });
+});
+
+describe('where the proof runs is said plainly, on every source', () => {
+  it.each(['stub', 'real', 'bridge', 'lace'] as const)('%s uses no jargon', (source) => {
+    const match = generatingBodyFor(source).match(JARGON);
+    expect(match, `the ${source} provenance says "${match?.[0]}"`).toBeNull();
+  });
+});
+
+describe('the milestone lands on the tier, not on the proof', () => {
+  it('celebrates knowing what she qualifies for, once, on the result screen', () => {
+    const html = renderOffersScreen(buildOffersContent('silver'), buildStepProgress(4, 4, 'x'));
+    expect(html).toContain('tier-reveal');
+    expect(html).toContain(buildOffersContent('silver').milestone);
+    // Exactly one reveal — a celebration on every screen is not a milestone.
+    expect([...html.matchAll(/tier-reveal/g)]).toHaveLength(1);
+  });
+
+  it('never celebrates a proof completing on the way there', () => {
+    for (const html of [
+      renderProofScreen(buildIdentityContent(settleReady(true), 0), buildStepProgress(1, 4, 'x')),
+      renderProofScreen(buildBackingContent(settleReady<Tier>('silver'), 0), buildStepProgress(2, 4, 'x')),
+      renderCompareScreen(buildCompareContent(), buildStepProgress(3, 4, 'x')),
+    ]) {
+      expect(html).not.toContain('tier-reveal');
+      expect(html).not.toContain('tier-milestone');
+    }
+  });
+});
+
+describe('the progress block says what is done and what is left', () => {
+  it.each(everyScreen())('%s carries both halves of the tally', (_label, html) => {
+    expect(html).toContain('progress-tally');
+    expect(html).toMatch(/te falta(n)? \d/);
   });
 });

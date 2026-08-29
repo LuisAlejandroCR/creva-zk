@@ -85,6 +85,10 @@ describe('style.css AA contrast fixes (axe-core measured)', () => {
     expect(source).toMatch(/\.disclaimer\s*{[^}]*color:\s*var\(--cr-text\)/);
   });
 
+  it('.badge-success uses --cr-text: --cr-success-text measures 4.47:1 on the tier reveal', () => {
+    expect(source).toMatch(/\.badge-success\s*{[^}]*color:\s*var\(--cr-text\)/);
+  });
+
   it('.demo-control > span, .badge-synthetic and .status use --cr-text-muted, not the failing --cr-text-secondary', () => {
     expect(source).toMatch(/\.demo-control > span\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
     expect(source).toMatch(/\.badge-synthetic\s*{[^}]*color:\s*var\(--cr-text-muted\)/);

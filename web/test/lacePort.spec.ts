@@ -60,7 +60,7 @@ describe('a browser-direct reason is degraded, never failed', () => {
     for (const reason of LACE_REASONS) {
       const content = buildBackingContent(settleDegraded<Tier>(reason), 0);
       expect(content.phase).toBe('degraded');
-      expect(content.statusHeading).not.toContain('no se cumple');
+      expect(content.statusHeading).not.toContain('Todavía no se puede');
       expect(content.ctaAction).toBe('retry');
       expect(content.ctaDisabled).toBe(false);
     }
@@ -68,7 +68,7 @@ describe('a browser-direct reason is degraded, never failed', () => {
 
   it('leaves the failed screen exactly as it was — a real answer, not a malfunction', () => {
     const content = buildBackingContent(settleFailed<Tier>(), 0);
-    expect(content.statusHeading).toBe('El requisito no se cumple');
+    expect(content.statusHeading).toBe('Todavía no se puede');
   });
 });
 
@@ -89,7 +89,7 @@ describe('each reason renders as its own screen', () => {
     const specific = buildBackingContent(settleDegraded<Tier>('wallet_locked'), 0);
     const generic = buildBackingContent(settleDegraded<Tier>('call_failed'), 0);
     const none = buildBackingContent(settleDegraded<Tier>(), 0);
-    expect(generic.statusHeading).toBe('No pudimos verificarlo');
+    expect(generic.statusHeading).toBe('Nadie pudo revisarlo');
     expect(generic.statusBody).toBe(none.statusBody);
     expect(specific.statusBody).not.toBe(generic.statusBody);
   });
@@ -129,12 +129,18 @@ describe('where the proof is generated is stated, per source', () => {
       now: 24_000,
       startedAt: 0,
       generatingBody: generatingBodyFor('lace'),
+      startLabel: 'start',
+      continueLabel: 'continue',
+      idleBody: 'idle',
+      stages: [{ label: 'uno', detail: 'detalle', startFraction: 0 }],
       readyHeading: () => '',
       readyBody: () => '',
       failedBody: () => '',
       degradedBody: () => '',
+      tech: { summary: 'Ver el detalle técnico', body: 'tech' },
     });
-    expect(content.statusHeading).toContain('24 s');
+    // The seconds live on the staged wait now, not in the panel heading.
+    expect(content.wait?.elapsedLabel).toContain('24 s');
     expect(content.statusBody).toContain(LOCAL_PROOF_SERVER_URL);
     expect(content.ctaDisabled).toBe(true);
   });
