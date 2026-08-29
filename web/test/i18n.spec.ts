@@ -17,6 +17,9 @@ import {
   startGenerating,
   type ProofState,
 } from '../src/domain/proofState';
+import { generatingBodyFor } from '../src/screens/proofProvenance';
+import type { PortSource } from '../src/proofPort';
+import type { ApiFailureReason } from '@creva-zk/api';
 import type { Tier } from '../src/domain/tier';
 
 // English words that would only appear here if a screen were left
@@ -73,5 +76,32 @@ describe('interface language: Spanish only, never mixed', () => {
   it('offers screen', () => {
     const html = renderOffersScreen(buildOffersContent('gold'), 'Paso 4 de 4');
     assertSpanishOnly(html, 'offers screen');
+  });
+
+  // The browser-direct path adds four degraded screens and one generating
+  // sentence per proof-port source. Every one of them is copy a user reads,
+  // so every one of them is scanned too.
+  const laceReasons: readonly ApiFailureReason[] = [
+    'wallet_absent',
+    'wallet_locked',
+    'wallet_wrong_network',
+    'proof_server_unreachable',
+  ];
+
+  it.each(laceReasons)('degraded screen, reason %s', (reason) => {
+    assertSpanishOnly(
+      renderProofScreen(buildIdentityContent(settleDegraded<boolean>(reason), 10_000), 'Paso 1 de 4'),
+      `identity screen, ${reason}`,
+    );
+    assertSpanishOnly(
+      renderProofScreen(buildBackingContent(settleDegraded<Tier>(reason), 10_000), 'Paso 2 de 4'),
+      `backing screen, ${reason}`,
+    );
+  });
+
+  const sources: readonly PortSource[] = ['stub', 'real', 'bridge', 'lace'];
+
+  it.each(sources)('generating copy for the %s source', (source) => {
+    assertSpanishOnly(generatingBodyFor(source), `generating copy, ${source}`);
   });
 });

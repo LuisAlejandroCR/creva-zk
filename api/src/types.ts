@@ -11,7 +11,13 @@ export type ApiFailureReason =
   | "wallet_unavailable" // genesis wallet failed to start or sync
   | "contract_not_compiled" // contract/src/managed/backing is missing
   | "deploy_failed"
-  | "call_failed";
+  | "call_failed"
+  // The four the browser-direct (Lace) path can distinguish before a proof
+  // is even attempted. They are additive: no existing step produces them.
+  | "wallet_absent" // no Midnight wallet is injected into this browser
+  | "wallet_locked" // a wallet is there but handed back no usable connection
+  | "wallet_wrong_network" // the wallet is connected to a different network
+  | "proof_server_unreachable"; // the user's local proof server never answered
 
 export interface ApiDegraded {
   readonly step: string;
