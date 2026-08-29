@@ -5,6 +5,11 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./lace": "./src/lace.ts",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

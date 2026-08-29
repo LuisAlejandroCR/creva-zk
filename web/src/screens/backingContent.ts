@@ -5,7 +5,9 @@
 
 import { TIER_LABELS, type Tier } from '../domain/tier';
 import type { ProofState } from '../domain/proofState';
+import { activePortSource } from '../proofPort';
 import { buildProofScreenContent, type ProofScreenContent } from './proofScreen';
+import { generatingBodyFor } from './proofProvenance';
 
 export function buildBackingContent(proof: ProofState<Tier>, now: number): ProofScreenContent {
   return buildProofScreenContent<Tier>({
@@ -16,6 +18,8 @@ export function buildBackingContent(proof: ProofState<Tier>, now: number): Proof
     now,
     startedAt: proof.startedAt,
     value: proof.value,
+    reason: proof.reason,
+    generatingBody: generatingBodyFor(activePortSource()),
     readyHeading: (tier) => `✓ Prueba de respaldo lista — ${TIER_LABELS[tier]}`,
     readyBody: () => 'El nivel de arriba es el único valor revelado. La siguiente pantalla dividida muestra qué significa eso.',
     failedBody: () =>

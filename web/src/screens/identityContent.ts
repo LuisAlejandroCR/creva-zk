@@ -4,7 +4,9 @@
 // discloses only the outcome, never the attestation it checked.
 
 import type { ProofState } from '../domain/proofState';
+import { activePortSource } from '../proofPort';
 import { buildProofScreenContent, type ProofScreenContent } from './proofScreen';
+import { generatingBodyFor } from './proofProvenance';
 
 export function buildIdentityContent(proof: ProofState<boolean>, now: number): ProofScreenContent {
   return buildProofScreenContent<boolean>({
@@ -15,6 +17,8 @@ export function buildIdentityContent(proof: ProofState<boolean>, now: number): P
     now,
     startedAt: proof.startedAt,
     value: proof.value,
+    reason: proof.reason,
+    generatingBody: generatingBodyFor(activePortSource()),
     readyHeading: () => '✓ Identidad verificada',
     readyBody: () => 'El predicado se cumple. No se reveló ningún documento, foto ni RFC para llegar a este resultado.',
     failedBody: () =>
