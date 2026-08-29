@@ -5,7 +5,7 @@
 // connected, so no rate or lender exists to show.
 
 import { TIER_LABELS, type Tier } from '../domain/tier';
-import type { TechDetail } from './proofScreen';
+import { helpPath } from '../help/helpContent';
 
 export interface OffersContent {
   readonly h1: string;
@@ -15,7 +15,7 @@ export interface OffersContent {
   readonly summary: string;
   readonly disclaimer: string;
   readonly ctaLabel: string;
-  readonly tech: TechDetail;
+  readonly help: string;
 }
 
 export function buildOffersContent(tier: Tier): OffersContent {
@@ -28,10 +28,6 @@ export function buildOffersContent(tier: Tier): OffersContent {
     disclaimer:
       'Este prototipo no está conectado a ningún catálogo de crédito. Por eso no verás tasas, ni bancos, ni cantidades: solo el nivel que salió de la revisión.',
     ctaLabel: 'Empezar de nuevo',
-    tech: {
-      summary: 'Ver el detalle técnico',
-      body:
-        'El nivel mostrado es el único valor divulgado por el circuito de respaldo, y llega acompañado de la prueba que lo respalda. No hay catálogo detrás: ninguna tasa, acreedor ni cifra aparece en pantalla porque ningún catálogo la produjo. Todos los datos de esta demostración son sintéticos y no pertenecen a ninguna persona real.',
-    },
+    help: helpPath('resultado', 'que-es-un-nivel'),
   };
 }

@@ -689,100 +689,214 @@ h1 {
   animation: cr-rise var(--cr-dur) var(--cr-ease) both;
 }
 
-/* ── The technical disclosure ────────────────────────────────────────────
-   Closed on arrival. The first read has to work without it; the second read
-   is what opens it. The claim inside is never dropped. */
-.tech {
-  border: 1px solid var(--cr-border);
-  border-radius: 14px;
-  background: var(--cr-surface-1);
-  padding: 0 0.9rem;
-}
-
-.tech-summary {
-  min-height: 44px;
+/* ── The ? every screen carries ─────────────────────────────────────────
+   Same 44px target as a back link, and it says where it goes: a bare glyph
+   would be one more thing to decode. */
+.help-link {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--cr-border);
+  background: var(--cr-surface-1);
+  color: var(--cr-text-muted);
   font-size: 0.82rem;
   font-weight: 700;
+  text-decoration: none;
+  transition: border-color var(--cr-dur-fast) var(--cr-ease), color var(--cr-dur-fast) var(--cr-ease);
+}
+
+.help-link:hover {
+  border-color: var(--cr-crimson);
+  color: var(--cr-text);
+}
+
+.help-link:focus-visible {
+  outline: 2px solid var(--cr-crimson);
+  outline-offset: 2px;
+}
+
+.help-link-mark {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 999px;
+  background: var(--cr-surface-2);
+  color: var(--cr-text);
+  font-weight: 800;
+}
+
+/* ── The help centre ─────────────────────────────────────────────────────
+   Index, category and article, in the same three shapes creva_finance
+   already ships, so the markup migrates with the content. */
+.help-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
   color: var(--cr-text-muted);
-  list-style: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
 }
 
-.tech-summary::-webkit-details-marker {
-  display: none;
+.help-back:hover {
+  color: var(--cr-text);
 }
 
-.tech-summary::before {
-  content: '›';
-  display: inline-block;
-  font-size: 1.1rem;
-  line-height: 1;
-  color: var(--cr-text-muted);
-  transition: transform var(--cr-dur-fast) var(--cr-ease);
-}
-
-.tech[open] .tech-summary::before {
-  transform: rotate(90deg);
-}
-
-.tech-summary:focus-visible {
+.help-back:focus-visible {
   outline: 2px solid var(--cr-crimson);
   outline-offset: 2px;
   border-radius: 10px;
 }
 
-.tech-body {
-  padding: 0 0 0.9rem;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  color: var(--cr-text-muted);
-  animation: cr-rise var(--cr-dur) var(--cr-ease) both;
+.help-title-icon {
+  margin-right: 0.4rem;
 }
 
-.tech-body code {
-  font-size: 0.95em;
-  padding: 0.05rem 0.3rem;
-  border-radius: 6px;
-  background: var(--cr-surface-2);
+.help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.help-card,
+.help-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 44px;
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid var(--cr-border);
+  background: var(--cr-surface-1);
   color: var(--cr-text);
+  text-decoration: none;
+  transition: border-color var(--cr-dur-fast) var(--cr-ease), transform var(--cr-dur-fast) var(--cr-ease);
 }
 
-/* ── The milestone ───────────────────────────────────────────────────────
-   The one earned celebration of the journey, and it belongs here: that a
-   proof ran is not her achievement, knowing what she qualifies for is. The
-   card lands first and the tier arrives inside it a beat later, so it reads
-   as an answer arriving rather than a transition finishing. */
-.tier-reveal {
-  position: relative;
-  padding: 1rem;
-  border-radius: 16px;
+.help-card:hover,
+.help-row:hover {
+  border-color: var(--cr-crimson);
+}
+
+.help-card:active,
+.help-row:active {
+  transform: scale(0.99);
+}
+
+.help-card:focus-visible,
+.help-row:focus-visible {
+  outline: 2px solid var(--cr-crimson);
+  outline-offset: 2px;
+}
+
+.help-card-icon {
+  flex: none;
+  font-size: 1.4rem;
+}
+
+.help-card-copy,
+.help-row-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.help-card-title,
+.help-row-question {
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.help-card-lead,
+.help-row-answer {
+  color: var(--cr-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.help-card-chevron {
+  flex: none;
+  color: var(--cr-text-muted);
+  font-size: 1.2rem;
+}
+
+/* The one line she reads before deciding to read the rest. */
+.help-answer {
+  margin: 0;
+  padding: 0.9rem;
+  border-radius: 14px;
   background: var(--cr-surface-2);
   border: 1px solid var(--cr-border);
-  overflow: hidden;
-  animation: cr-land var(--cr-dur-slow) var(--cr-ease) both;
-}
-
-/* One ring, once: it expands out of the card and is gone. Nothing here
-   repeats, because an answer only arrives once. */
-.tier-reveal::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 16px;
-  border: 2px solid var(--cr-crimson);
-  pointer-events: none;
-  animation: cr-milestone-ring var(--cr-dur-slow) var(--cr-ease) var(--cr-dur) both;
-}
-
-.tier-milestone {
-  margin: 0 0 0.35rem;
-  font-size: 0.85rem;
-  font-weight: 800;
-  line-height: 1.4;
   color: var(--cr-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.help-steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--cr-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.help-steps::marker {
+  color: var(--cr-text);
+}
+
+.help-resolved {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: var(--cr-success-bg);
+  border: 1px solid var(--cr-success-border);
+  color: var(--cr-text);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.help-resolved-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cr-text-muted);
+}
+
+.help-note {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: var(--cr-info-bg);
+  border: 1px solid var(--cr-info-border);
+  color: var(--cr-text);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.help-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 /* ── Motion ──────────────────────────────────────────────────────────────

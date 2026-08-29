@@ -1,12 +1,14 @@
 // backingContent.ts
-// Copy for the "see what you qualify for" screen. Plain language above, the
-// exact technical claim inside the disclosure. The value is the proven Tier
-// only — never the collateral amount or the account balance behind it.
+// Copy for the "see what you qualify for" screen. Plain language throughout:
+// the explanation lives in the help centre, one tap away, and never in the
+// flow. The value is the proven Tier only — never the collateral amount or
+// the account balance behind it.
 
 import { TIER_LABELS, type Tier } from '../domain/tier';
 import type { ProofState } from '../domain/proofState';
 import type { WaitStage } from '../domain/waitStages';
 import { activePortSource } from '../proofPort';
+import { helpPath } from '../help/helpContent';
 import { buildProofScreenContent, type ProofScreenContent } from './proofScreen';
 import { generatingBodyFor } from './proofProvenance';
 
@@ -57,10 +59,13 @@ export function buildBackingContent(proof: ProofState<Tier>, now: number): Proof
       'Tu respaldo todavía no alcanza para el límite que pediste. Nadie vio de cuánto es: solo que aún no llega.',
     degradedBody: () =>
       'El servicio que hace la revisión no contestó, así que nadie pudo revisar tu respaldo. Esto no quiere decir que no califiques: quiere decir que no lo sabemos. Tu saldo sigue aquí, en tu teléfono.',
-    tech: {
-      summary: 'Ver el detalle técnico',
-      body:
-        'El circuito <code>backing-tier</code> recibe como argumento público el límite solicitado. Dentro del circuito, el colateral entra como testigo privado y se compara contra ese límite y contra los umbrales de cada nivel. La prueba de conocimiento cero revela únicamente el nivel resultante — Sin nivel, Bronce, Plata u Oro — y nunca el monto del colateral, el saldo de la cuenta ni por cuánto se superó el umbral.',
+    help: helpPath('privacidad', 'sin-ver-mi-saldo'),
+    degradedHelp: {
+      call_failed: helpPath('problemas', 'nadie-pudo-revisar'),
+      wallet_absent: helpPath('problemas', 'falta-la-cartera'),
+      wallet_locked: helpPath('problemas', 'cartera-bloqueada'),
+      wallet_wrong_network: helpPath('problemas', 'red-equivocada'),
+      proof_server_unreachable: helpPath('problemas', 'servidor-local'),
     },
   });
 }
