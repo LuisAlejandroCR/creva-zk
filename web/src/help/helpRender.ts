@@ -50,7 +50,7 @@ export function renderHelpIndex(): string {
     ${renderTopbar()}
     ${backLink('#', 'Volver a mi solicitud')}
     <h1>¿En qué te ayudamos?</h1>
-    <p class="intro">Preguntas que nos hacen seguido, contestadas sin rodeos. Si algo no está aquí, escríbenos.</p>
+    <p class="intro">Las preguntas que nos hacen seguido, contestadas sin rodeos. Todo lo que ves en pantalla es de ejemplo.</p>
     <div class="help-list">${HELP_CATEGORIES.map(renderCategoryCard).join('')}</div>
   `;
 }
