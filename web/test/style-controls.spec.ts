@@ -129,10 +129,16 @@ describe('style.css motion', () => {
   });
 });
 
-// The disclosure is the whole plain-language-first mechanism: a summary that
-// is a real 44px target, and a body that is only revealed on request.
-describe('style.css technical disclosure', () => {
-  it('gives the summary a 44px target', () => {
-    expect(source).toMatch(/\.tech-summary\s*{[^}]*min-height:\s*44px/);
+// The explanation left the flow: what a screen carries now is a ?, and it
+// has to be as easy to hit as the back link it sits beside.
+describe('style.css help centre', () => {
+  it('gives the ? and every help row a 44px target', () => {
+    expect(source).toMatch(/\.help-link\s*{[^}]*min-height:\s*44px/);
+    expect(source).toMatch(/\.help-back\s*{[^}]*min-height:\s*44px/);
+    expect(source).toMatch(/\.help-card,\s*\n\.help-row\s*{[^}]*min-height:\s*44px/);
+  });
+
+  it('declares no disclosure styles, because there is no disclosure left', () => {
+    expect(source).not.toMatch(/\.tech(-|\s|{)/);
   });
 });

@@ -1,8 +1,8 @@
 // plainLanguage.spec.ts
 // The journey is written for an entrepreneur applying for a card, not for a
-// developer. Nothing she has to read first may use the vocabulary of the
-// proof system; the technical claim is never deleted, only moved behind a
-// disclosure that starts closed. Both halves are asserted here.
+// developer. No screen may use the vocabulary of the proof system anywhere —
+// there is no disclosure to hide it in any more. The explanation lives in
+// the help centre, and every screen carries a ? that reaches it.
 
 import { describe, expect, it } from 'vitest';
 import type { ApiFailureReason } from '@creva-zk/api';
@@ -23,24 +23,19 @@ import {
 } from '../src/domain/proofState';
 import type { Tier } from '../src/domain/tier';
 
-// The vocabulary of the proof system. Every one of these is legitimate — and
-// belongs inside the disclosure, where a jury looks, not in the first line
-// an applicant reads.
+// The vocabulary of the proof system. Every one of these is legitimate, and
+// none of it belongs on a screen she has to get through: expanding a word
+// mid-task still asks her to learn it to finish. It lives in help content.
 const JARGON = /\b(predicad[oa]s?|atestaci[oó]n(es)?|circuitos?|witness|disclose|testigos?|booleanos?|hash(es)?|umbral(es)?)\b/i;
 
 function stripTags(html: string): string {
   return html.replace(/<[^>]*>/g, ' ');
 }
 
-// Everything outside <details> — that is, everything she sees before
-// choosing to see more.
+// The whole screen now: with the disclosure gone there is no "further in"
+// left for a technical word to hide in.
 function aboveTheFold(html: string): string {
-  return stripTags(html.replace(/<details[\s\S]*?<\/details>/g, ' '));
-}
-
-function insideDisclosure(html: string): string {
-  const blocks = [...html.matchAll(/<details[\s\S]*?<\/details>/g)].map((m) => m[0]);
-  return stripTags(blocks.join(' '));
+  return stripTags(html);
 }
 
 const IDENTITY_STATES: Array<ProofState<boolean>> = [
@@ -73,7 +68,7 @@ function everyScreen(): Array<readonly [string, string]> {
 }
 
 describe('plain language above the fold', () => {
-  it.each(everyScreen())('%s uses no proof-system vocabulary before the disclosure', (label, html) => {
+  it.each(everyScreen())('%s uses no proof-system vocabulary anywhere on it', (label, html) => {
     const match = aboveTheFold(html).match(JARGON);
     expect(match, `${label} says "${match?.[0]}" where she has to read it`).toBeNull();
   });
@@ -85,28 +80,24 @@ describe('plain language above the fold', () => {
   });
 });
 
-describe('the technical claim is moved, never deleted', () => {
-  it.each(everyScreen())('%s carries a disclosure that starts closed', (_label, html) => {
-    expect(html).toMatch(/<details class="tech">/);
-    // No `open` attribute: the first read has to work without it.
-    expect(html).not.toMatch(/<details[^>]*\sopen/);
-    expect(html).toContain('Ver el detalle técnico');
+describe('the explanation left the flow, and is one tap away', () => {
+  it.each(everyScreen())('%s carries no disclosure to expand mid-task', (_label, html) => {
+    expect(html).not.toContain('<details');
+    expect(html).not.toContain('Ver el detalle técnico');
   });
 
-  it('keeps the exact predicate claim on the identity screen', () => {
-    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), buildStepProgress(1, 4, 'x'));
-    const detail = insideDisclosure(html);
-    expect(detail).toMatch(/atestaci[oó]n/i);
-    expect(detail).toMatch(/predicado/i);
-    expect(detail).toMatch(/conocimiento cero/i);
+  it.each(everyScreen())('%s carries a ? that reaches the help centre', (_label, html) => {
+    expect(html).toContain('data-role="help-link"');
+    expect(html, 'no help href on the screen').toMatch(/href="#\/ayuda\/[^"]+\/[^"]+"/);
+    // The ? says where it goes; a bare glyph is one more thing to decode.
+    expect(html).toContain('Preguntas sobre esta pantalla');
   });
 
-  it('keeps the exact disclosure claim on the backing screen', () => {
-    const html = renderProofScreen(buildBackingContent(idleProof<Tier>(), 0), buildStepProgress(2, 4, 'x'));
-    const detail = insideDisclosure(html);
-    expect(detail).toMatch(/circuito/i);
-    expect(detail).toMatch(/testigo privado/i);
-    expect(detail).toMatch(/nunca el monto del colateral/i);
+  it('points every screen at an article that answers that screen', () => {
+    expect(buildIdentityContent(idleProof<boolean>(), 0).help).toBe('privacidad/que-ve-creva');
+    expect(buildBackingContent(idleProof<Tier>(), 0).help).toBe('privacidad/sin-ver-mi-saldo');
+    expect(buildCompareContent().help).toBe('privacidad/donde-quedan-mis-datos');
+    expect(buildOffersContent('silver').help).toBe('resultado/que-es-un-nivel');
   });
 });
 

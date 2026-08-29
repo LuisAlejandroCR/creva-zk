@@ -2,7 +2,8 @@
 // The journey's stateful glue: owns the current step and both proof states,
 // wires the single CTA per screen, and re-renders on every state change.
 // Every proof outcome comes from the seam in proofPort.ts — this file holds
-// no outcomes of its own.
+// no outcomes of its own. The help centre renders over the same root, and
+// the journey's state survives the visit.
 
 import type { Tier } from './domain/tier';
 import type { ProofState } from './domain/proofState';
@@ -24,6 +25,8 @@ import { buildOffersContent } from './screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from './render';
 import { buildStepProgress, type StepProgress } from './domain/journeyProgress';
 import { applyWaitProgress } from './waitView';
+import { parseHelpRoute } from './help/helpRoute';
+import { renderHelpArticle, renderHelpCategory, renderHelpIndex } from './help/helpRender';
 
 type Step = 'identity' | 'backing' | 'compare' | 'offers';
 
@@ -108,6 +111,22 @@ function buildView(state: AppState, now: number): ScreenView {
   };
 }
 
+// Rendering the help centre over the journey's own root, rather than in a
+// second mount, is what keeps a proof running while she reads: the state and
+// the ticker are untouched, only the markup is swapped.
+function renderHelpRoute(root: HTMLElement, hash: string): boolean {
+  const route = parseHelpRoute(hash);
+  if (route.kind === 'journey') return false;
+
+  root.innerHTML =
+    route.kind === 'index'
+      ? renderHelpIndex()
+      : route.kind === 'category'
+        ? renderHelpCategory(route.category)
+        : renderHelpArticle(route.category, route.article);
+  return true;
+}
+
 export function mountApp(root: HTMLElement): void {
   let state = initialState();
   // Bumped on every start, so a proof left running by "start over" cannot
@@ -115,6 +134,10 @@ export function mountApp(root: HTMLElement): void {
   let generation = 0;
   let tickHandle: ReturnType<typeof setInterval> | undefined;
   let renderedKey: string | undefined;
+  // While she is in the help centre the journey keeps its state and its
+  // ticker, and simply stops drawing. A proof started before she left is
+  // still running when she comes back.
+  let showingHelp = false;
 
   function stopTicking(): void {
     if (tickHandle !== undefined) clearInterval(tickHandle);
@@ -122,6 +145,7 @@ export function mountApp(root: HTMLElement): void {
   }
 
   function render(): void {
+    if (showingHelp) return;
     const view = buildView(state, Date.now());
 
     // Same screen, still waiting: patch the few fields that moved so the CSS
@@ -218,5 +242,17 @@ export function mountApp(root: HTMLElement): void {
     });
   }
 
-  render();
+  function route(): void {
+    const wasShowingHelp = showingHelp;
+    showingHelp = renderHelpRoute(root, window.location.hash);
+    if (showingHelp) return;
+
+    // Coming back from help: the markup is gone, so force a full redraw
+    // rather than trusting the key from before she left.
+    if (wasShowingHelp) renderedKey = undefined;
+    render();
+  }
+
+  window.addEventListener('hashchange', route);
+  route();
 }

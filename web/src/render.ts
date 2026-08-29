@@ -2,12 +2,14 @@
 // Pure HTML-string renderers, one per screen. Kept string-in/string-out (no
 // DOM APIs) so layout and copy assertions can run under plain vitest. The
 // data-role hooks are what waitView.ts patches in place while a proof runs.
+// Explanations are not rendered here: every screen carries a ? instead.
 
 import type { CompareContent } from './screens/compareContent';
 import type { OffersContent } from './screens/offersContent';
-import type { ProofScreenContent, TechDetail } from './screens/proofScreen';
+import type { ProofScreenContent } from './screens/proofScreen';
 import type { StepProgress } from './domain/journeyProgress';
 import { OVERTIME_NOTE, WAIT_PROMISE, type WaitProgress } from './domain/waitStages';
+import { renderHelpLink } from './help/helpRender';
 
 const SYNTHETIC_BADGE = '<span class="badge-synthetic">Sintético</span>';
 
@@ -19,17 +21,6 @@ function renderProgress(progress: StepProgress): string {
       <p class="progress">${progress.label}</p>
       <p class="progress-tally">${progress.tally}</p>
     </div>
-  `;
-}
-
-// Closed by default, always. The first read has to work without it; the
-// second read is what opens it.
-function renderTech(tech: TechDetail): string {
-  return `
-    <details class="tech">
-      <summary class="tech-summary">${tech.summary}</summary>
-      <div class="tech-body">${tech.body}</div>
-    </details>
   `;
 }
 
@@ -75,7 +66,7 @@ export function renderProofScreen(content: ProofScreenContent, progress: StepPro
       ${content.synthetic ? `<p>${SYNTHETIC_BADGE}</p>` : ''}
     </div>
     <button class="btn-primary" data-role="cta" ${content.ctaDisabled ? 'disabled' : ''}>${content.ctaLabel}</button>
-    ${renderTech(content.tech)}
+    ${renderHelpLink(content.help)}
   `;
 }
 
@@ -113,7 +104,7 @@ export function renderCompareScreen(content: CompareContent, progress: StepProgr
       </section>
     </div>
     <button class="btn-primary" data-role="cta">${content.ctaLabel}</button>
-    ${renderTech(content.tech)}
+    ${renderHelpLink(content.help)}
   `;
 }
 
@@ -128,6 +119,6 @@ export function renderOffersScreen(content: OffersContent, progress: StepProgres
     <p class="intro">${content.summary}</p>
     <p class="disclaimer">${content.disclaimer}</p>
     <button class="btn-primary" data-role="cta">${content.ctaLabel}</button>
-    ${renderTech(content.tech)}
+    ${renderHelpLink(content.help)}
   `;
 }

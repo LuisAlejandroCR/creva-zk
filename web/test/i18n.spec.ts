@@ -10,6 +10,8 @@ import { buildCompareContent } from '../src/screens/compareContent';
 import { buildOffersContent } from '../src/screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from '../src/render';
 import { buildStepProgress } from '../src/domain/journeyProgress';
+import { HELP_CATEGORIES, everyHelpArticle } from '../src/help/helpContent';
+import { renderHelpArticle, renderHelpCategory, renderHelpIndex } from '../src/help/helpRender';
 import {
   idleProof,
   settleDegraded,
@@ -107,5 +109,23 @@ describe('interface language: Spanish only, never mixed', () => {
 
   it.each(sources)('generating copy for the %s source', (source) => {
     assertSpanishOnly(generatingBodyFor(source), `generating copy, ${source}`);
+  });
+});
+
+// The help centre ships the same way the screens do, so it is held to the
+// same rule: Spanish only, never mixed. Its keywords are not rendered, so
+// only what actually reaches a page is scanned.
+describe('the help centre is Spanish only too', () => {
+  const pages: Array<readonly [string, string]> = [
+    ['índice', renderHelpIndex()],
+    ...HELP_CATEGORIES.map((category) => [category.slug, renderHelpCategory(category.slug)] as const),
+    ...everyHelpArticle().map(
+      ({ category, article }) =>
+        [`${category.slug}/${article.slug}`, renderHelpArticle(category.slug, article.slug)] as const,
+    ),
+  ];
+
+  it.each(pages)('%s', (label, html) => {
+    assertSpanishOnly(html, `help ${label}`);
   });
 });

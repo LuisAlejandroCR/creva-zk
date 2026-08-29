@@ -3,7 +3,7 @@
 // on both sides — crossed out and sealed behind one outcome chip on the
 // right — so the meaning survives with every label hidden.
 
-import type { TechDetail } from './proofScreen';
+import { helpPath } from '../help/helpContent';
 
 export interface CompareItem {
   readonly icon: string;
@@ -25,7 +25,7 @@ export interface CompareContent {
   readonly rightTitle: string;
   readonly outcomeChip: OutcomeChip;
   readonly ctaLabel: string;
-  readonly tech: TechDetail;
+  readonly help: string;
 }
 
 export function buildCompareContent(): CompareContent {
@@ -44,10 +44,6 @@ export function buildCompareContent(): CompareContent {
     rightTitle: 'Como fue con Creva',
     outcomeChip: { icon: '✓', label: 'Solo la respuesta' },
     ctaLabel: 'Ver mi resultado',
-    tech: {
-      summary: 'Ver el detalle técnico',
-      body:
-        'La columna izquierda es la divulgación completa: el documento, la biometría y el saldo cruzan hacia la contraparte y quedan en su poder. La derecha es lo que las dos pruebas de conocimiento cero divulgan en realidad: un booleano de identidad y un nivel de respaldo. Los testigos privados — documento, fecha de nacimiento, RFC, colateral, saldo — permanecen en el dispositivo y nunca entran en la transcripción de la prueba; el verificador solo recibe la prueba y el resultado del predicado.',
-    },
+    help: helpPath('privacidad', 'donde-quedan-mis-datos'),
   };
 }

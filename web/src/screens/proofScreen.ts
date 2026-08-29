@@ -1,7 +1,7 @@
 // proofScreen.ts
 // Pure view-model builder shared by the identity and backing screens: turns
 // a ProofState into plain-language copy, a staged wait, one contextual CTA
-// and a technical disclosure that starts closed. A degraded proof renders
+// and the help article this screen's ? leads to. A degraded proof renders
 // the copy for its own reason where there is one, so "no wallet" and "your
 // local proof server is down" are never the same screen — but it stays a
 // degraded screen, never a rejection. No DOM involved.
@@ -11,14 +11,6 @@ import type { ProofPhase } from '../domain/proofState';
 import { buildWaitProgress, type WaitProgress, type WaitStage } from '../domain/waitStages';
 
 export type CtaAction = 'start' | 'retry' | 'continue';
-
-// The disclosure keeps the exact technical claim a ZK jury needs, out of the
-// way of the entrepreneur who does not. Never empty: dropping the claim to
-// simplify the screen would be the one unacceptable simplification.
-export interface TechDetail {
-  readonly summary: string;
-  readonly body: string;
-}
 
 export interface ProofScreenContent {
   readonly h1: string;
@@ -32,7 +24,9 @@ export interface ProofScreenContent {
   readonly ctaAction: CtaAction;
   readonly ctaDisabled: boolean;
   readonly synthetic: boolean;
-  readonly tech: TechDetail;
+  /** "category/article": where this screen's ? goes. Never empty — a ? that
+   *  leads nowhere fails the build. */
+  readonly help: string;
 }
 
 export interface BuildProofScreenOptions<T> {
@@ -62,7 +56,11 @@ export interface BuildProofScreenOptions<T> {
   readonly failedBody: () => string;
   /** No value: nobody could check, so there is no answer to describe. */
   readonly degradedBody: () => string;
-  readonly tech: TechDetail;
+  /** The article that answers this screen. */
+  readonly help: string;
+  /** An article per degraded reason, where one says more than the screen's
+   *  own. Anything not listed keeps the screen's article. */
+  readonly degradedHelp?: Readonly<Partial<Record<ApiFailureReason, string>>>;
 }
 
 // True for every source that proves through a process this app itself
@@ -105,7 +103,7 @@ const DEGRADED_CTA_LABEL = 'Reintentar';
 
 export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): ProofScreenContent {
   const { phase, now, startedAt, value } = opts;
-  const shared = { h1: opts.h1, intro: opts.intro, phase, tech: opts.tech };
+  const shared = { h1: opts.h1, intro: opts.intro, phase, help: opts.help };
 
   if (phase === 'idle') {
     return {
@@ -151,8 +149,12 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
 
   if (phase === 'degraded') {
     const specific = opts.reason === undefined ? undefined : DEGRADED_COPY[opts.reason];
+    const specificHelp = opts.reason === undefined ? undefined : opts.degradedHelp?.[opts.reason];
     return {
       ...shared,
+      // The ? follows the reason: "falta la cartera" has an article of its
+      // own, and sending her to the screen's general one would waste the tap.
+      help: specificHelp ?? opts.help,
       // Not a rejection: nothing was checked, so the honest action is to try
       // again, never a way past a question nobody answered. That holds for
       // the four named reasons too — they only say what to fix.

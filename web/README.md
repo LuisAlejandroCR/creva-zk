@@ -137,20 +137,56 @@ made with. No screen decides an outcome for itself.
     While a proof runs the region is patched field by field
     (`src/waitView.ts`) rather than re-rendered, so no transition is ever
     interrupted.
-13. **Plain language first, technical detail on demand.** Primary copy is
-    written for a Mexican entrepreneur applying for a card. No *predicado*,
-    *atestación*, *circuito*, *testigo*, *witness* or *disclose* appears
-    anywhere she has to read: every screen carries a `Ver el detalle técnico`
-    disclosure, closed on arrival, and the exact technical claim lives inside
-    it — moved, never deleted, because a ZK jury still has to see it.
-    `test/plainLanguage.spec.ts` asserts both halves on every screen in every
-    state.
+13. **Plain language, and an answer when she wants one.** Primary copy is
+    written for a Mexican entrepreneur applying for a card, most of whom have
+    never touched crypto. No *predicado*, *atestación*, *circuito*,
+    *testigo*, *witness* or *disclose* appears anywhere on a journey screen —
+    not even folded away, because expanding a word mid-task still asks her to
+    learn it in order to finish. The explanation lives in the help centre
+    (criterion 15) and every screen carries a `?` that reaches it.
+    `test/plainLanguage.spec.ts` scans every screen in every state.
 14. **Motion with intent.** Animation marks state changes only — a screen
     arriving, the split's two halves separating, the tier landing, a wait step
     becoming live. Every transition and animation is timed with `--cr-ease`
     and a `--cr-dur*` token; the one exception is the wait meter's fill, which
     is `linear` because it reports elapsed time and easing it would report the
     wrong time. `prefers-reduced-motion: reduce` stands all of it down.
+15. **The help centre.** Mirrors what `creva_finance/frontend` already ships,
+    so it migrates by copying files rather than by rewriting them:
+
+    | creva_finance | here |
+    | --- | --- |
+    | `lib/help-content.ts` | `src/help/helpContent.ts` |
+    | `app/help/page.tsx` | `renderHelpIndex()` at `#/ayuda` |
+    | `app/help/[category]` | `renderHelpCategory()` at `#/ayuda/:category` |
+    | `app/help/[category]/[article]` | `renderHelpArticle()` at `#/ayuda/:category/:article` |
+    | `components/help/HelpLink.tsx` | `renderHelpLink()`, 44px, same as the back link |
+    | `test/lib/help-content.test.ts` | `test/help/helpContent.spec.ts` |
+
+    `HelpArticle` is `{ slug, question, answer, steps?, note?, resolvedBy?,
+    keywords? }` and `HelpCategory` is `{ slug, title, lead, icon, articles }`,
+    as theirs are. `answer` is one line — what she reads before deciding to
+    open anything. `keywords` is what she would type, not what we called it.
+    The content module carries no markup at all, which the tests enforce; all
+    of it lives in `helpRender.ts`.
+
+    Three rules the tests hold:
+    - **A `?` that leads nowhere fails the build**, as it does in
+      creva_finance. Every screen's help path — including one per typed
+      degraded reason, so "falta la cartera" reaches its own article — is
+      resolved against the content module, and every link on every rendered
+      page is checked too.
+    - **No article ever states a threshold, a ratio, a formula or a tier
+      boundary.** Same rule as theirs, same reason: that is Creva's business
+      logic and publishing it would give it away. The test rejects
+      comparators, percentages, currency and formula words, and rejects any
+      sentence naming a tier and a figure together.
+    - **It never dead-ends.** An unknown category falls back to the index and
+      an unknown article to its category; every page carries a way back.
+
+    Reading help does not interrupt a proof: the help centre renders over the
+    journey's own root, so state and ticker survive the visit and a proof
+    started before she left is still running when she returns.
 
 ## Proof-port sources
 

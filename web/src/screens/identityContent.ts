@@ -1,11 +1,13 @@
 // identityContent.ts
-// Copy for the "apply for the card" screen. Plain language above, the exact
-// technical claim inside the disclosure. The value is a plain boolean — only
-// the outcome is ever disclosed, never what was checked to reach it.
+// Copy for the "apply for the card" screen. Plain language throughout: the
+// explanation lives in the help centre, one tap away, and never in the flow.
+// The value is a plain boolean — only the outcome is ever disclosed, never
+// what was checked to reach it.
 
 import type { ProofState } from '../domain/proofState';
 import type { WaitStage } from '../domain/waitStages';
 import { activePortSource } from '../proofPort';
+import { helpPath } from '../help/helpContent';
 import { buildProofScreenContent, type ProofScreenContent } from './proofScreen';
 import { generatingBodyFor } from './proofProvenance';
 
@@ -57,10 +59,13 @@ export function buildIdentityContent(proof: ProofState<boolean>, now: number): P
       'Con esta identificación todavía no se puede seguir. No se dice cuál de los requisitos faltó, ni siquiera a nosotros.',
     degradedBody: () =>
       'El servicio que hace la revisión no contestó, así que nadie pudo comprobar tu identidad. Esto no quiere decir que no califiques: quiere decir que no lo sabemos. Tus datos siguen aquí, en tu teléfono.',
-    tech: {
-      summary: 'Ver el detalle técnico',
-      body:
-        'El circuito <code>identity-check</code> recibe como argumentos públicos la llave del emisor y el hash del RFC esperado. Verifica en el dispositivo una atestación de identidad firmada y evalúa un predicado de tres condiciones — emisor válido, mayor de edad, RFC coincidente — sobre un testigo privado que nunca sale de la máquina. La prueba de conocimiento cero revela únicamente el booleano del predicado: ni el documento, ni la fecha de nacimiento, ni el RFC, ni cuál de las tres condiciones falló.',
+    help: helpPath('privacidad', 'que-ve-creva'),
+    degradedHelp: {
+      call_failed: helpPath('problemas', 'nadie-pudo-revisar'),
+      wallet_absent: helpPath('problemas', 'falta-la-cartera'),
+      wallet_locked: helpPath('problemas', 'cartera-bloqueada'),
+      wallet_wrong_network: helpPath('problemas', 'red-equivocada'),
+      proof_server_unreachable: helpPath('problemas', 'servidor-local'),
     },
   });
 }
