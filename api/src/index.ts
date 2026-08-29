@@ -4,14 +4,16 @@
 // contract loader, environment/provider wiring, the demo runner, the HTTP
 // proof server) stays internal — only the seam is exported here, and only
 // browser-safe modules, so bundling this entry never pulls in node: or
-// testcontainers. The browser-direct Lace path is deliberately NOT here: it
-// reaches Midnight's WebAssembly ledger, so it lives behind its own
-// "@creva-zk/api/lace" entry and only a build on that source pays for it.
+// testcontainers. Two paths are deliberately NOT here. The browser-direct
+// Lace path reaches Midnight's WebAssembly ledger, so it lives behind
+// "@creva-zk/api/lace" and only a build on that source pays for it; the real
+// in-process path now reaches Docker and node:, so it lives behind
+// "@creva-zk/api/real" and no browser build may reach it at all.
 
 export type { ApiDegraded, ApiFailureReason, ApiResult } from "./types.js";
 export type { BackingProofPort, IdentityProofPort, JubjubPoint, Tier } from "./proofPort.js";
 export { createStubBackingPort, createStubIdentityPort } from "./stubProofPort.js";
-export { createRealBackingPort, createRealIdentityPort, type PortLogger } from "./realProofPort.js";
+export type { PortLogger } from "./portLogger.js";
 export {
   createBridgeBackingPort,
   createBridgeIdentityPort,

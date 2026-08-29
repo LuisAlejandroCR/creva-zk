@@ -94,9 +94,15 @@ unrecognised falls back to the stub.
 | `VITE_PORT_SOURCE` | Who proves | Needs |
 | --- | --- | --- |
 | unset / `stub` | nobody — a synthetic outcome, held 32s so the generating screen is seen | nothing |
-| `real` | an in-process Node call path | Node, not a browser |
-| `bridge` | `api/`'s local HTTP proof server | `npm run serve --workspace api` |
+| `real` | the in-process Node call path — it deploys and runs the circuit | Node, not a browser; degrades in one |
+| `bridge` | `api/`'s local HTTP proof server, backed by the real port | `npm run serve --workspace api`, Docker, the Compact toolchain |
 | `lace` | the browser itself, via Lace | the checklist below |
+
+On `bridge` the backing screen now shows a real proof — `proveBacking` against the local network,
+~23.7s — instead of a degraded result. It reports `bronze` when the collateral clears, because
+that is the strongest tier a boolean circuit proves; see [`api/README.md`](../api/README.md).
+The identity screen still degrades on that source: `proveIdentity` has no TypeScript binding and
+no JubJub signer, and the reason is spelled out there.
 
 ## The browser-direct path (`VITE_PORT_SOURCE=lace`)
 

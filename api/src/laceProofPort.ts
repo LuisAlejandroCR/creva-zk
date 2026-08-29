@@ -9,7 +9,7 @@
 
 import type { ApiResult } from "./types.js";
 import type { BackingProofPort, IdentityProofPort, JubjubPoint, Tier } from "./proofPort.js";
-import type { PortLogger } from "./realProofPort.js";
+import type { PortLogger } from "./portLogger.js";
 import { connectLaceWallet, degraded, type LaceConnection, type LaceWalletOptions } from "./laceWallet.js";
 import { createLaceProviders, type LaceProviderOptions } from "./laceProviders.js";
 import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
