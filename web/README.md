@@ -232,9 +232,11 @@ Node process of ours sits in the middle: `api/`'s proof server is the
    web/public/zk/zkir/<circuitId>.bzkir
    ```
 
-   Copy them out of `contract/src/managed/backing` after `npm run
-   compact:build`. Override the base URL with `VITE_ZK_CONFIG_URL` if they
-   are served from somewhere else.
+   No manual copy: `scripts/copy-zk-artifacts.mjs` mirrors them out of
+   `contract/src/managed/` and runs from `npm run build` and `npm run dev`
+   in this workspace, so `npm run verify` (which compiles first) and the web
+   build both get them. See "The 2 MB the artifacts cost" below. Override the
+   base URL with `VITE_ZK_CONFIG_URL` if they are served from somewhere else.
 5. **Node 24.11.1+ and `npm ci`** at the repository root, as for any other
    source.
 
@@ -243,6 +245,36 @@ Then:
 ```
 VITE_PORT_SOURCE=lace npm run dev --workspace web
 ```
+
+### The 2 MB the artifacts cost
+
+The artifacts are compiler output, regenerable by `npm run compact:build`, so
+they are gitignored — `contract/src/managed/` and the served copy at
+`web/public/zk/` both. The copy is the honest number for the Mobile track:
+
+| File | Size |
+| --- | --- |
+| `keys/<id>.prover` — backing | 672 kB |
+| `keys/<id>.prover` — identity | 1.3 MB |
+| `keys/<id>.verifier` | ~1.6 kB each |
+| `zkir/<id>.bzkir` | small |
+| **total** | **~2 MB** |
+
+That is ~2 MB on top of the 164 kB shell, and it is a real first-load weight
+for an installable PWA. Two decisions follow from it, and both are held by
+tests:
+
+- **The service worker does not precache them.** `public/sw.js` bypasses the
+  `/zk/` prefix before any cache branch, so the install payload stays the
+  shell. Putting 2 MB into the install would hurt the very thing installing
+  is meant to prove.
+- **They are fetched when a proof is started**, on the `lace` source only.
+  No other source requests them at all.
+
+If the artifacts are missing, `npm run build --workspace web` fails and names
+`npm run compact:build` rather than shipping a build that silently cannot
+prove. `npm run dev` only warns, because the default source is the stub and
+the journey does not need them to render.
 
 ### Budget the wait
 

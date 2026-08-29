@@ -44,3 +44,17 @@ describe('service worker shell caching', () => {
     }
   });
 });
+
+describe('ZK artifacts are never cached', () => {
+  it('bypasses the /zk/ prefix before any cache branch', () => {
+    expect(source).toContain("const NEVER_CACHED_PREFIX = '/zk/';");
+    const bypass = source.indexOf('url.pathname.startsWith(NEVER_CACHED_PREFIX)');
+    expect(bypass).toBeGreaterThan(-1);
+    expect(bypass).toBeLessThan(source.indexOf('SHELL_ASSETS.includes(url.pathname)'));
+  });
+
+  it('keeps the ~2 MB of prover keys out of the install payload', () => {
+    const match = source.match(/const SHELL_ASSETS = \[([\s\S]*?)\];/);
+    expect(match![1]).not.toContain('/zk');
+  });
+});

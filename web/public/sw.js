@@ -1,10 +1,17 @@
 // sw.js
 // App-shell service worker. Only the fixed SHELL_ASSETS list is ever
-// cached — proof outcomes, attestation responses, and any future API call
-// stay network-only and never touch on-device storage. Navigations go
-// network-first with the cached shell as an offline fallback.
+// cached — proof outcomes, attestation responses, the ~2 MB of ZK artifacts
+// under /zk/, and any future API call stay network-only and never touch
+// on-device storage. Navigations go network-first with the cached shell as
+// an offline fallback.
 
 const CACHE_NAME = 'creva-zk-shell-v1';
+// Never cached, and stated rather than left to the SHELL_ASSETS check: the
+// prover keys under this prefix are ~2 MB, and precaching them would put
+// that weight into the install payload of an app whose claim is that it is
+// light enough to install.
+const NEVER_CACHED_PREFIX = '/zk/';
+
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -65,6 +72,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  if (url.pathname.startsWith(NEVER_CACHED_PREFIX)) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(request));
