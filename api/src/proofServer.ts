@@ -76,10 +76,17 @@ function parseRequestedLimit(value: unknown): bigint | undefined {
   return undefined;
 }
 
+// Both coordinates are Field elements, so they travel as decimal strings
+// for the same reason requestedLimit does: JSON numbers cannot hold them.
+function parseFieldElement(value: unknown): bigint | undefined {
+  return typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : undefined;
+}
+
 function parseIssuerKey(value: unknown): JubjubPoint | undefined {
   const record = asRecord(value);
-  const compressed = record?.["compressed"];
-  return typeof compressed === "string" && compressed.length > 0 ? { compressed } : undefined;
+  const x = parseFieldElement(record?.["x"]);
+  const y = parseFieldElement(record?.["y"]);
+  return x === undefined || y === undefined ? undefined : { x, y };
 }
 
 // Never throws: a port that rejects (it should not — the ports return typed

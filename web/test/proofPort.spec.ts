@@ -18,7 +18,7 @@ import { idleProof, startGenerating } from '../src/domain/proofState';
 
 // Synthetic public arguments only — no real issuer key or tax ID anywhere
 // in this test.
-const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: 'ab'.repeat(32) };
+const SYNTHETIC_ISSUER_KEY: JubjubPoint = { x: 1n, y: 2n };
 const SYNTHETIC_TAX_ID_HASH = 'cd'.repeat(32);
 
 async function renderBacking(port: BackingProofPort) {

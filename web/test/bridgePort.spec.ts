@@ -12,7 +12,7 @@ import { buildBackingContent } from '../src/screens/backingContent';
 import { buildIdentityContent } from '../src/screens/identityContent';
 
 // Synthetic public arguments only.
-const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: 'ab'.repeat(32) };
+const SYNTHETIC_ISSUER_KEY: JubjubPoint = { x: 1n, y: 2n };
 const SYNTHETIC_TAX_ID_HASH = 'cd'.repeat(32);
 
 // What a browser sees when nothing is listening on the bridge's port.

@@ -9,7 +9,15 @@ import type { JubjubPoint } from '@creva-zk/api';
 // is expected to match. Both are public arguments to proveIdentity: the
 // document, the photo and the tax ID itself never leave the device, and
 // never appear here.
-export const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: 'ab'.repeat(32) };
+//
+// The key is the (x, y) pair the circuit takes, not a compressed point —
+// this is the Jubjub generator, so it is a real point on the curve rather
+// than a hex string no one could decompress. It stands in until a
+// synthetic issuer's actual verifying key is threaded through.
+export const SYNTHETIC_ISSUER_KEY: JubjubPoint = {
+  x: 28336281903124990867587793011069573392383982287722241916350956173377953689573n,
+  y: 39385640392217313770878525135509063452020585410343666726093009378539878503883n,
+};
 export const SYNTHETIC_TAX_ID_HASH = 'cd'.repeat(32);
 
 // The limit the demo asks for. The stub port clears anything at or under

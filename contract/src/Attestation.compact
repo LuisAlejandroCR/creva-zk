@@ -7,6 +7,12 @@
 // anything. The claim's shape (`T`) is chosen by each predicate — this
 // module never looks inside it.
 //
+// The two hashing steps verifyAttestation performs are exported as pure
+// circuits (attestationMessage, attestationChallenge) so an off-chain
+// issuer can compute the challenge by CALLING this contract rather than
+// by reimplementing Compact's transientHash in TypeScript. Signer and
+// verifier then agree by construction.
+//
 // A module file (as opposed to a top-level program) carries no `pragma`
 // and imports from inside its own `module { ... }` block — confirmed
 // against the compiler, not assumed.
@@ -39,7 +45,36 @@ module Attestation {
   // used for anything else. schnorrVerify asserts internally, so a call
   // that returns at all means the signature held.
   export circuit verifyAttestation<T>(att: Attestation<T>, issuerKey: JubjubPoint): [] {
-    const msg: Vector<1, Field> = [transientHash<SignedPayload<T>>(att.payload)];
-    schnorrVerify<1>(msg, att.signature, issuerKey);
+    schnorrVerify<1>(attestationMessage<T>(att.payload), att.signature, issuerKey);
+  }
+
+  // The message schnorrVerify signs over, as its own pure circuit: the
+  // single-element Vector whose one Field is the hash of the payload.
+  // verifyAttestation calls it, and so does an off-chain signer — through
+  // the compiled contract's pureCircuits binding — so neither side ever
+  // holds a private copy of this encoding.
+  export pure circuit attestationMessage<T>(payload: SignedPayload<T>): Vector<1, Field> {
+    return [transientHash<SignedPayload<T>>(payload)];
+  }
+
+  // Everything the signer needs in one call: the payload hash and the
+  // Schnorr challenge over it, composed exactly as verifyAttestation
+  // composes them. The result is the FULL challenge — a signer must
+  // truncate it to 248 bits (mod 2^248) to match schnorrVerify's
+  // witness-assisted reduction.
+  //
+  // Generic in T, so each predicate exports its own concrete
+  // instantiation (see identity-check.compact and backing-tier.compact);
+  // only a concrete instantiation gets a TypeScript binding.
+  export pure circuit attestationChallenge<T>(
+                        payload: SignedPayload<T>,
+                        announcement: JubjubPoint,
+                        issuerKey: JubjubPoint
+                        ): Field {
+    return schnorrChallenge<1>(jubjubPointX(announcement),
+                               jubjubPointY(announcement),
+                               jubjubPointX(issuerKey),
+                               jubjubPointY(issuerKey),
+                               attestationMessage<T>(payload));
   }
 }

@@ -18,8 +18,11 @@ import { createStubBackingPort, createStubIdentityPort } from "../src/stubProofP
 import type { ApiResult } from "../src/types.js";
 import type { Tier } from "../src/proofPort.js";
 
-// Synthetic public arguments only.
-const SYNTHETIC_ISSUER_KEY = { compressed: "ab".repeat(32) };
+// Synthetic public arguments only. The issuer key crosses the wire as the
+// (x, y) pair proveIdentity takes, with each Field element a decimal
+// string for the same reason requestedLimit is one.
+const SYNTHETIC_ISSUER_KEY = { x: 1n, y: 2n };
+const SYNTHETIC_ISSUER_KEY_BODY = { x: "1", y: "2" };
 const SYNTHETIC_TAX_ID_HASH = "cd".repeat(32);
 
 const stubPorts: ProofPorts = { backing: createStubBackingPort(), identity: createStubIdentityPort() };
@@ -40,7 +43,7 @@ describe("routeProofRequest", () => {
   });
 
   it("answers the identity endpoint with the port's own result", async () => {
-    const body = JSON.stringify({ issuerKey: SYNTHETIC_ISSUER_KEY, expectedTaxIdHash: SYNTHETIC_TAX_ID_HASH });
+    const body = JSON.stringify({ issuerKey: SYNTHETIC_ISSUER_KEY_BODY, expectedTaxIdHash: SYNTHETIC_TAX_ID_HASH });
 
     const response = await routeProofRequest("POST", IDENTITY_ROUTE, body, stubPorts);
 

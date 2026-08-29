@@ -220,8 +220,8 @@ export function createRealIdentityPort(logger: Logger | PortLogger = silentLogge
   return {
     async checkIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
       logger.info(
-        { issuerKey: issuerKey.compressed, expectedTaxIdHash },
-        "real identity port called; identity-check.compact has no TypeScript binding and no JubJub signer",
+        { issuerKeyX: issuerKey.x.toString(), issuerKeyY: issuerKey.y.toString(), expectedTaxIdHash },
+        "real identity port called; the Schnorr signer exists now, but identity-check.compact still has no TypeScript binding",
       );
       return { status: "degraded", degraded: { step: "checkIdentity", reason: "contract_not_compiled" } };
     },

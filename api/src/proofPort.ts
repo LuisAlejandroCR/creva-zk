@@ -11,11 +11,16 @@ import type { ApiResult } from "./types.js";
 // `Tier` type exists yet to import instead.
 export type Tier = "none" | "bronze" | "silver" | "gold";
 
-// Mirrors Compact's JubjubPoint the same way attestation/src/types.ts does:
-// a single compressed hex string off the wire, not imported from that
-// workspace (see this file's header — no shared package to import from).
+// Compact's JubjubPoint: the (x, y) Field pair proveIdentity actually
+// takes. Restated here rather than imported from attestation/ or the
+// runtime (see this file's header — no shared package to import from),
+// but structurally identical to both, so a key crosses this boundary
+// ready to be a circuit argument. It is deliberately NOT a compressed hex
+// string: a compressed point has to be decompressed by someone before the
+// circuit can use it, and that someone never existed.
 export interface JubjubPoint {
-  readonly compressed: string; // hex
+  readonly x: bigint;
+  readonly y: bigint;
 }
 
 // proveBacking(requestedLimit: Uint<64>) -> Boolean — see

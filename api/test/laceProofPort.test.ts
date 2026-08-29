@@ -14,7 +14,7 @@ import { ephemeralStoragePassword, FetchZkConfigProvider } from "../src/laceProv
 import type { JubjubPoint } from "../src/proofPort.js";
 
 // Synthetic public arguments only — no real issuer key, no real tax ID.
-const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: "ab".repeat(32) };
+const SYNTHETIC_ISSUER_KEY: JubjubPoint = { x: 1n, y: 2n };
 const SYNTHETIC_TAX_ID_HASH = "cd".repeat(32);
 
 // Hex rather than Bech32m: parseCoinPublicKeyToHex accepts either, and a

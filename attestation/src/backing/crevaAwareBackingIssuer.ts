@@ -8,13 +8,15 @@
 import type { CrevaApiPort } from "../crevaApi/types.js";
 import type { JubjubPoint, IssuerResult } from "../types.js";
 import type { CollateralClaim, BackingIssuerPort } from "./types.js";
-import { SyntheticBackingIssuer } from "./syntheticBackingIssuer.js";
 
 export class CrevaAwareBackingIssuer implements BackingIssuerPort {
   constructor(
     private readonly api: CrevaApiPort,
     private readonly real: BackingIssuerPort,
-    private readonly synthetic: BackingIssuerPort = new SyntheticBackingIssuer(),
+    // Required, like the real issuer: the synthetic fallback now needs a
+    // signer carrying the contract's challenge circuit, so there is no
+    // sensible default this class could construct on its own.
+    private readonly synthetic: BackingIssuerPort,
   ) {}
 
   async issue(subjectKey: JubjubPoint, claim: CollateralClaim): Promise<IssuerResult<CollateralClaim>> {

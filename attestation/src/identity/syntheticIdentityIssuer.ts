@@ -8,13 +8,16 @@
 // difference except that one tag.
 
 import type { AttestationSigner } from "../signing.js";
-import { Ed25519AttestationSigner } from "../signing.js";
 import type { JubjubPoint, SignedPayload, IssuerResult } from "../types.js";
 import type { IdentityClaim, IdentityIssuerPort } from "./types.js";
 
 export class SyntheticIdentityIssuer implements IdentityIssuerPort {
+  // The signer is required, with no default. A default signer would have
+  // to invent a challenge source, and a signature the circuit rejects is
+  // worse than no signer at all — the failure would surface as an aborted
+  // proof, far from the line that caused it.
   constructor(
-    private readonly signer: AttestationSigner = new Ed25519AttestationSigner(),
+    private readonly signer: AttestationSigner<IdentityClaim>,
     // Raw signer errors can carry internal detail (key material, process
     // state); they are logged here, never placed in the returned result.
     private readonly logError: (error: unknown) => void = () => {},

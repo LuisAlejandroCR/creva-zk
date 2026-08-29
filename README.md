@@ -43,9 +43,13 @@ Submitted to the **Integrate Midnight** track, where prior work is allowed when 
   Midnight's official example.
 - **Reused circuit code:** `contract/src/schnorr.compact` is
   [`midnightntwrk/example-zkloan`](https://github.com/midnightntwrk/example-zkloan)'s
-  `contract/src/schnorr.compact` (Apache-2.0), unmodified except for its header comment. Compact
+  `contract/src/schnorr.compact` (Apache-2.0). Compact
   0.31.1 has no signature-verification primitive yet, so this Schnorr-over-JubJub polyfill is the
-  official example's answer to that gap, not ours.
+  official example's answer to that gap, not ours. Two changes of ours: the challenge hash is
+  factored out of `schnorrVerify` into an exported `schnorrChallenge` pure circuit, so the
+  off-chain issuer can obtain the challenge by calling the contract rather than by reimplementing
+  Compact's `transientHash` in TypeScript; and that circuit is generic over the message length
+  rather than fixed at `Vector<4>`, which had it hashing a different struct than the verifier.
 
 ### Running it
 
@@ -122,9 +126,13 @@ Entregado al track **Integrate Midnight**, donde el trabajo previo se permite si
 - **Código de circuito reutilizado:** `contract/src/schnorr.compact` es el
   `contract/src/schnorr.compact` de
   [`midnightntwrk/example-zkloan`](https://github.com/midnightntwrk/example-zkloan) (Apache-2.0),
-  sin modificar salvo el comentario de encabezado. Compact 0.31.1 todavía no tiene un primitivo de
+  Compact 0.31.1 todavía no tiene un primitivo de
   verificación de firmas, así que este polyfill de Schnorr sobre JubJub es la respuesta del ejemplo
-  oficial a ese vacío, no la nuestra.
+  oficial a ese vacío, no la nuestra. Dos cambios nuestros: el hash del desafío sale de
+  `schnorrVerify` a un circuito puro exportado `schnorrChallenge`, para que el emisor off-chain
+  obtenga el desafío llamando al contrato en vez de reimplementar el `transientHash` de Compact en
+  TypeScript; y ese circuito es genérico sobre el largo del mensaje en vez de fijo en `Vector<4>`,
+  que hacía que hasheara una estructura distinta a la del verificador.
 
 ### Correrlo
 
