@@ -17,7 +17,9 @@ export function buildIdentityContent(proof: ProofState<boolean>, now: number): P
     value: proof.value,
     readyHeading: () => '✓ Identidad verificada',
     readyBody: () => 'El predicado se cumple. No se reveló ningún documento, foto ni RFC para llegar a este resultado.',
+    failedBody: () =>
+      'La atestación firmada no cumple el predicado. El circuito revela solo ese desenlace, nunca cuál de las tres condiciones falló.',
     degradedBody: () =>
-      'El predicado se cumple mediante una vía de verificación alterna. Trátalo como de menor confianza que una verificación completa.',
+      'El servicio de pruebas no respondió, así que nadie pudo comprobar tu identidad. Esto no significa que no califiques: significa que no lo sabemos. Tus datos siguen sin salir de este dispositivo.',
   });
 }

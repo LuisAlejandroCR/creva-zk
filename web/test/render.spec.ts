@@ -19,14 +19,14 @@ function countOccurrences(source: string, needle: RegExp): number {
 
 describe('renderProofScreen', () => {
   it('renders exactly one h1 and Creva\'s primary button class', () => {
-    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), 'Paso 1 de 4', 'ready');
+    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), 'Paso 1 de 4');
     expect(countOccurrences(html, /<h1/g)).toBe(1);
     expect(html).toContain('class="btn-primary"');
     expect(html).not.toMatch(/disabled/);
   });
 
   it('tags the idle status panel with the idle phase, not a semantic one', () => {
-    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), 'Paso 1 de 4', 'ready');
+    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), 'Paso 1 de 4');
     expect(html).toContain('data-phase="idle"');
   });
 
@@ -34,35 +34,34 @@ describe('renderProofScreen', () => {
     const html = renderProofScreen(
       buildIdentityContent({ phase: 'generating', startedAt: 0 }, 5000),
       'Paso 1 de 4',
-      'ready',
     );
     expect(html).toContain('data-phase="generating"');
     expect(html).toContain('disabled');
   });
 
   it('tags the failed panel so it picks up --cr-danger-*', () => {
-    const html = renderProofScreen(buildIdentityContent(settleFailed<boolean>(), 0), 'Paso 1 de 4', 'failed');
+    const html = renderProofScreen(buildIdentityContent(settleFailed<boolean>(), 0), 'Paso 1 de 4');
     expect(html).toContain('data-phase="failed"');
   });
 
   it('tags the ready panel so it picks up --cr-success-*', () => {
-    const html = renderProofScreen(buildIdentityContent(settleReady(true), 0), 'Paso 1 de 4', 'ready');
+    const html = renderProofScreen(buildIdentityContent(settleReady(true), 0), 'Paso 1 de 4');
     expect(html).toContain('data-phase="ready"');
   });
 
   it('tags the degraded panel so it picks up --cr-info-*', () => {
-    const html = renderProofScreen(buildIdentityContent(settleDegraded(true), 0), 'Paso 1 de 4', 'degraded');
+    const html = renderProofScreen(buildIdentityContent(settleDegraded('call_failed'), 0), 'Paso 1 de 4');
     expect(html).toContain('data-phase="degraded"');
   });
 
   it('omits the synthetic badge from the status panel while idle', () => {
-    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), 'Paso 1 de 4', 'ready');
+    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), 'Paso 1 de 4');
     const statusPanel = html.split('<div class="status-panel"')[1]!;
     expect(statusPanel).not.toContain('badge-synthetic');
   });
 
   it('shows the synthetic badge once a value has settled', () => {
-    const html = renderProofScreen(buildIdentityContent(settleReady(true), 0), 'Paso 1 de 4', 'ready');
+    const html = renderProofScreen(buildIdentityContent(settleReady(true), 0), 'Paso 1 de 4');
     expect(html).toContain('badge-synthetic');
   });
 });

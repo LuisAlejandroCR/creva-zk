@@ -44,11 +44,11 @@ describe('interface language: Spanish only, never mixed', () => {
     startGenerating<boolean>(0),
     settleFailed<boolean>(),
     settleReady(true),
-    settleDegraded(true),
+    settleDegraded<boolean>('call_failed'),
   ];
 
   it.each(identityStates.map((state, i) => [i, state] as const))('identity screen, state %i', (_i, state) => {
-    const html = renderProofScreen(buildIdentityContent(state, 10_000), 'Paso 1 de 4', 'ready');
+    const html = renderProofScreen(buildIdentityContent(state, 10_000), 'Paso 1 de 4');
     assertSpanishOnly(html, 'identity screen');
   });
 
@@ -57,11 +57,11 @@ describe('interface language: Spanish only, never mixed', () => {
     startGenerating<Tier>(0),
     settleFailed<Tier>(),
     settleReady<Tier>('silver'),
-    settleDegraded<Tier>('gold'),
+    settleDegraded<Tier>('call_failed'),
   ];
 
   it.each(backingStates.map((state, i) => [i, state] as const))('backing screen, state %i', (_i, state) => {
-    const html = renderProofScreen(buildBackingContent(state, 10_000), 'Paso 2 de 4', 'ready');
+    const html = renderProofScreen(buildBackingContent(state, 10_000), 'Paso 2 de 4');
     assertSpanishOnly(html, 'backing screen');
   });
 

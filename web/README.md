@@ -8,24 +8,30 @@
 
 ## Scope
 
-This app drives every proof outcome from a local, typed stub (`src/domain`).
-It does not call `api/`, `contract/`, `anchoring/`, or `advisor/` — those are
-owned by other agents. The stub exposes exactly a `Tier` and a verified
-boolean, and every screen state is derived from it, including the failure
-states.
+Every proof outcome on screen comes from a `@creva-zk/api` port, chosen by
+the seam in `src/proofPort.ts`. There is one stub and it lives behind that
+port; `src/domain/demoInputs.ts` holds only the synthetic *inputs* a call is
+made with. No screen decides an outcome for itself.
 
 ## Acceptance criteria
 
 1. **Journey.** "Solicita la tarjeta" (identity) → "Descubre a qué calificas"
    (backing) → a before/after comparison → an offers screen. The identity
    and backing screens each expose one primary action, whose label changes
-   with proof phase (Iniciar → Reintentar / Continuar / Continuar de todas
-   formas). This README stays in English as project documentation; the
-   screens themselves are Spanish-only per criterion 8.
+   with proof phase (Iniciar → Reintentar / Continuar). This README stays in
+   English as project documentation; the screens themselves are Spanish-only
+   per criterion 8.
 2. **Four proof states.** Each proof (identity, backing) renders one of:
-   `generating`, `ready`, `verification failed`, `degraded`. `generating` is
-   its own screen state with an elapsed-time readout, not a spinner — real
-   proofs here take tens of seconds, and the UI says so.
+   `generating`, `ready`, `failed`, `degraded`. `generating` is its own
+   screen state with an elapsed-time readout, not a spinner — real proofs
+   here take tens of seconds, and the UI says so. `failed` and `degraded`
+   are different answers and never collapse into one another:
+   - `failed` — the predicate was evaluated and does not hold. Her collateral
+     falls short, or the attestation does not match.
+   - `degraded` — nobody could check. The proof server did not answer. Only
+     `ready` advances the journey; `degraded` offers retry, never a way past
+     an unanswered check, because telling her she does not qualify when
+     nothing was evaluated is a lie.
 3. **Split before/after screen.** The same three items — document, selfie,
    balance — appear on both sides. Left: legible, each crossing over to the
    counterparty (an arrow per row, the counterparty named at the bottom).
@@ -60,6 +66,23 @@ states.
    screen, label, button, and status message is in Spanish — no English, and
    the two are never mixed on one screen. `test/i18n.spec.ts` renders every
    screen in every reachable state and fails on a stray English word.
+9. **The seam is the only source of outcomes.** The screens call
+   `selectIdentityPort()` / `selectBackingPort()` and turn the result into a
+   screen state with `toProofState`. Choosing a source is the whole switch:
+
+   ```bash
+   npm run dev --workspace web                          # stub, instant, default
+   npm run serve --workspace api                        # then, in another shell:
+   VITE_PORT_SOURCE=bridge npm run dev --workspace web  # a real ~23.7s proof
+   ```
+
+   With nothing set the journey behaves exactly as it did before it was
+   wired — same copy, same states, same 32s hold on the generating screen —
+   pinned by `test/defaultParity.spec.ts`. That hold applies to the stub
+   *only*, so a real proof takes the time it takes and never has latency
+   added to it. Kill the proof server and both screens land on `degraded`;
+   `test/proofRun.spec.ts` proves that, and proves generating is entered
+   before the call and left only after it settles.
 
 ## Out of scope
 

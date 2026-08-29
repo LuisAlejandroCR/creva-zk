@@ -15,7 +15,7 @@ import {
   createStubIdentityPort,
 } from '@creva-zk/api';
 import type { ProofState } from './domain/proofState';
-import { settleFailed, settleReady } from './domain/proofState';
+import { settleDegraded, settleFailed, settleReady } from './domain/proofState';
 
 type PortSource = 'stub' | 'real' | 'bridge';
 
@@ -42,6 +42,10 @@ export function resolvePortSource(raw: string | undefined): PortSource {
 }
 
 const PORT_SOURCE: PortSource = resolvePortSource(import.meta.env?.VITE_PORT_SOURCE);
+
+export function activePortSource(): PortSource {
+  return PORT_SOURCE;
+}
 
 // Where the bridge port looks for that server. Left undefined unless the
 // build sets it, so @creva-zk/api's own default (http://localhost:8787)
@@ -70,10 +74,22 @@ export function selectIdentityPort(): IdentityProofPort {
   }
 }
 
-// A port's ApiResult has no "degraded but here's a lower-trust value" case
-// the way this app's own demo scenarios do — degraded means no value came
-// back at all, so it renders as the same "failed, offer retry" state as a
-// hard failure.
-export function toProofState<T>(result: ApiResult<T>): ProofState<T> {
-  return result.status === 'ok' ? settleReady(result.value) : settleFailed<T>();
+// The two non-ok outcomes are different answers to the user and must not be
+// collapsed:
+//
+//   failed   the predicate does not hold — the collateral falls short, the
+//            attestation does not match. A real answer, and it is "no".
+//   degraded nobody could check. The proof server is down, the call timed
+//            out, the body was not an ApiResult. Not an answer at all.
+//
+// Rendering degraded as failed would tell her she does not qualify when in
+// fact nothing was evaluated, so the reason travels through to the screen.
+//
+// A predicate that does not hold is an `ok` result carrying a negative
+// outcome — tier "none", verified false — not a degraded one. `holds` is how
+// the caller names that, since this adapter is generic over the outcome and
+// cannot read it. Omitted, every ok result is treated as holding.
+export function toProofState<T>(result: ApiResult<T>, holds: (value: T) => boolean = () => true): ProofState<T> {
+  if (result.status === 'degraded') return settleDegraded<T>(result.degraded.reason);
+  return holds(result.value) ? settleReady(result.value) : settleFailed<T>();
 }

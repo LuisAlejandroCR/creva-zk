@@ -39,10 +39,12 @@ describe('proof state transitions', () => {
     expect(state.value).toBeUndefined();
   });
 
-  it('settleDegraded carries the settled value under a degraded phase', () => {
-    const state = settleDegraded(true);
+  it('settleDegraded carries a reason and never a value', () => {
+    const state = settleDegraded('call_failed');
     expect(state.phase).toBe('degraded');
-    expect(state.value).toBe(true);
+    expect(state.reason).toBe('call_failed');
+    // Degraded means nobody answered, so there is no outcome to disclose.
+    expect(state.value).toBeUndefined();
   });
 });
 
