@@ -9,13 +9,12 @@ import type { Tier } from './domain/tier';
 import type { ProofState } from './domain/proofState';
 import { STUB_LATENCY_MS, idleProof } from './domain/proofState';
 import {
-  SYNTHETIC_ISSUER_KEY,
   SYNTHETIC_REQUESTED_LIMIT,
   SYNTHETIC_TAX_ID_HASH,
   backingHolds,
   identityHolds,
 } from './domain/demoInputs';
-import { activePortSource, selectBackingPort, selectIdentityPort } from './proofPort';
+import { activePortSource, identityIssuerKey, selectBackingPort, selectIdentityPort } from './proofPort';
 import { runProof } from './proofRun';
 import { buildIdentityContent } from './screens/identityContent';
 import { buildBackingContent } from './screens/backingContent';
@@ -206,7 +205,7 @@ export function mountApp(root: HTMLElement): void {
       kind === 'identity'
         ? runProof<boolean>({
             call: () =>
-              selectIdentityPort().checkIdentity(SYNTHETIC_ISSUER_KEY, SYNTHETIC_TAX_ID_HASH),
+              selectIdentityPort().checkIdentity(identityIssuerKey(), SYNTHETIC_TAX_ID_HASH),
             holds: identityHolds,
             emit,
             minimumMs: stubHold(),

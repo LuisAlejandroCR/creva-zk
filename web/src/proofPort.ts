@@ -5,7 +5,7 @@
 // chosen at build time by VITE_PORT_SOURCE, so switching between the stub
 // and a real proof needs no code edit — see the note below.
 
-import type { ApiResult, BackingProofPort, IdentityProofPort } from '@creva-zk/api';
+import type { ApiResult, BackingProofPort, IdentityProofPort, JubjubPoint } from '@creva-zk/api';
 import {
   createBridgeBackingPort,
   createBridgeIdentityPort,
@@ -18,6 +18,7 @@ import {
 import { createRealBackingPort, createRealIdentityPort } from './realUnavailable';
 import type { LaceOptions } from '@creva-zk/api/lace';
 import { createLazyLaceBackingPort, createLazyLaceIdentityPort } from './lacePort';
+import { SYNTHETIC_ISSUER_KEY } from './domain/demoInputs';
 import type { ProofState } from './domain/proofState';
 import { settleDegraded, settleFailed, settleReady } from './domain/proofState';
 
@@ -105,6 +106,23 @@ export function selectBackingPort(): BackingProofPort {
     default:
       return createStubBackingPort();
   }
+}
+
+// Which issuer key an identity proof is checked against, per source.
+//
+// On the bridge path the browser names none. The server publishes the key
+// its own deployment signs under and the port fetches it before proving —
+// naming one here is what made the circuit abort, because a key this app
+// invented is not the key the attestation was signed with. The zero point
+// goes over as a marker that no browser-side key applies; the bridge port
+// replaces it and never sends it.
+//
+// Every other source proves against the synthetic issuer this demo ships,
+// which is the key its own synthetic attestation was signed under.
+const NO_BROWSER_ISSUER_KEY: JubjubPoint = { x: 0n, y: 0n };
+
+export function identityIssuerKey(): JubjubPoint {
+  return PORT_SOURCE === 'bridge' ? NO_BROWSER_ISSUER_KEY : SYNTHETIC_ISSUER_KEY;
 }
 
 export function selectIdentityPort(): IdentityProofPort {

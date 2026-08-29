@@ -17,6 +17,7 @@ export type { PortLogger } from "./portLogger.js";
 export {
   createBridgeBackingPort,
   createBridgeIdentityPort,
+  fetchIdentityIssuerKey,
   DEFAULT_BRIDGE_TIMEOUT_MS,
   DEFAULT_BRIDGE_URL,
   type BridgeOptions,

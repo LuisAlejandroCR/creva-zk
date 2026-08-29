@@ -1,8 +1,9 @@
 // api/src/proofServer.ts
 // The Node-only HTTP bridge in front of the proof ports: one endpoint per
-// predicate, each answering with exactly the ApiResult<T> the port itself
-// returns. Routing is a pure function over (method, path, body) so it is
-// testable without opening a socket; startProofServer wraps it in node:http.
+// predicate plus one that publishes this deployment's own issuer key, each
+// answering with exactly the ApiResult<T> the port itself returns. Routing is
+// a pure function over (method, path, body) so it is testable without opening
+// a socket; startProofServer wraps it in node:http.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { ApiDegraded, ApiResult } from "./types.js";
@@ -18,9 +19,18 @@ export interface ServerLogger {
 
 const noopLogger: ServerLogger = { info: () => undefined, error: () => undefined };
 
+// The issuer key of this server's own deployment. A browser cannot invent
+// one: proveIdentity verifies the attestation's signature against the key it
+// is handed, so a made-up key aborts the circuit and nobody decides anything.
+export type IdentityIssuerKeySource = () => Promise<ApiResult<JubjubPoint>>;
+
 export interface ProofPorts {
   readonly backing: BackingProofPort;
   readonly identity: IdentityProofPort;
+  // Optional so a caller that only exercises the two predicates keeps
+  // compiling; without it the issuer route degrades, which is the honest
+  // answer from a server that cannot say which key it signs under.
+  readonly identityIssuer?: IdentityIssuerKeySource;
 }
 
 export interface RouteResponse {
@@ -30,6 +40,9 @@ export interface RouteResponse {
 
 export const BACKING_ROUTE = "/proof/backing";
 export const IDENTITY_ROUTE = "/proof/identity";
+// Where the browser asks which key this deployment signs under, before it
+// asks for a proof against that key.
+export const IDENTITY_ISSUER_ROUTE = "/proof/identity/issuer";
 export const DEFAULT_PROOF_SERVER_PORT = 8787;
 
 // A proof takes ~23.7s against the local network, so the per-request budget
@@ -40,10 +53,10 @@ export const REQUEST_TIMEOUT_MS = 180_000;
 
 // The server is a local development bridge for the Vite dev server on
 // another port, so a browser reaches it cross-origin. Permissive by design:
-// it exposes nothing but two predicate outcomes on loopback.
+// it exposes nothing but two predicate outcomes and a public key.
 const CORS_HEADERS: Readonly<Record<string, string>> = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "POST, OPTIONS",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
   "access-control-allow-headers": "content-type",
   "access-control-max-age": "600",
 };
@@ -102,6 +115,29 @@ async function settle<T>(step: string, call: () => Promise<ApiResult<T>>, logger
   }
 }
 
+// The key leaves as decimal strings for the same reason it arrives as them:
+// a Field element does not survive JSON's number type, and JSON.stringify
+// throws outright on a bigint.
+async function settleIssuerKey(
+  source: IdentityIssuerKeySource,
+  logger: ServerLogger,
+): Promise<RouteResponse> {
+  try {
+    const result = await source();
+    if (result.status === "degraded") {
+      return { status: 200, body: JSON.stringify(result) };
+    }
+    const wire: ApiResult<{ x: string; y: string }> = {
+      status: "ok",
+      value: { x: result.value.x.toString(), y: result.value.y.toString() },
+    };
+    return { status: 200, body: JSON.stringify(wire) };
+  } catch (err) {
+    logger.error({ err, step: "identityIssuerKey" }, "issuer key source threw instead of degrading");
+    return { status: 200, body: degradedBody("identityIssuerKey", "call_failed") };
+  }
+}
+
 export async function routeProofRequest(
   method: string | undefined,
   pathname: string,
@@ -109,7 +145,8 @@ export async function routeProofRequest(
   ports: ProofPorts,
   logger: ServerLogger = noopLogger,
 ): Promise<RouteResponse> {
-  const isKnownRoute = pathname === BACKING_ROUTE || pathname === IDENTITY_ROUTE;
+  const isIssuerRoute = pathname === IDENTITY_ISSUER_ROUTE;
+  const isKnownRoute = pathname === BACKING_ROUTE || pathname === IDENTITY_ROUTE || isIssuerRoute;
 
   if (method === "OPTIONS") {
     return { status: isKnownRoute ? 204 : 404, body: "" };
@@ -117,6 +154,21 @@ export async function routeProofRequest(
   if (!isKnownRoute) {
     return { status: 404, body: degradedBody("route", "call_failed") };
   }
+
+  // The issuer key is a read, so it is a GET. A server with no deployment to
+  // speak for degrades rather than inventing a key — never a 500, and never
+  // a key that would abort the circuit downstream.
+  if (isIssuerRoute) {
+    if (method !== "GET") {
+      return { status: 405, body: degradedBody("route", "call_failed") };
+    }
+    const source = ports.identityIssuer;
+    if (source === undefined) {
+      return { status: 200, body: degradedBody("identityIssuerKey", "contract_not_found") };
+    }
+    return await settleIssuerKey(source, logger);
+  }
+
   if (method !== "POST") {
     return { status: 405, body: degradedBody("route", "call_failed") };
   }

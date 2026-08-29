@@ -11,7 +11,7 @@
 
 import pino from "pino";
 import { createRealBackingPort, shutdownRealPorts } from "./realProofPort.js";
-import { createRealIdentityPort } from "./realIdentityPort.js";
+import { createRealIdentityPort, realIdentityIssuerKey } from "./realIdentityPort.js";
 import { DEFAULT_PROOF_SERVER_PORT, startProofServer, type ProofPorts } from "./proofServer.js";
 
 const logger = pino({ transport: { target: "pino-pretty" } });
@@ -30,6 +30,10 @@ function resolvePort(raw: string | undefined): number {
 const ports: ProofPorts = {
   backing: createRealBackingPort(logger),
   identity: createRealIdentityPort(logger),
+  // The browser asks this server which key its own deployment signs under.
+  // It cannot invent one: proveIdentity verifies the attestation against the
+  // key it is given, so a made-up key aborts the circuit.
+  identityIssuer: () => realIdentityIssuerKey(logger),
 };
 
 const started = await startProofServer(ports, resolvePort(process.env["PROOF_SERVER_PORT"]), logger);

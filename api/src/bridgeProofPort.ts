@@ -58,12 +58,35 @@ function isBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }
 
+// The wire shape of an issuer key: both Field elements as decimal strings.
+// A body shaped any other way is a degraded call, not a key.
+function isIssuerKeyWire(value: unknown): value is { x: string; y: string } {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  const isField = (candidate: unknown): candidate is string =>
+    typeof candidate === "string" && /^\d+$/.test(candidate);
+  return isField(record["x"]) && isField(record["y"]);
+}
+
 // One request, one typed outcome. Every failure mode of the trip — server
 // down, DNS, CORS, non-JSON body, a body that is not an ApiResult, the
 // timeout above — comes back as the same degraded result. This never throws
 // and never hangs: the abort below bounds the wait unconditionally.
 async function post<T>(
   step: string,
+  route: string,
+  payload: unknown,
+  isValue: (candidate: unknown) => candidate is T,
+  options: BridgeOptions,
+): Promise<ApiResult<T>> {
+  return await send<T>(step, "POST", route, payload, isValue, options);
+}
+
+// The issuer key is a read, so it is a GET with no body. Same contract as
+// post: one trip, one typed outcome, never a throw.
+async function send<T>(
+  step: string,
+  method: "GET" | "POST",
   route: string,
   payload: unknown,
   isValue: (candidate: unknown) => candidate is T,
@@ -81,9 +104,10 @@ async function post<T>(
 
   try {
     const response = await doFetch(`${baseUrl}${route}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
+      method,
+      ...(method === "POST"
+        ? { headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }
+        : {}),
       signal: controller.signal,
     });
 
@@ -121,13 +145,41 @@ export function createBridgeBackingPort(options: BridgeOptions = {}): BackingPro
   };
 }
 
+// Asks the server which issuer key its own deployment signs under. Exported
+// so a caller can tell a server with no deployment to speak for apart from a
+// proof that ran and answered.
+export async function fetchIdentityIssuerKey(
+  options: BridgeOptions = {},
+): Promise<ApiResult<JubjubPoint>> {
+  const wire = await send<{ x: string; y: string }>(
+    "identityIssuerKey",
+    "GET",
+    "/proof/identity/issuer",
+    undefined,
+    isIssuerKeyWire,
+    options,
+  );
+  if (wire.status === "degraded") return wire;
+  return { status: "ok", value: { x: BigInt(wire.value.x), y: BigInt(wire.value.y) } };
+}
+
 export function createBridgeIdentityPort(options: BridgeOptions = {}): IdentityProofPort {
   return {
-    async checkIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
+    // Two trips, in this order and never the other. proveIdentity verifies
+    // the attestation's signature against the key it is handed, so a key the
+    // browser invented aborts the circuit and nobody decides anything — the
+    // bug this order exists to prevent. The caller's argument is therefore
+    // ignored: only the key this server publishes for its own deployment can
+    // be right, and if that first trip does not come back the proof is never
+    // attempted.
+    async checkIdentity(_issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
+      const issuer = await fetchIdentityIssuerKey(options);
+      if (issuer.status === "degraded") return issuer;
+
       return await post<boolean>(
         "checkIdentity",
         "/proof/identity",
-        { issuerKey: { x: issuerKey.x.toString(), y: issuerKey.y.toString() }, expectedTaxIdHash },
+        { issuerKey: { x: issuer.value.x.toString(), y: issuer.value.y.toString() }, expectedTaxIdHash },
         isBoolean,
         options,
       );

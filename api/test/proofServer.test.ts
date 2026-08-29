@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BACKING_ROUTE,
+  IDENTITY_ISSUER_ROUTE,
   IDENTITY_ROUTE,
   REQUEST_TIMEOUT_MS,
   routeProofRequest,
@@ -25,7 +26,15 @@ const SYNTHETIC_ISSUER_KEY = { x: 1n, y: 2n };
 const SYNTHETIC_ISSUER_KEY_BODY = { x: "1", y: "2" };
 const SYNTHETIC_TAX_ID_HASH = "cd".repeat(32);
 
-const stubPorts: ProofPorts = { backing: createStubBackingPort(), identity: createStubIdentityPort() };
+// The (x, y) pair a deployment publishes as its own issuer key. Synthetic
+// values; the shape is the one a circuit argument has to take.
+const SERVER_ISSUER_KEY = { x: 77n, y: 88n };
+
+const stubPorts: ProofPorts = {
+  backing: createStubBackingPort(),
+  identity: createStubIdentityPort(),
+  identityIssuer: async () => ({ status: "ok", value: SERVER_ISSUER_KEY }),
+};
 
 // Stands in for "the proof port itself blew up" — the ports do not throw,
 // but this is a process boundary and the server must hold anyway.
@@ -152,5 +161,68 @@ describe("startProofServer", () => {
     const result = await createBridgeBackingPort({ baseUrl, timeoutMs: 5_000 }).checkBacking(3_000n);
 
     expect(result.status).toBe("degraded");
+  });
+});
+
+// The browser cannot invent an issuer key: proveIdentity verifies the
+// attestation against the key it is handed, so a made-up one aborts the
+// circuit. This route is how the browser learns the right one.
+describe("the identity issuer route", () => {
+  it("publishes this deployment's key as decimal strings on a GET", async () => {
+    const response = await routeProofRequest("GET", IDENTITY_ISSUER_ROUTE, "", stubPorts);
+
+    expect(response.status).toBe(200);
+    // Decimal strings, not numbers: a Field does not survive JSON's number
+    // type, and JSON.stringify throws outright on a bigint.
+    expect(JSON.parse(response.body)).toEqual({ status: "ok", value: { x: "77", y: "88" } });
+  });
+
+  it("degrades, never 500s, when the server has no deployment to speak for", async () => {
+    const withoutIssuer: ProofPorts = { backing: createStubBackingPort(), identity: createStubIdentityPort() };
+
+    const response = await routeProofRequest("GET", IDENTITY_ISSUER_ROUTE, "", withoutIssuer);
+
+    expect(response.status).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({
+      status: "degraded",
+      degraded: { step: "identityIssuerKey", reason: "contract_not_found" },
+    });
+  });
+
+  it("degrades, never 500s, when the issuer source throws", async () => {
+    const exploding: ProofPorts = {
+      ...stubPorts,
+      identityIssuer: () => Promise.reject(new Error("no deployment")),
+    };
+
+    const response = await routeProofRequest("GET", IDENTITY_ISSUER_ROUTE, "", exploding);
+
+    expect(response.status).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({
+      status: "degraded",
+      degraded: { step: "identityIssuerKey", reason: "call_failed" },
+    });
+  });
+
+  it("passes a degraded source straight through instead of rewriting it", async () => {
+    const noDeployment: ProofPorts = {
+      ...stubPorts,
+      identityIssuer: async () => ({
+        status: "degraded",
+        degraded: { step: "identityIssuerKey", reason: "environment_unavailable" },
+      }),
+    };
+
+    const response = await routeProofRequest("GET", IDENTITY_ISSUER_ROUTE, "", noDeployment);
+
+    expect(JSON.parse(response.body)).toEqual({
+      status: "degraded",
+      degraded: { step: "identityIssuerKey", reason: "environment_unavailable" },
+    });
+  });
+
+  it("answers a preflight and refuses a POST", async () => {
+    expect((await routeProofRequest("OPTIONS", IDENTITY_ISSUER_ROUTE, "", stubPorts)).status).toBe(204);
+    expect((await routeProofRequest("POST", IDENTITY_ISSUER_ROUTE, "{}", stubPorts)).status).toBe(405);
   });
 });
