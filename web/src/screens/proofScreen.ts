@@ -36,7 +36,7 @@ export interface BuildProofScreenOptions<T> {
   readonly now: number;
   readonly startedAt?: number;
   readonly value?: T;
-  // Only a degraded proof has one. Four of them get copy of their own; every
+  // Only a degraded proof has one. Five of them get copy of their own; every
   // other reason falls through to degradedBody().
   readonly reason?: ApiFailureReason;
   // Where this proof is being generated. Optional, and the default is the
@@ -73,7 +73,7 @@ interface DegradedCopy {
   readonly body: string;
 }
 
-// The four the browser-direct path can tell apart before a proof is even
+// The five the browser-direct path can tell apart before a proof is even
 // attempted. Each names the single thing the user has to fix and nothing
 // else — and none of them says she failed, because nobody checked anything.
 const DEGRADED_COPY: Partial<Readonly<Record<ApiFailureReason, DegradedCopy>>> = {
@@ -92,6 +92,13 @@ const DEGRADED_COPY: Partial<Readonly<Record<ApiFailureReason, DegradedCopy>>> =
   proof_server_unreachable: {
     heading: 'El servidor local no responde',
     body: 'No respondió el servidor que configuraste en Lace (Ajustes » Midnight » Local, http://localhost:6300). Ahí se genera todo, en tu propia computadora: sin él nadie pudo comprobar nada, y tus datos siguieron sin viajar a ningún lado. Inícialo y vuelve a intentarlo.',
+  },
+  // Not her problem to fix, and the copy says so: whoever installed this app
+  // pointed it at a place where nothing is set up. Everything else on this
+  // list asks her to do something; this one asks her to tell someone.
+  contract_not_found: {
+    heading: 'Falta un dato de esta app',
+    body: 'A esta app le falta la dirección del lugar donde se hace la revisión, o ese lugar ya no está, así que nadie pudo revisar nada. No es algo que hayas hecho mal ni algo que puedas arreglar desde aquí: avísale a quien te compartió la app. Tus datos siguen sin salir de este dispositivo.',
   },
 };
 
@@ -157,7 +164,7 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
       help: specificHelp ?? opts.help,
       // Not a rejection: nothing was checked, so the honest action is to try
       // again, never a way past a question nobody answered. That holds for
-      // the four named reasons too — they only say what to fix.
+      // the five named reasons too — they only say what to fix.
       statusHeading: specific?.heading ?? 'Nadie pudo revisarlo',
       statusBody: specific?.body ?? opts.degradedBody(),
       ctaLabel: DEGRADED_CTA_LABEL,

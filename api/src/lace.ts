@@ -9,9 +9,12 @@ export {
   createLaceIdentityPort,
   DEFAULT_LOCAL_PROOF_SERVER_URL,
   DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS,
+  PROOF_REQUEST_CONTENT_TYPE,
   prepareLaceStack,
+  probeProofServer,
   type LaceOptions,
   type LaceStack,
 } from "./laceProofPort.js";
+export { DEFAULT_COLLATERAL_AMOUNT, TIER_PROVEN_BY_CLEARED_BACKING } from "./backingClaim.js";
 export { DEFAULT_LACE_NETWORK_ID, type ConnectorHost, type LaceConnection } from "./laceWallet.js";
 export { DEFAULT_ZK_CONFIG_BASE_URL, FetchZkConfigProvider, type LaceProviderOptions } from "./laceProviders.js";

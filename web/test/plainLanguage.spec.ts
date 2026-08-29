@@ -226,7 +226,7 @@ describe('the split screen reads with every label hidden', () => {
   });
 });
 
-// The four reasons the browser-direct path can tell apart before a proof is
+// The five reasons the browser-direct path can tell apart before a proof is
 // even attempted. They are still degraded screens, and they still have to be
 // readable by someone who has never heard of a proof system.
 const LACE_REASONS: readonly ApiFailureReason[] = [
@@ -234,6 +234,7 @@ const LACE_REASONS: readonly ApiFailureReason[] = [
   'wallet_locked',
   'wallet_wrong_network',
   'proof_server_unreachable',
+  'contract_not_found',
 ];
 
 describe('the typed degraded reasons stay plain, and stay degraded', () => {

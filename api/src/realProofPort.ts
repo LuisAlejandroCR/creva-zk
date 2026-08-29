@@ -25,13 +25,17 @@ import type { BackingProofPort, IdentityProofPort, JubjubPoint, Tier } from "./p
 import type { PortLogger } from "./portLogger.js";
 import { startLocalEnvironment, type LocalEnvironmentHandle } from "./localEnvironment.js";
 import { createProviders } from "./providers.js";
+import { zkConfigPath } from "./zkConfigPath.js";
+import { DEFAULT_COLLATERAL_AMOUNT, TIER_PROVEN_BY_CLEARED_BACKING } from "./backingClaim.js";
 
 // Type-only, so nothing here loads the compiled contract at module scope.
 // Every shape below is read off that module rather than restated, so the two
 // cannot drift apart.
 type ContractModule = typeof import("./contract.js");
 type BackingProviders = Parameters<ContractModule["deployBacking"]>[0];
-type DeployedBacking = Parameters<ContractModule["callProveBacking"]>[0];
+// What the call step takes. Since the browser joins rather than deploys,
+// that parameter is the wider "found contract"; a deployment is one.
+type FoundBacking = Parameters<ContractModule["callProveBacking"]>[0];
 type CircuitId = ContractModule["BACKING_CIRCUIT_ID"];
 type PrivateStateId = ContractModule["BACKING_PRIVATE_STATE_ID"];
 type BackingPrivateState = ReturnType<ContractModule["createBackingPrivateState"]>;
@@ -39,21 +43,10 @@ type CallProveBacking = ContractModule["callProveBacking"];
 
 export type { PortLogger };
 
-// The collateral the single deployment holds as witness-only private state.
-// It is fixed when the contract is deployed, which is why it is a port
-// option and not a per-call argument: only the requested limit — the
-// circuit's public argument — varies from call to call. Synthetic demo
-// data, matching the clearing case in run.ts.
-export const DEFAULT_COLLATERAL_AMOUNT = 5_000n;
-
-// backing.compact's proveBacking answers a Boolean: the collateral cleared
-// the requested limit, or it did not. It has no tier ladder — that is
-// backing-tier.compact's proveBackingTier, which has no TypeScript binding
-// yet (see the identity note below; it needs the same missing signer).
-// So a cleared proof is reported as the LOWEST tier the proof actually
-// supports. Claiming more than the circuit proved would be exactly the
-// fabrication this repository exists to avoid.
-export const TIER_PROVEN_BY_CLEARED_BACKING: Tier = "bronze";
+// Both live in backingClaim.ts now, so the browser-direct port reads the
+// same two values without importing this Node-only module. Re-exported here
+// because api/src/real.ts is where a caller has always found them.
+export { DEFAULT_COLLATERAL_AMOUNT, TIER_PROVEN_BY_CLEARED_BACKING };
 
 export interface RealPortOptions {
   readonly logger?: Logger;
@@ -63,12 +56,12 @@ export interface RealPortOptions {
   // Docker, a proof server or a 23.7s wait.
   readonly startEnvironment?: typeof startLocalEnvironment;
   readonly buildProviders?: (environment: LocalEnvironmentHandle) => BackingProviders;
-  readonly deploy?: (providers: BackingProviders, collateralAmount: bigint, logger: Logger) => Promise<ApiResult<DeployedBacking>>;
+  readonly deploy?: (providers: BackingProviders, collateralAmount: bigint, logger: Logger) => Promise<ApiResult<FoundBacking>>;
   readonly call?: CallProveBacking;
 }
 
 interface Deployment {
-  readonly deployed: DeployedBacking;
+  readonly deployed: FoundBacking;
   readonly environment: LocalEnvironmentHandle;
   readonly call: CallProveBacking;
 }
@@ -92,11 +85,11 @@ async function loadContract(logger: Logger): Promise<ApiResult<ContractModule>> 
   }
 }
 
-function defaultProviders(contract: ContractModule, environment: LocalEnvironmentHandle): BackingProviders {
+function defaultProviders(environment: LocalEnvironmentHandle): BackingProviders {
   return createProviders<CircuitId, PrivateStateId, BackingPrivateState>(
     environment.configuration,
     environment.walletProvider,
-    contract.zkConfigPath(),
+    zkConfigPath(),
   );
 }
 
@@ -110,9 +103,9 @@ async function openDeployment(options: RealPortOptions, logger: Logger): Promise
 
   try {
     // The compiled circuit is only needed for the steps the caller has not
-    // overridden — a caller that supplies all three (a test) never loads it.
-    const needsContract =
-      options.buildProviders === undefined || options.deploy === undefined || options.call === undefined;
+    // overridden — a caller that supplies both (a test) never loads it. The
+    // provider wiring no longer needs it: the ZK config path moved out.
+    const needsContract = options.deploy === undefined || options.call === undefined;
     let contract: ContractModule | undefined;
     if (needsContract) {
       const loaded = await loadContract(logger);
@@ -124,7 +117,7 @@ async function openDeployment(options: RealPortOptions, logger: Logger): Promise
     if (started.status === "degraded") return started;
     const environment = started.value;
 
-    const build = options.buildProviders ?? ((env: LocalEnvironmentHandle) => defaultProviders(mustLoad(contract), env));
+    const build = options.buildProviders ?? defaultProviders;
     const deploy = options.deploy ?? mustLoad(contract).deployBacking;
     const call = options.call ?? mustLoad(contract).callProveBacking;
 

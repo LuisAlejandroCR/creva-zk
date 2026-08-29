@@ -1,14 +1,22 @@
 // api/test/laceProofPort.test.ts
-// Checks the browser-direct path's preflight against a fake dapp connector
-// and a fake fetch: the four ways it can degrade are four distinct reasons,
-// and a wallet that answers everything correctly gets a complete six-provider
-// stack built in-process. No browser, no Lace and no proof server are
-// involved — this exercises the seam's contract, not a real proof.
+// Checks the browser-direct path against a fake dapp connector, a fake fetch
+// and fake join/call seams: the five ways it can degrade are five distinct
+// reasons, a wallet that answers everything gets a complete six-provider
+// stack, and the last step JOINS a contract at a supplied address rather than
+// deploying one. No browser, no Lace, no proof server and no compiled circuit
+// are involved — this exercises the seam's contract, not a real proof.
 
 import { describe, expect, it, vi } from "vitest";
 import { validatePassword } from "@midnight-ntwrk/midnight-js-utils";
 import type { ConnectedAPI, Configuration, InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
-import { createLaceBackingPort, createLaceIdentityPort, prepareLaceStack } from "../src/laceProofPort.js";
+import {
+  createLaceBackingPort,
+  createLaceIdentityPort,
+  prepareLaceStack,
+  probeProofServer,
+  PROOF_REQUEST_CONTENT_TYPE,
+} from "../src/laceProofPort.js";
+import { TIER_PROVEN_BY_CLEARED_BACKING } from "../src/backingClaim.js";
 import { DEFAULT_LACE_NETWORK_ID, selectWallet, type ConnectorHost } from "../src/laceWallet.js";
 import { ephemeralStoragePassword, FetchZkConfigProvider } from "../src/laceProviders.js";
 import type { JubjubPoint } from "../src/proofPort.js";
@@ -98,7 +106,7 @@ function options(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("browser-direct preflight: four distinct degraded reasons", () => {
+describe("browser-direct preflight: distinct degraded reasons", () => {
   it("degrades wallet_absent when no wallet is injected", async () => {
     const result = await prepareLaceStack("checkBacking", options({ connectorHost: {} }));
     expect(result).toEqual({ status: "degraded", degraded: { step: "checkBacking", reason: "wallet_absent" } });
@@ -198,17 +206,6 @@ describe("lace ports", () => {
     });
   });
 
-  // Deploy and call on top of the stack are the real port's unfinished
-  // wiring. Until that lands this degrades honestly rather than inventing a
-  // tier, and this test is the thing that will fail when it does land.
-  it("degrades call_failed once the whole stack is up, because deploy/call is not wired yet", async () => {
-    const port = createLaceBackingPort(options());
-    await expect(port.checkBacking(3_000n)).resolves.toEqual({
-      status: "degraded",
-      degraded: { step: "checkBacking", reason: "call_failed" },
-    });
-  });
-
   it("never throws at the caller, whatever the wallet does", async () => {
     const exploding: ConnectorHost = {
       broken: {
@@ -225,6 +222,166 @@ describe("lace ports", () => {
     await expect(port.checkIdentity(SYNTHETIC_ISSUER_KEY, SYNTHETIC_TAX_ID_HASH)).resolves.toMatchObject({
       status: "degraded",
     });
+  });
+});
+
+// A contract address is 64 hex characters with no 0x prefix — see
+// assertIsContractAddress in @midnight-ntwrk/midnight-js-utils. Synthetic:
+// nothing was ever deployed at it.
+const SYNTHETIC_CONTRACT_ADDRESS = "ab".repeat(32);
+
+// Stand-ins for the two steps contract.ts owns. Using them keeps every test
+// here free of the compiled circuit, which is a build artifact this
+// workspace cannot produce without the compact toolchain.
+function fakeJoin(found: unknown = { callTx: {} }) {
+  return vi.fn(async (..._args: unknown[]) => ({ status: "ok", value: found }) as never);
+}
+
+function fakeCall(cleared: boolean, answered = 3_000n) {
+  return vi.fn(async (..._args: unknown[]) => ({ status: "ok", value: { cleared, answered } }) as never);
+}
+
+describe("the browser joins a contract; it never deploys one", () => {
+  it("degrades contract_not_found when the build named no address", async () => {
+    const join = fakeJoin();
+    const port = createLaceBackingPort(options({ join, call: fakeCall(true) }));
+
+    await expect(port.checkBacking(3_000n)).resolves.toEqual({
+      status: "degraded",
+      degraded: { step: "checkBacking", reason: "contract_not_found" },
+    });
+    // The point of the reason: nothing was attempted, and in particular
+    // nothing was deployed from the browser.
+    expect(join).not.toHaveBeenCalled();
+  });
+
+  it("degrades contract_not_found when the address is only whitespace", async () => {
+    const join = fakeJoin();
+    const port = createLaceBackingPort(options({ contractAddress: "   ", join, call: fakeCall(true) }));
+
+    await expect(port.checkBacking(3_000n)).resolves.toMatchObject({
+      degraded: { reason: "contract_not_found" },
+    });
+    expect(join).not.toHaveBeenCalled();
+  });
+
+  it("joins at the address the build supplied, with the collateral as private state", async () => {
+    const join = fakeJoin();
+    const port = createLaceBackingPort(
+      options({ contractAddress: SYNTHETIC_CONTRACT_ADDRESS, collateralAmount: 5_000n, join, call: fakeCall(true) }),
+    );
+
+    await port.checkBacking(3_000n);
+
+    expect(join).toHaveBeenCalledTimes(1);
+    const [providers, address, collateral] = join.mock.calls[0] as [unknown, string, bigint];
+    expect(address).toBe(SYNTHETIC_CONTRACT_ADDRESS);
+    expect(collateral).toBe(5_000n);
+    // The six providers built from the wallet, not a set of its own.
+    expect(providers).toHaveProperty("zkConfigProvider");
+  });
+
+  it("produces a real tier when the joined contract's proof clears", async () => {
+    const call = fakeCall(true);
+    const port = createLaceBackingPort(
+      options({ contractAddress: SYNTHETIC_CONTRACT_ADDRESS, join: fakeJoin(), call }),
+    );
+
+    await expect(port.checkBacking(3_000n)).resolves.toEqual({
+      status: "ok",
+      value: TIER_PROVEN_BY_CLEARED_BACKING,
+    });
+    expect(call.mock.calls[0]?.[1]).toBe(3_000n);
+  });
+
+  it("answers 'none' when the proof runs and does not clear — an answer, not a malfunction", async () => {
+    const port = createLaceBackingPort(
+      options({ contractAddress: SYNTHETIC_CONTRACT_ADDRESS, join: fakeJoin(), call: fakeCall(false, 0n) }),
+    );
+
+    await expect(port.checkBacking(9_000_000n)).resolves.toEqual({ status: "ok", value: "none" });
+  });
+
+  it("keeps the join's own reason but re-stamps the step as the port's", async () => {
+    const join = vi.fn(async () => ({
+      status: "degraded",
+      degraded: { step: "join", reason: "contract_not_found" },
+    }) as never);
+    const port = createLaceBackingPort(
+      options({ contractAddress: SYNTHETIC_CONTRACT_ADDRESS, join, call: fakeCall(true) }),
+    );
+
+    await expect(port.checkBacking(3_000n)).resolves.toEqual({
+      status: "degraded",
+      degraded: { step: "checkBacking", reason: "contract_not_found" },
+    });
+  });
+
+  it("passes a failed call through as call_failed, still on the port's own step", async () => {
+    const call = vi.fn(async () => ({
+      status: "degraded",
+      degraded: { step: "call", reason: "call_failed" },
+    }) as never);
+    const port = createLaceBackingPort(
+      options({ contractAddress: SYNTHETIC_CONTRACT_ADDRESS, join: fakeJoin(), call }),
+    );
+
+    await expect(port.checkBacking(3_000n)).resolves.toEqual({
+      status: "degraded",
+      degraded: { step: "checkBacking", reason: "call_failed" },
+    });
+  });
+
+  it("degrades rather than throwing when the join step breaks its own contract", async () => {
+    const join = vi.fn(() => {
+      throw new Error("the ledger blew up");
+    });
+    const port = createLaceBackingPort(
+      options({ contractAddress: SYNTHETIC_CONTRACT_ADDRESS, join, call: fakeCall(true) }),
+    );
+
+    await expect(port.checkBacking(3_000n)).resolves.toEqual({
+      status: "degraded",
+      degraded: { step: "checkBacking", reason: "call_failed" },
+    });
+  });
+
+  it("never reaches the contract at all when the preflight already failed", async () => {
+    const join = fakeJoin();
+    const port = createLaceBackingPort(
+      options({ connectorHost: {}, contractAddress: SYNTHETIC_CONTRACT_ADDRESS, join, call: fakeCall(true) }),
+    );
+
+    await expect(port.checkBacking(3_000n)).resolves.toMatchObject({ degraded: { reason: "wallet_absent" } });
+    expect(join).not.toHaveBeenCalled();
+  });
+});
+
+describe("the proof server probe is a real cross-origin request", () => {
+  it("sends the same content type the prover will, so the browser preflights", async () => {
+    const seen: RequestInit[] = [];
+    const doFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      seen.push(init);
+      return new Response(null, { status: 405 });
+    }) as unknown as typeof fetch;
+
+    await expect(probeProofServer("http://localhost:6300", doFetch, 1_000)).resolves.toBe(true);
+    expect(seen[0]?.headers).toEqual({ "Content-Type": PROOF_REQUEST_CONTENT_TYPE });
+    // The bug this replaced: an opaque `no-cors` response passed the probe
+    // for a server that would reject the prover's own request.
+    expect(seen[0]?.mode).toBeUndefined();
+  });
+
+  it("reports the failure it can see, and logs the error rather than swallowing it", async () => {
+    const errors: Record<string, unknown>[] = [];
+    const logger = { info: () => undefined, error: (obj: Record<string, unknown>) => errors.push(obj) };
+    const rejecting = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    }) as unknown as typeof fetch;
+
+    await expect(probeProofServer("http://localhost:6300", rejecting, 1_000, logger)).resolves.toBe(false);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.err).toBeInstanceOf(TypeError);
   });
 });
 

@@ -84,7 +84,7 @@ describe('interface language: Spanish only, never mixed', () => {
     assertSpanishOnly(html, 'offers screen');
   });
 
-  // The browser-direct path adds four degraded screens and one generating
+  // The browser-direct path adds five degraded screens and one generating
   // sentence per proof-port source. Every one of them is copy a user reads,
   // so every one of them is scanned too.
   const laceReasons: readonly ApiFailureReason[] = [
@@ -92,6 +92,7 @@ describe('interface language: Spanish only, never mixed', () => {
     'wallet_locked',
     'wallet_wrong_network',
     'proof_server_unreachable',
+    'contract_not_found',
   ];
 
   it.each(laceReasons)('degraded screen, reason %s', (reason) => {
