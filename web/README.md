@@ -106,14 +106,15 @@ made with. No screen decides an outcome for itself.
    ```bash
    npm run dev --workspace web                          # stub, instant, default
    npm run serve --workspace api                        # then, in another shell:
-   VITE_PORT_SOURCE=bridge npm run dev --workspace web  # a real ~23.7s proof
+   VITE_PORT_SOURCE=bridge npm run dev --workspace web  # a real proof (~23.7s, backing)
    ```
 
    With nothing set the journey selects the stub ports and touches no
    network; its copy and states are pinned by `test/defaultParity.spec.ts`.
    The stub answers instantly, so it is held for `MEASURED_PROOF_MS`
-   (23 700 ms — the measured latency of one real proof, from
-   `tools/measure-proof-latency.sh`), which is the same number the wait
+   (23 700 ms — the measured latency of one real **backing** proof, from
+   `tools/measure-proof-latency.sh`; no identity proof has been timed),
+   which is the same number the wait
    sequence is paced against. That hold applies to the stub *only*, so a
    real proof takes the time it takes and never has latency added to it.
    Kill the proof server and both screens land on `degraded`;
@@ -135,7 +136,9 @@ made with. No screen decides an outcome for itself.
     card arrives, a single ring expands out of it once, and the tier appears
     inside a beat later — an answer arriving, not a transition finishing.
     Nothing repeats, and nothing celebrates on the way there.
-12. **The wait is the story.** A real proof takes ~23.7s. That wait is the
+12. **The wait is the story.** A real backing proof takes ~23.7s — the only
+    proof latency this repository has measured; the identity proof verifies a
+    signature in-circuit and is therefore slower by an unmeasured amount. That wait is the
     only moment the product's promise is visible instead of asserted, so the
     verification itself is the screen's hero rather than a card on it: one
     ring carrying the elapsed seconds, paced against the measured run, and
@@ -260,8 +263,8 @@ unrecognised falls back to the stub.
 
 | `VITE_PORT_SOURCE` | Who proves | Needs |
 | --- | --- | --- |
-| unset / `stub` | nobody — a synthetic outcome, held `MEASURED_PROOF_MS` (23.7s) so the staged wait is seen at its real pace | nothing |
-| `real` | the in-process Node call path — it deploys and runs the circuit | Node, not a browser; degrades in one |
+| unset / `stub` | nobody — a synthetic outcome, held `MEASURED_PROOF_MS` (23.7s, the measured latency of one **backing** proof) so the staged wait is seen at its real pace | nothing |
+| `real` | the in-process Node call path — it deploys and runs both circuits | Node, not a browser; degrades in one |
 | `bridge` | `api/`'s local HTTP proof server, backed by the real port | `npm run serve --workspace api`, Docker, the Compact toolchain |
 | `lace` | the browser itself, via Lace | the checklist below |
 
@@ -269,13 +272,31 @@ On `bridge` and on `lace` the backing screen shows a real proof — `proveBackin
 instead of a degraded result. Both report `bronze` when the collateral clears, because that is
 the strongest tier a boolean circuit proves; see [`api/README.md`](../api/README.md).
 
-**The identity screen still degrades on every real source**, `lace` included: `proveIdentity` has
-no TypeScript binding and no JubJub signer, and the reason is spelled out in `api/README.md`.
-That matters for how the journey reads on those sources — the CTA only advances on a `ready`
-proof, so step 1 does not hand over to step 2 and the backing screen is not reachable by clicking
-through. To watch a real browser proof today, call `selectBackingPort().checkBacking(...)` from
-the console, or run the journey on `stub` for the flow and on `lace` for the proof. Wiring past
-that gate would mean fabricating an identity outcome, which this repository will not do.
+**`proveIdentity` is wired now** — `identity-check.compact` has a TypeScript binding
+(`contract/src/identity.ts`), and `api/`'s `real` port deploys it and runs the circuit. Two
+things about that proof are stated plainly rather than dressed up:
+
+- **The issuer is synthetic.** Creva's KYC provider signs nothing today, so the attestation is
+  signed by a key the deployment generates for itself. The *verification* is real — Schnorr over
+  Jubjub, checked inside the circuit on every proof — but the thing being verified belongs to
+  nobody.
+- **An attestation from another issuer aborts the proof** and comes back `degraded`, not `false`.
+  Per criterion 2 that is correct: nothing was evaluated, so nothing may read as a rejection.
+
+**The identity screen nonetheless still degrades on every real source**, and for two different
+reasons — neither of them "nobody got to it":
+
+- On **`bridge`**, the browser sends the fixed `SYNTHETIC_ISSUER_KEY` from
+  `src/domain/demoInputs.ts`, while the server's deployment issues a **fresh issuer key per
+  process** and nothing on `/proof/identity` hands that key back. A key that is not the issuer's
+  is exactly the abort case above, so the screen lands on `degraded`.
+- On **`lace`**, the browser-direct path has no second contract to join: it joins the backing
+  contract at an address the build supplies, and no identity deployment address is supplied.
+
+So on those sources the CTA does not advance out of step 1 and the backing screen is not
+reachable by clicking through — call `selectBackingPort().checkBacking(...)` from the console, or
+run the journey on `stub` for the flow and on `lace` for the proof. Wiring past that gate would
+mean fabricating an identity outcome, which this repository will not do.
 
 ## The browser-direct path (`VITE_PORT_SOURCE=lace`)
 
@@ -423,9 +444,12 @@ the journey does not need them to render.
 
 ### Budget the wait
 
-A measured proof costs ~23.7s (`tools/PROOF-LATENCY.md`). `generating` is a
-first-class screen state with a live elapsed-time readout for exactly that
-reason, and on this source its copy names where the proof is being generated.
+A measured **backing** proof costs ~23.7s (`tools/PROOF-LATENCY.md`, measured on
+`backing.compact`, which does no in-circuit signature verification). The identity
+proof does verify a signature in-circuit, so it costs more — how much more is not
+measured, and no number for it is stated. `generating` is a first-class screen
+state with a live elapsed-time readout for exactly that reason, and on this source
+its copy names where the proof is being generated.
 
 ### The five ways this path degrades
 

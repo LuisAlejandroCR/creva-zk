@@ -64,9 +64,28 @@ Verbatim from `README.md`:
 >   Midnight's official example.
 > - **Reused circuit code:** `contract/src/schnorr.compact` is
 >   [`midnightntwrk/example-zkloan`](https://github.com/midnightntwrk/example-zkloan)'s
->   `contract/src/schnorr.compact` (Apache-2.0), unmodified except for its header comment. Compact
+>   `contract/src/schnorr.compact` (Apache-2.0). Compact
 >   0.31.1 has no signature-verification primitive yet, so this Schnorr-over-JubJub polyfill is the
->   official example's answer to that gap, not ours.
+>   official example's answer to that gap, not ours. Two changes of ours: the challenge hash is
+>   factored out of `schnorrVerify` into an exported `schnorrChallenge` pure circuit, so the
+>   off-chain issuer can obtain the challenge by calling the contract rather than by reimplementing
+>   Compact's `transientHash` in TypeScript; and that circuit is generic over the message length
+>   rather than fixed at `Vector<4>`, which had it hashing a different struct than the verifier.
+
+## What runs today
+
+Stated so the demo is not read as more than it is:
+
+- **Both predicates are compiled and bound to TypeScript**, and both run: `proveBacking`
+  (`backing.compact`) and `proveIdentity` (`identity-check.compact`). `proveBackingTier`, the
+  four-rung tier ladder, is compiled but has **no** compiled-contract binding yet — so the running
+  demo reports `bronze` for a cleared backing proof, the strongest tier a boolean circuit proves.
+- **The attestation issuer is synthetic.** Creva's KYC provider signs nothing today, so the
+  identity deployment generates its own Schnorr key. The signature check itself is real and runs
+  inside the circuit; an attestation from a different issuer aborts the proof and returns a typed
+  degraded result, never `false`.
+- **Measured latency covers the backing proof only**: ~23.7 s. The identity proof verifies a
+  signature in-circuit and is slower; that has not been measured and no figure is claimed.
 
 ## What it does not do
 

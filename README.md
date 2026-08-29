@@ -1,3 +1,8 @@
+<!-- README.md -->
+Front page of the repository, in English and Spanish: what Creva ZK proves, which workspace owns
+what, how to run it, and — under "What is measured, and what is not" — exactly which claims here
+rest on a measurement and which do not. Every figure quoted below names what it was measured on.
+
 # Creva ZK
 
 **Midnight Hackathon: August 2026** — Major League Hacking.
@@ -21,7 +26,7 @@ public predicate, and disclose **only the outcome**.
 
 ### Workspaces
 
-- [`contract/`](contract/README.md) — the Compact circuit and its disclosure boundary.
+- [`contract/`](contract/README.md) — the Compact circuits and their disclosure boundary.
 - [`api/`](api/README.md) — the Midnight client: the typed proof ports, their stub/real/bridge
   implementations, and the local HTTP proof server the browser reaches through the bridge.
 - [`anchoring/`](anchoring/README.md) — chain-agnostic commitment scheme and anchoring port, with
@@ -68,12 +73,25 @@ Once the circuit is compiled, `npm run demo` deploys `backing.compact` on the lo
 `undeployed` network, calls `proveBacking` twice with synthetic collateral, and prints
 proof latency in milliseconds for each call.
 
-**Measured: ~23.7 s per proof**, on top of a ~52 s environment cold start and a ~19.5 s
+**Measured: ~23.7 s per *backing* proof**, on top of a ~52 s environment cold start and a ~19.5 s
 deploy. Reproduced independently through
 [`example-bboard`](https://github.com/midnightntwrk/example-bboard)'s own harness with
 `npm run measure`. See [`tools/PROOF-LATENCY.md`](tools/PROOF-LATENCY.md) for both runs
 and for the duplicated-WASM-runtime bug that blocked every circuit call until it was
 pinned in `overrides`.
+
+### What is measured, and what is not
+
+| Claim | Status |
+|---|---|
+| `proveBacking` latency, ~23.7 s | **Measured**, twice, on two independent harnesses. |
+| `proveIdentity` latency | **Not measured.** The 23.7 s figure was taken on `backing.compact`, which does **no** in-circuit signature verification. `identity-check.compact` verifies a Schnorr signature inside the proof, so it is slower — by how much, this repository does not know and does not guess. |
+| `proveIdentity` wired to TypeScript | **Yes** — `contract/src/identity.ts` binds the compiled circuit, `api/src/realIdentityPort.ts` deploys it and calls it. |
+| The identity attestation's issuer | **Synthetic.** Creva's KYC provider signs nothing today; the deployment issues its own Schnorr key. The *signature check* is real and runs inside the circuit. |
+| An attestation from a different issuer | **Aborts the proof** and returns a typed `degraded` result — never `false`. "Nobody could check" is not "the answer is no". |
+| The identity screen in the browser | **Still degrades on every real source.** On `bridge` the browser's hard-coded issuer key is not the server's per-process one; on `lace` there is no identity contract address to join. See [`web/README.md`](web/README.md). |
+| `proveBackingTier` | **Not reachable from TypeScript** — `backing-tier.compact` has no compiled-contract binding yet. |
+| The circuits | **No cryptographic audit.** |
 
 `verify` compiles the circuit before typechecking: the compiler generates the TypeScript APIs the
 rest of the workspace compiles against.
@@ -103,9 +121,10 @@ circuito, evaluar un predicado público, y divulgar **solo el desenlace**.
 
 ### Workspaces
 
-- [`contract/`](contract/README.md) — el circuito Compact y su frontera de divulgación.
-- [`api/`](api/README.md) — tipos de dominio compartidos por los demás workspaces. Declarado como
-  workspace de npm; aún sin implementar.
+- [`contract/`](contract/README.md) — los circuitos Compact y su frontera de divulgación.
+- [`api/`](api/README.md) — el cliente de Midnight: los puertos de prueba tipados, sus
+  implementaciones (stub, real, bridge, lace) y el servidor HTTP de pruebas local que el navegador
+  alcanza por el bridge.
 - [`anchoring/`](anchoring/README.md) — esquema de compromiso y puerto de anclaje agnóstico de
   cadena, con adaptadores para Cardano y EVM.
 - [`advisor/`](advisor/README.md) — asesor local de tramo para el track Integrate Midnight AI.
@@ -151,10 +170,23 @@ Una vez compilado el circuito, `npm run demo` despliega `backing.compact` en la 
 local `undeployed`, llama a `proveBacking` dos veces con colateral sintético, e
 imprime la latencia de cada prueba en milisegundos.
 
-**Medido: ~23.7 s por prueba**, más ~52 s de arranque en frío del entorno y ~19.5 s de
-despliegue. Reproducido de forma independiente con el propio harness de
+**Medido: ~23.7 s por prueba de *respaldo***, más ~52 s de arranque en frío del entorno y ~19.5 s
+de despliegue. Reproducido de forma independiente con el propio harness de
 [`example-bboard`](https://github.com/midnightntwrk/example-bboard) vía `npm run measure`.
 Ver [`tools/PROOF-LATENCY.md`](tools/PROOF-LATENCY.md).
+
+### Qué está medido y qué no
+
+| Afirmación | Estado |
+|---|---|
+| Latencia de `proveBacking`, ~23.7 s | **Medida**, dos veces, en dos harnesses independientes. |
+| Latencia de `proveIdentity` | **No medida.** Los 23.7 s se tomaron sobre `backing.compact`, que **no** verifica firmas dentro del circuito. `identity-check.compact` sí verifica una firma Schnorr dentro de la prueba, así que tarda más — cuánto más, este repositorio no lo sabe y no lo inventa. |
+| `proveIdentity` con binding de TypeScript | **Sí** — `contract/src/identity.ts` liga el circuito compilado y `api/src/realIdentityPort.ts` lo despliega y lo llama. |
+| El emisor de la atestación de identidad | **Sintético.** El proveedor KYC de Creva no firma nada hoy; el despliegue genera su propia llave Schnorr. La *verificación de la firma* sí es real y ocurre dentro del circuito. |
+| Una atestación de otro emisor | **Aborta la prueba** y devuelve un resultado `degraded` tipado — nunca `false`. "Nadie pudo verificar" no es "la respuesta es no". |
+| La pantalla de identidad en el navegador | **Sigue degradando en toda fuente real.** En `bridge`, la llave de emisor fija del navegador no es la que el servidor genera por proceso; en `lace` no hay dirección de contrato de identidad a la cual unirse. Ver [`web/README.md`](web/README.md). |
+| `proveBackingTier` | **No alcanzable desde TypeScript** — `backing-tier.compact` todavía no tiene binding de contrato compilado. |
+| Los circuitos | **Sin auditoría criptográfica.** |
 
 `verify` compila el circuito **antes** de typechequear: el compilador genera las APIs de TypeScript
 contra las que compila el resto.

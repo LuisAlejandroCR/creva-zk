@@ -1,9 +1,22 @@
 Measured proof latency for the backing circuit, and the root cause of the
 "expected instance of StateValue" failure that blocked every circuit call for
 five rounds. The cause was a duplicated WASM runtime in node_modules, not the
-circuit and not the api/ wiring.
+circuit and not the api/ wiring. Every number in this file was taken on
+backing.compact; the identity circuit is not measured here.
 
 # Proof latency
+
+## What was measured
+
+`proveBacking`, on `backing.compact`, and **only** that. `backing.compact` has
+no in-circuit signature verification: it reads one witness, compares it to a
+public argument and discloses the outcome.
+
+`proveIdentity` (`identity-check.compact`) is wired to TypeScript and runs —
+see `api/README.md` — but it verifies a Schnorr-over-Jubjub signature *inside*
+the proof, which `backing.compact` never does. Its latency is therefore
+higher, and it has **not** been measured. No number below applies to it, and
+none is quoted for it anywhere in this repository.
 
 ## The numbers
 
@@ -21,8 +34,9 @@ warm prover. Both assert the public ledger: collateral 5000 vs limit 3000
 gives `cleared: true`, collateral 1000 vs limit 3000 gives `cleared: false`,
 `answered: 1` in each.
 
-**~24 s per call, well under the 48.4 s reference upper bound and nowhere
-near 90 s.** The two-minute demo video is filmable as designed.
+**~24 s per backing call, well under the 48.4 s reference upper bound and
+nowhere near 90 s.** The two-minute demo video is filmable as designed —
+filming an identity proof would need a measurement that does not exist yet.
 
 ## The root cause
 
