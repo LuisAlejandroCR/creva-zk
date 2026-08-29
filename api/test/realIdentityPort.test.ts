@@ -56,6 +56,10 @@ function harness(overrides: Partial<{ start: unknown; deploy: unknown; call: unk
       call: call as never,
       // Fixed so the issuer key is the same on every run of this file.
       issuerSecretKey: 12_345n,
+      // Stands in for the contract's own challenge circuit, so this suite runs
+      // on a machine where compact:build has not. Nothing here checks the
+      // signature — that is the circuit's job, and it needs Docker.
+      challenge: (() => 42n) as never,
     },
   };
 }

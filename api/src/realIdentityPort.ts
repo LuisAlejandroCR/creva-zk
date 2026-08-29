@@ -50,6 +50,9 @@ export interface RealIdentityPortOptions {
   // degrade and never-throw contracts can be exercised without Docker, a
   // proof server or a ~24s wait.
   readonly startEnvironment?: StartEnvironment;
+  // The contract's own challenge circuit. Overriding it is what lets a test
+  // run without the compiled circuit; nothing else may reimplement the hash.
+  readonly challenge?: IdentityModule["identityAttestationChallenge"];
   readonly buildProviders?: (environment: LocalEnvironmentHandle) => IdentityProviders;
   readonly deploy?: IdentityModule["deployIdentity"];
   readonly call?: CallProveIdentity;
@@ -85,9 +88,17 @@ async function openIdentityDeployment(
   logger: Logger,
 ): Promise<ApiResult<IdentityDeployment>> {
   try {
-    const loaded = await loadIdentityContract(logger);
-    if (loaded.status === "degraded") return loaded;
-    const contract = loaded.value;
+    // Only for the steps the caller has not overridden. A caller that supplies
+    // deploy, call and the challenge (a test) never loads the compiled circuit,
+    // so its suite runs on a machine where compact:build has not.
+    const needsContract =
+      options.deploy === undefined || options.call === undefined || options.challenge === undefined;
+    let contract: IdentityModule | undefined;
+    if (needsContract) {
+      const loaded = await loadIdentityContract(logger);
+      if (loaded.status === "degraded") return loaded;
+      contract = loaded.value;
+    }
 
     const started = await sharedEnvironment(logger, options.startEnvironment);
     if (started.status === "degraded") return started;
@@ -95,15 +106,15 @@ async function openIdentityDeployment(
     // Signed through the contract's own challenge circuit — the reason the
     // proof clears instead of aborting on the signature.
     const issued = await issueIdentityAttestation(
-      contract.identityAttestationChallenge,
+      options.challenge ?? mustLoad(contract).identityAttestationChallenge,
       options.claim ?? defaultIdentityClaim(),
       undefined,
       options.issuerSecretKey,
     );
 
     const build = options.buildProviders ?? defaultProviders;
-    const deploy = options.deploy ?? contract.deployIdentity;
-    const call = options.call ?? contract.callProveIdentity;
+    const deploy = options.deploy ?? mustLoad(contract).deployIdentity;
+    const call = options.call ?? mustLoad(contract).callProveIdentity;
 
     const deployed = await deploy(build(started.value), issued.attestation as never, logger);
     if (deployed.status === "degraded") return deployed;
@@ -191,6 +202,13 @@ export function createRealIdentityPort(
       return { status: "ok", value: outcome.value.matched };
     },
   };
+}
+
+// The branch above loads the module whenever any default is still in play, so
+// an undefined here is a bug in this file, not a state a caller can reach.
+function mustLoad(contract: IdentityModule | undefined): IdentityModule {
+  if (contract === undefined) throw new Error("compiled identity contract was needed but never loaded");
+  return contract;
 }
 
 function isPinoLogger(logger: Logger | PortLogger): logger is Logger {
