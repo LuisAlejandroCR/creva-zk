@@ -19,7 +19,10 @@ import type { ApiResult } from "../src/types.js";
 import type { JubjubPoint } from "../src/proofPort.js";
 
 // Synthetic public arguments only.
-const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: "ab".repeat(32) };
+// Synthetic issuer key. JubjubPoint travels as (x, y) since the Schnorr
+// signer landed — the compressed hex it used to carry had no owner able
+// to decompress it.
+const SYNTHETIC_ISSUER_KEY: JubjubPoint = { x: 1n, y: 2n };
 const SYNTHETIC_TAX_ID_HASH = "cd".repeat(32);
 
 const silent = pino({ level: "silent" });
