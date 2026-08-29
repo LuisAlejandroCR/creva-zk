@@ -4,12 +4,17 @@
    of truth for this palette. No token is invented here. */
 
 :root {
+  /* Light is the default, the same way creva_finance defaults to it. Set so
+     native UI — scrollbars, the select's dropdown — follows the theme too. */
+  color-scheme: light;
+
   /* Brand */
   --cr-crimson: #C41E3A;
   --cr-crimson-dark: #9E1329;
   --cr-inactive: #DED7C8;
   --cr-gradient: linear-gradient(135deg, #D62E52 0%, #9E1329 100%);
   --cr-on-brand: #FFFFFF;
+  --cr-obsidian: #17130F;
   --cr-shadow-brand-sm: 0 8px 24px rgba(158, 19, 41, 0.24);
 
   /* Motion */
@@ -58,10 +63,24 @@
   --cr-info-text: #3A5FD8;
 }
 
-/* Dark mode — Ink palette. This app has no manual theme toggle (unlike
-   creva_finance's .dark class), so it follows the system preference. */
+/* Dark mode — the ink palette, reachable two ways because this ships two
+   ways:
+
+     .dark                 creva_finance's own mechanism: the host owns the
+                           theme and toggles this class on the root element,
+                           defaulting to light. Embedded, we follow the host.
+     prefers-color-scheme  the standalone fallback, for when no host is
+                           setting a class at all.
+
+   Both only ever set ink, so they cannot disagree. The one case that needs
+   settling is a host that stays light while the OS is dark: add `.light` to
+   the root to suppress the media query and hold the light palette.
+
+   The two blocks below must stay identical — theme-mechanism.spec.ts fails
+   if they ever drift apart. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
+    color-scheme: dark;
     --cr-bg: #17130F;
     --cr-surface-1: #211B16;
     --cr-surface-2: #2A2118;
@@ -76,6 +95,23 @@
     --cr-danger-text: #FF8FAE;
     --cr-info-text: #93b4ff;
   }
+}
+
+.dark {
+  color-scheme: dark;
+  --cr-bg: #17130F;
+  --cr-surface-1: #211B16;
+  --cr-surface-2: #2A2118;
+  --cr-text: #F6F1E7;
+  --cr-text-secondary: #8A8175;
+  --cr-text-muted: rgba(246, 241, 231, 0.72);
+  --cr-text-subtle: rgba(246, 241, 231, 0.58);
+  --cr-border: rgba(246, 241, 231, 0.08);
+
+  --cr-success-text: #4ade80;
+  --cr-warning-text: #fbbf24;
+  --cr-danger-text: #FF8FAE;
+  --cr-info-text: #93b4ff;
 }
 
 *, *::before, *::after {
@@ -227,27 +263,17 @@ h1 {
   border-color: var(--cr-info-border);
 }
 
+/* The phase is carried by the panel's tint and border, never by the heading
+   colour. On the cream palette every semantic *-text token sits in the same
+   hue family as its own tint and lands just under AA there — danger 4.30:1,
+   info 4.28:1 — so the heading stays neutral, the way alert-warning already
+   does in globals.css. Neutral measures 13-15:1 in both themes. */
 .status-heading {
   margin: 0 0 0.35rem;
   font-weight: 700;
   color: var(--cr-text);
 }
 
-.status-panel[data-phase='failed'] .status-heading {
-  color: var(--cr-danger-text);
-}
-
-.status-panel[data-phase='ready'] .status-heading {
-  color: var(--cr-success-text);
-}
-
-.status-panel[data-phase='degraded'] .status-heading {
-  color: var(--cr-info-text);
-}
-
-/* Warning text intentionally stays neutral, matching alert-warning in
-   globals.css — --cr-warning-text does not clear 4.5:1 at this size on the
-   warning tint in the light theme. */
 .status-body {
   margin: 0;
   color: var(--cr-text-muted);
@@ -302,9 +328,16 @@ h1 {
   transform: scale(0.98);
 }
 
+/* Fading the gradient with opacity washes it toward rosa — #E899A4 at 0.45,
+   carrying near-white text at 2.06:1 — and the rosa never carries text. This
+   is also the screen we hold for the ~24s a real proof takes, so it has to be
+   legible. --cr-inactive is the palette's OFF state and --cr-obsidian is the
+   same value in both palettes, so this reads 12.9:1 light and dark alike. */
 .btn-primary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  background: var(--cr-inactive);
+  color: var(--cr-obsidian);
+  opacity: 1;
+  cursor: progress;
   transform: none;
 }
 
