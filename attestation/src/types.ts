@@ -1,24 +1,24 @@
 // types.ts
 // Off-chain mirror of contract/src/Attestation.compact's shapes, plus the
-// result envelope every issuer in this workspace returns. No chain/circuit
-// SDK is imported here; adapters and signers hold the implementation-
-// specific code.
+// result envelope every issuer in this workspace returns. Point and scalar
+// types are the ones the Compact runtime itself uses, so a value built here
+// is already the value a witness hands the circuit.
 
-// Mirrors Compact's JubjubPoint. Compact represents a point as an (x, y)
-// Field pair; off the wire this workspace carries it as a single compressed
-// hex string instead, the same way a real HTTP client would transmit a
-// curve point — decompressing it into the (x, y) pair a circuit witness
-// needs is the job of whatever builds that witness, not this issuer.
-export interface JubjubPoint {
-  readonly compressed: string; // hex
-}
+import type { JubjubPoint } from "@midnight-ntwrk/midnight-js-protocol/compact-runtime";
+
+// Re-exported rather than redeclared: this is Compact's own JubjubPoint,
+// the (x, y) Field pair `jubjubPointX`/`jubjubPointY` read and a witness
+// passes straight into verifyAttestation. Nothing compresses or
+// decompresses a point anywhere in this workspace any more — there is no
+// hex string to get wrong, and no decompression step left unowned.
+export type { JubjubPoint };
 
 // Mirrors schnorr.compact's SchnorrSignature: an announcement point and a
 // scalar response, the two values schnorrVerify checks against the
-// issuer's key.
+// issuer's key. `response` is a Field, so it is a bigint here — never hex.
 export interface SchnorrSignature {
   readonly announcement: JubjubPoint;
-  readonly response: string; // hex
+  readonly response: bigint;
 }
 
 // Mirrors Attestation.compact's SignedPayload<T>: exactly what the issuer

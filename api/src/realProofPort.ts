@@ -35,7 +35,10 @@ export function createRealBackingPort(logger: PortLogger = noopLogger): BackingP
 export function createRealIdentityPort(logger: PortLogger = noopLogger): IdentityProofPort {
   return {
     async checkIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
-      logger.info({ issuerKey: issuerKey.compressed, expectedTaxIdHash }, "real identity port called before the identity circuit is wired");
+      logger.info(
+        { issuerKeyX: issuerKey.x.toString(), issuerKeyY: issuerKey.y.toString(), expectedTaxIdHash },
+        "real identity port called before the identity circuit is wired",
+      );
       return { status: "degraded", degraded: { step: "checkIdentity", reason: "contract_not_compiled" } };
     },
   };

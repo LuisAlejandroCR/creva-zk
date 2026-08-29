@@ -1,97 +1,177 @@
 // signing.ts
-// The AttestationSigner port every issuer signs through, plus one concrete
-// implementation. Ed25519 is itself a Schnorr signature over a twisted
-// Edwards curve — a signature already is an (R, s) pair, the same shape as
-// SchnorrSignature's announcement+response — so it stands in for
-// Midnight's actual JubJub curve and Poseidon-based transientHash
-// challenge (contract/src/schnorr.compact), neither of which ships as an
-// installable library outside the Compact toolchain this sandbox lacks
-// (see the repository root README's toolchain note). Swapping in a real
-// JubJub signer, once that toolchain is reachable, changes nothing on the
-// calling side: every issuer here depends on AttestationSigner, never on
-// Ed25519AttestationSigner directly.
+// The AttestationSigner port every issuer signs through, plus the Schnorr-
+// over-Jubjub implementation the circuit actually accepts. Every curve
+// operation here is the Compact runtime's own — the same ecMulGenerator /
+// ecAdd / ecMul schnorr.compact compiles down to — and the challenge hash
+// is supplied by the contract, never recomputed here.
 
+import { createHash, randomBytes as nodeRandomBytes } from "node:crypto";
 import {
-  createPublicKey,
-  generateKeyPairSync,
-  sign as edSign,
-  verify as edVerify,
-  type KeyObject,
-} from "node:crypto";
-import type { JubjubPoint, SchnorrSignature, SignedPayload } from "./types.js";
+  ecAdd,
+  ecMul,
+  ecMulGenerator,
+  type JubjubPoint,
+} from "@midnight-ntwrk/midnight-js-protocol/compact-runtime";
+import type { SchnorrSignature, SignedPayload } from "./types.js";
 
-// Domain-separates this signature from every other use of Ed25519 in the
-// system, so a message signed here can never be replayed as one signed
-// for an unrelated purpose.
-const DOMAIN = Buffer.from("creva-zk:attestation:v1", "utf8");
+// Order of the Jubjub prime-order subgroup: the modulus every scalar in a
+// signature lives in. Verified against the runtime, not copied from a
+// spec — ecMulGenerator(JUBJUB_ORDER) is the identity point (0, 1), and
+// the runtime rejects any scalar >= this value outright.
+export const JUBJUB_ORDER =
+  6554484396890773809930967563523245729705921265872317281365359162392183254199n;
 
-// The fixed 12-byte ASN.1 prefix node:crypto puts in front of every raw
-// 32-byte Ed25519 public key when exporting/importing SPKI DER.
-const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
+// schnorr.compact truncates the challenge to 248 bits before it reaches
+// ecMul, because ecMul needs a scalar below JUBJUB_ORDER (~2^252.4) while
+// transientHash returns a BLS12-381 scalar (~2^255). The signer must
+// truncate identically or the two sides compute different challenges.
+export const TWO_248 = 1n << 248n;
 
-// Canonical, deterministic byte encoding of a signed payload. Field order
-// is spelled out explicitly rather than left to JSON.stringify's handling
-// of whatever key order the caller happened to build the object in.
-function encodePayload<T>(payload: SignedPayload<T>): Buffer {
-  const canonical = JSON.stringify({
-    subjectKey: payload.subjectKey.compressed,
-    claim: payload.claim,
-    // bigint fields (e.g. CollateralClaim.collateral) do not survive
-    // JSON.stringify; replacer turns them into a tagged decimal string so
-    // two payloads that differ only in a bigint claim field never encode
-    // to the same bytes.
-  }, (_key, value) => (typeof value === "bigint" ? `bigint:${value.toString()}` : value));
-  return Buffer.concat([DOMAIN, Buffer.from(canonical, "utf8")]);
-}
+// Both hashes verifyAttestation performs — over the payload, then over
+// the Schnorr challenge input — composed into the single value a signer
+// needs. This is the contract's own `<predicate>AttestationChallenge` pure
+// circuit, as TypeScript sees it.
+//
+// Wire the compiled binding straight into this slot:
+//
+//   pureCircuits.identityAttestationChallenge
+//
+// Signer and verifier then agree because they are running the same
+// circuit, not because two copies of one formula were kept in step by
+// hand. Nothing in this workspace hashes anything itself; in particular
+// the encoding of the claim T, which only the circuit knows, never has to
+// be restated here.
+//
+// Returns the FULL challenge. The signer truncates it to 248 bits, the
+// same reduction schnorr.compact's getSchnorrReduction witness supplies.
+export type AttestationChallenge<T> = (
+  payload: SignedPayload<T>,
+  announcement: JubjubPoint,
+  issuerKey: JubjubPoint,
+) => bigint;
 
-function publicKeyFromCompressed(point: JubjubPoint): KeyObject {
-  const raw = Buffer.from(point.compressed, "hex");
-  return createPublicKey({
-    key: Buffer.concat([ED25519_SPKI_PREFIX, raw]),
-    format: "der",
-    type: "spki",
-  });
-}
-
-export interface AttestationSigner {
+export interface AttestationSigner<T> {
   readonly publicKey: JubjubPoint;
-  sign<T>(payload: SignedPayload<T>): Promise<SchnorrSignature>;
+  sign(payload: SignedPayload<T>): Promise<SchnorrSignature>;
 }
 
-export class Ed25519AttestationSigner implements AttestationSigner {
-  private readonly privateKey: KeyObject;
-  readonly publicKey: JubjubPoint;
+// Reduces a scalar into [1, JUBJUB_ORDER). Zero is excluded because a zero
+// nonce would publish the secret key in the response, and a zero secret
+// key has no corresponding public key on the curve.
+function toNonZeroScalar(value: bigint): bigint {
+  const reduced = ((value % JUBJUB_ORDER) + JUBJUB_ORDER) % JUBJUB_ORDER;
+  return reduced === 0n ? 1n : reduced;
+}
 
-  constructor(keyPair: { readonly privateKey: KeyObject; readonly publicKey: KeyObject } = generateKeyPairSync("ed25519")) {
-    this.privateKey = keyPair.privateKey;
-    const raw = keyPair.publicKey.export({ type: "spki", format: "der" });
-    this.publicKey = { compressed: raw.subarray(raw.length - 32).toString("hex") };
+// Derives the per-signature nonce from the secret key and the message,
+// the way Ed25519 and RFC 6979 do: no entropy source is consulted, so the
+// same key signing the same payload always produces the same signature,
+// and a caller can never weaken the signature by supplying a bad RNG.
+// Reusing a nonce across two messages would leak the secret key, which is
+// exactly what binding it to a commitment over the payload prevents.
+//
+// Deliberately NOT the contract's challenge circuit: the nonce is the
+// signer's own business, the verifier never recomputes it, and routing a
+// secret key through a circuit binding would put it somewhere it has no
+// reason to be. A plain domain-separated SHA-512 is the right tool.
+function deriveNonce(secretKey: bigint, payloadCommitment: bigint): bigint {
+  const hash = createHash("sha512")
+    .update("creva-zk:schnorr-nonce:v1")
+    .update(toScalarBytes(secretKey))
+    .update(toScalarBytes(payloadCommitment))
+    .digest();
+  return toNonZeroScalar(bytesToBigInt(hash));
+}
+
+// The curve's identity element, used as a stand-in announcement to get a
+// payload- and key-bound commitment out of the challenge circuit before
+// the real announcement exists. The nonce has to depend on the payload,
+// and the payload's own hash is inside the circuit — this is how to reach
+// it without a second binding. It never appears in a signature.
+const IDENTITY_POINT: JubjubPoint = { x: 0n, y: 1n };
+
+// Fixed 32-byte big-endian encoding, so two different scalars can never
+// feed the nonce hash the same bytes.
+function toScalarBytes(value: bigint): Buffer {
+  const out = Buffer.alloc(32);
+  let v = value;
+  for (let i = 31; i >= 0; i -= 1) {
+    out[i] = Number(v & 0xffn);
+    v >>= 8n;
+  }
+  return out;
+}
+
+function bytesToBigInt(bytes: Uint8Array): bigint {
+  let acc = 0n;
+  for (const byte of bytes) acc = (acc << 8n) | BigInt(byte);
+  return acc;
+}
+
+export class SchnorrAttestationSigner<T> implements AttestationSigner<T> {
+  readonly publicKey: JubjubPoint;
+  private readonly secretKey: bigint;
+
+  constructor(
+    private readonly challenge: AttestationChallenge<T>,
+    secretKey: bigint = SchnorrAttestationSigner.generateSecretKey(),
+  ) {
+    // Normalised once, here, so publicKey and every later signature are
+    // derived from the same scalar the runtime will accept.
+    this.secretKey = toNonZeroScalar(secretKey);
+    this.publicKey = ecMulGenerator(this.secretKey);
   }
 
-  async sign<T>(payload: SignedPayload<T>): Promise<SchnorrSignature> {
-    const message = encodePayload(payload);
-    const signature = edSign(null, message, this.privateKey);
-    return {
-      announcement: { compressed: signature.subarray(0, 32).toString("hex") },
-      response: signature.subarray(32, 64).toString("hex"),
-    };
+  // A uniformly random scalar in [1, JUBJUB_ORDER). Drawn from 64 bytes
+  // rather than 32 so the modular reduction's bias is negligible.
+  static generateSecretKey(seed: Uint8Array = nodeRandomBytes(64)): bigint {
+    return toNonZeroScalar(bytesToBigInt(seed));
+  }
+
+  // Produces the (R, s) pair schnorrVerify checks as G*s == R + pk*c.
+  // Every value below is computed the way the circuit computes it: the
+  // challenge comes from the contract's own pure circuit, and the curve
+  // operations are the runtime's.
+  async sign(payload: SignedPayload<T>): Promise<SchnorrSignature> {
+    const commitment = this.challenge(payload, IDENTITY_POINT, this.publicKey);
+    const nonce = deriveNonce(this.secretKey, commitment);
+    const announcement = ecMulGenerator(nonce);
+
+    const c = truncateChallenge(this.challenge(payload, announcement, this.publicKey));
+
+    // s = k + c*sk (mod L). Substituting into G*s gives G*k + (G*sk)*c,
+    // which is exactly R + pk*c — the equation schnorrVerify asserts.
+    const response = (nonce + c * this.secretKey) % JUBJUB_ORDER;
+    return { announcement, response };
   }
 }
 
-// Mirrors Attestation.compact's verifyAttestation, off-circuit: recomputes
-// the signed message from the attestation's own fields and checks it
-// against the claimed public key. Exists for this workspace's own tests
-// and for anyone integrating it who wants to sanity-check a signature
-// before it reaches a real prover.
+// The 248-bit truncation schnorr.compact performs through its
+// getSchnorrReduction witness: c = cFull mod 2^248. The witness side of
+// that reduction — the (quotient, remainder) pair the circuit's asserts
+// check — lives in contract/src/schnorrWitness.ts, which owns it; the
+// signer only ever needs the remainder.
+export function truncateChallenge(challengeHash: bigint): bigint {
+  return challengeHash % TWO_248;
+}
+
+// Mirrors schnorr.compact's verification equation off-circuit, using the
+// runtime's own curve operations and the contract's own challenge. The
+// circuit remains the authority — this exists so a caller can reject a
+// bad signature before paying for a proof, and so the round-trip test has
+// something to check that is not a second copy of the signer's algebra.
 export function verifyAttestationSignature<T>(
+  challenge: AttestationChallenge<T>,
   payload: SignedPayload<T>,
   signature: SchnorrSignature,
   issuerKey: JubjubPoint,
 ): boolean {
-  const message = encodePayload(payload);
-  const sigBytes = Buffer.concat([
-    Buffer.from(signature.announcement.compressed, "hex"),
-    Buffer.from(signature.response, "hex"),
-  ]);
-  return edVerify(null, message, publicKeyFromCompressed(issuerKey), sigBytes);
+  const { announcement, response } = signature;
+  if (response < 0n || response >= JUBJUB_ORDER) return false;
+
+  const c = truncateChallenge(challenge(payload, announcement, issuerKey));
+
+  const lhs = ecMulGenerator(response);
+  const rhs = ecAdd(announcement, ecMul(issuerKey, c));
+  return lhs.x === rhs.x && lhs.y === rhs.y;
 }

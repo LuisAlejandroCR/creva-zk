@@ -16,8 +16,11 @@ export type {
 } from "./types.js";
 
 export {
-  Ed25519AttestationSigner,
+  JUBJUB_ORDER,
+  SchnorrAttestationSigner,
+  truncateChallenge,
   verifyAttestationSignature,
+  type AttestationChallenge,
   type AttestationSigner,
 } from "./signing.js";
 

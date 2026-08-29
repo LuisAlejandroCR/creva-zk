@@ -1,12 +1,25 @@
 // schnorr.compact
 // Schnorr signature verification over the JubJub curve, adapted from
 // midnightntwrk/example-zkloan (Apache-2.0), contract/src/schnorr.compact
-// (commit 25b22e3), unmodified except for this header. Compact 0.31.1's
+// (commit 25b22e3). Compact 0.31.1's
 // standard library has no signature verification primitive yet — this
 // builds one from ecAdd/ecMul/ecMulGenerator plus a witness-assisted
 // 248-bit challenge reduction. It is a polyfill: once the compiler ships
 // jubjubSchnorrVerify, this file goes away and Attestation.compact calls
 // that instead.
+//
+// Changed from the upstream file: the challenge is no longer inlined in
+// schnorrVerify but factored into the exported pure circuit below, and
+// that circuit is generic over the message length rather than fixed at
+// Vector<4> — at Vector<4> it hashed a different struct than
+// schnorrVerify<1> does, so its output was a challenge no verifier would
+// ever compute.
+//
+// schnorrChallenge is exported so an off-chain signer can obtain the very
+// challenge this circuit will check, by calling the compiled contract's
+// own pureCircuits binding rather than by reimplementing transientHash in
+// TypeScript. schnorrVerify computes its challenge by calling it too, so
+// there is exactly one definition of the challenge in the system.
 
 module schnorr {
   import CompactStandardLibrary;
@@ -36,14 +49,14 @@ module schnorr {
                    pk: JubjubPoint
                    ): [] {
     const {announcement, response} = signature;
+    // The one and only place the challenge is defined — the same circuit
+    // the off-chain signer calls through pureCircuits.
     const cFull: Field =
-            transientHash<SchnorrHashInput<n>>(
-              SchnorrHashInput<n> { ann_x: jubjubPointX(announcement),
-                                    ann_y: jubjubPointY(announcement),
-                                    pk_x: jubjubPointX(pk),
-                                    pk_y: jubjubPointY(pk),
-                                    msg: msg }
-              );
+            schnorrChallenge<n>(jubjubPointX(announcement),
+                                jubjubPointY(announcement),
+                                jubjubPointX(pk),
+                                jubjubPointY(pk),
+                                msg);
     // Truncate challenge to 248 bits via witness-assisted division by 2^248.
     // The witness provides (quotient, remainder) such that cFull == q * 2^248 + r
     // where r : Uint<248>, guaranteeing r < 2^248 < Jubjub subgroup order.
@@ -68,19 +81,23 @@ module schnorr {
            "Invalid attestation signature");
   }
 
-  export pure circuit schnorrChallenge(
+  // Generic over the message length, exactly as schnorrVerify is: a
+  // concrete instantiation compiled at the wrong n would hash a different
+  // struct and produce a challenge the verifier never computes. The
+  // previous Vector<4> version had precisely that bug — verifyAttestation
+  // calls schnorrVerify<1>.
+  //
+  // Returns the FULL hash. Callers must truncate to 248 bits (mod 2^248)
+  // to match schnorrVerify's challenge reduction above.
+  export pure circuit schnorrChallenge<#n>(
                         ann_x: Field,
                         ann_y: Field,
                         pk_x: Field,
                         pk_y: Field,
-                        msg: Vector<4, Field>
+                        msg: Vector<n, Field>
                         ): Field {
-    const cFull: Field =
-            transientHash<SchnorrHashInput<4>>(
-              SchnorrHashInput<4> { ann_x: ann_x, ann_y: ann_y, pk_x: pk_x, pk_y: pk_y, msg: msg }
-              );
-    // Return the full hash. Callers must truncate to 248 bits (mod 2^248)
-    // to match schnorrVerify's challenge reduction.
-    return cFull;
+    return transientHash<SchnorrHashInput<n>>(
+             SchnorrHashInput<n> { ann_x: ann_x, ann_y: ann_y, pk_x: pk_x, pk_y: pk_y, msg: msg }
+             );
   }
 }

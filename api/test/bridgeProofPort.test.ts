@@ -14,7 +14,7 @@ import {
 import type { JubjubPoint } from "../src/proofPort.js";
 
 // Synthetic public arguments only — no real issuer key, no real tax ID.
-const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: "ab".repeat(32) };
+const SYNTHETIC_ISSUER_KEY: JubjubPoint = { x: 1n, y: 2n };
 const SYNTHETIC_TAX_ID_HASH = "cd".repeat(32);
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -132,7 +132,7 @@ describe("createBridgeIdentityPort", () => {
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("http://localhost:9999/proof/identity");
     expect(JSON.parse(String(init.body))).toEqual({
-      issuerKey: { compressed: SYNTHETIC_ISSUER_KEY.compressed },
+      issuerKey: { x: SYNTHETIC_ISSUER_KEY.x.toString(), y: SYNTHETIC_ISSUER_KEY.y.toString() },
       expectedTaxIdHash: SYNTHETIC_TAX_ID_HASH,
     });
   });

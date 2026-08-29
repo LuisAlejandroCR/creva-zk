@@ -7,13 +7,14 @@
 // to whatever collateral value the caller supplies.
 
 import type { AttestationSigner } from "../signing.js";
-import { Ed25519AttestationSigner } from "../signing.js";
 import type { JubjubPoint, SignedPayload, IssuerResult } from "../types.js";
 import type { CollateralClaim, BackingIssuerPort } from "./types.js";
 
 export class SyntheticBackingIssuer implements BackingIssuerPort {
+  // Required, with no default — see SyntheticIdentityIssuer for why a
+  // default signer would be a liability rather than a convenience.
   constructor(
-    private readonly signer: AttestationSigner = new Ed25519AttestationSigner(),
+    private readonly signer: AttestationSigner<CollateralClaim>,
     private readonly logError: (error: unknown) => void = () => {},
   ) {}
 

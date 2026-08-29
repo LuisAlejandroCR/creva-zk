@@ -126,7 +126,12 @@ export function createLaceIdentityPort(options: LaceOptions = {}): IdentityProof
         return stack;
       }
       logger.info(
-        { issuerKey: issuerKey.compressed, expectedTaxIdHash, proofServerUrl: stack.value.proofServerUrl },
+        {
+          issuerKeyX: issuerKey.x.toString(),
+          issuerKeyY: issuerKey.y.toString(),
+          expectedTaxIdHash,
+          proofServerUrl: stack.value.proofServerUrl,
+        },
         "lace identity port reached a complete browser provider stack before the identity circuit is wired",
       );
       return degraded("checkIdentity", "call_failed");

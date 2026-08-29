@@ -22,7 +22,7 @@ import { backingHolds, identityHolds } from '../src/domain/demoInputs';
 import type { Tier } from '../src/domain/tier';
 
 // Synthetic public arguments only.
-const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: 'ab'.repeat(32) };
+const SYNTHETIC_ISSUER_KEY: JubjubPoint = { x: 1n, y: 2n };
 const SYNTHETIC_TAX_ID_HASH = 'cd'.repeat(32);
 
 // The four the browser-direct preflight can tell apart.

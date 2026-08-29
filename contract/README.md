@@ -18,6 +18,47 @@ of the backing predicate — every value the circuit touches, and what happens t
 | `cleared` (ledger) | | ✅ public ledger state | ✅ set to `outcome` |
 | `answered` (ledger counter) | | ✅ public ledger state | ✅ incremented once per call, carries no amount |
 
+## Signing an attestation the circuit will accept
+
+`verifyAttestation` hashes twice before it checks anything: once over the `SignedPayload<T>`, and
+once over the Schnorr challenge input. An off-chain issuer has to compute both to produce a
+signature the circuit accepts, and computing them by reimplementing Compact's `transientHash` in
+TypeScript is how signer and verifier silently drift apart.
+
+So both are exported as **pure circuits**, and the issuer calls them:
+
+| Compact | Where | Emitted binding |
+|---|---|---|
+| `schnorrChallenge<#n>` | `schnorr.compact` | none — generic |
+| `attestationMessage<T>`, `attestationChallenge<T>` | `Attestation.compact` | none — generic |
+| `identityAttestationMessage`, `identityAttestationChallenge` | `identity-check.compact` | `pureCircuits.*` |
+| `backingAttestationMessage`, `backingAttestationChallenge` | `backing-tier.compact` | `pureCircuits.*` |
+
+Only the concrete instantiations get a TypeScript binding — Compact emits one for a circuit with no
+remaining type parameters, which is why each predicate pins the generic pair at its own claim type.
+`schnorrVerify` computes its own challenge by calling `schnorrChallenge`, so there is exactly one
+definition of the challenge in the system and the two sides agree by construction rather than by
+two copies of a formula kept in step by hand.
+
+`<predicate>AttestationChallenge` composes both hashes, so a signer needs that one call and never
+has to know how the claim is encoded. Wiring, once `npm run compact:build` has produced
+`src/managed/identity-check`:
+
+```ts
+import { pureCircuits } from "./managed/identity-check/contract/index.js";
+import { SchnorrAttestationSigner } from "@creva-zk/attestation";
+
+const signer = new SchnorrAttestationSigner<IdentityClaim>(pureCircuits.identityAttestationChallenge);
+```
+
+`<predicate>AttestationMessage` is exported alongside it for a caller that needs the message on its
+own — building the witness, or debugging a signature the circuit rejected.
+
+The challenge those circuits return is the **full** hash; the signer truncates it to 248 bits, the
+same reduction `getSchnorrReduction` supplies to the circuit. That witness is implemented in
+`src/schnorrWitness.ts`, which imports nothing from `./managed` so it can be tested before the
+toolchain has run.
+
 ## Build
 
 ```bash

@@ -127,7 +127,7 @@ export function createBridgeIdentityPort(options: BridgeOptions = {}): IdentityP
       return await post<boolean>(
         "checkIdentity",
         "/proof/identity",
-        { issuerKey: { compressed: issuerKey.compressed }, expectedTaxIdHash },
+        { issuerKey: { x: issuerKey.x.toString(), y: issuerKey.y.toString() }, expectedTaxIdHash },
         isBoolean,
         options,
       );

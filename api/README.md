@@ -37,10 +37,12 @@ That is the whole command. It listens on **`http://localhost:8787`** (override w
 | Endpoint | Request body | Response body |
 |---|---|---|
 | `POST /proof/backing` | `{ "requestedLimit": "3000" }` | `ApiResult<Tier>` |
-| `POST /proof/identity` | `{ "issuerKey": { "compressed": "…" }, "expectedTaxIdHash": "…" }` | `ApiResult<boolean>` |
+| `POST /proof/identity` | `{ "issuerKey": { "x": "…", "y": "…" }, "expectedTaxIdHash": "…" }` | `ApiResult<boolean>` |
 
 `requestedLimit` travels as a decimal string: it is a `Uint<64>` and does not survive JSON's
-number type.
+number type. The issuer key's `x` and `y` travel the same way, for the same reason — they are
+`Field` elements. The key is the (x, y) pair `proveIdentity` takes, not a compressed point:
+nothing on either side of this boundary decompresses anything.
 
 Then point the screens at it:
 

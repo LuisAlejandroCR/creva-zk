@@ -5,6 +5,9 @@
 // proving the flow keeps running end to end when Creva's API is down.
 
 import { describe, expect, it, vi } from "vitest";
+import { ecMulGenerator } from "@midnight-ntwrk/midnight-js-protocol/compact-runtime";
+import { SchnorrAttestationSigner, verifyAttestationSignature } from "../src/signing.js";
+import { backingChallenge } from "./support/contractHasher.js";
 import { CrevaCollateralSigner, type CrevaSigningClient } from "../src/backing/crevaCollateralSigner.js";
 import { SyntheticBackingIssuer } from "../src/backing/syntheticBackingIssuer.js";
 import { CrevaAwareBackingIssuer } from "../src/backing/crevaAwareBackingIssuer.js";
@@ -12,9 +15,11 @@ import type { CrevaApiPort, CrevaApiStatus } from "../src/crevaApi/types.js";
 import type { JubjubPoint, SchnorrSignature } from "../src/types.js";
 import type { CollateralClaim, BackingIssuerPort } from "../src/backing/types.js";
 
-const subjectKey: JubjubPoint = { compressed: "33".repeat(32) };
+const subjectKey: JubjubPoint = ecMulGenerator(33n);
 const claim: CollateralClaim = { collateral: 5_000_000n };
-const fakeSignature: SchnorrSignature = { announcement: { compressed: "44".repeat(32) }, response: "55".repeat(32) };
+// A well-formed but meaningless signature: these tests cover routing and
+// degradation, never signature validity, so it is never verified.
+const fakeSignature: SchnorrSignature = { announcement: ecMulGenerator(44n), response: 55n };
 
 describe("CrevaCollateralSigner", () => {
   it("issues a real attestation from Creva's signing client", async () => {
@@ -51,16 +56,35 @@ describe("CrevaCollateralSigner", () => {
 });
 
 describe("SyntheticBackingIssuer", () => {
-  it("issues an attestation tagged synthetic", async () => {
-    const issuer = new SyntheticBackingIssuer();
+  it("issues an attestation tagged synthetic whose signature actually verifies", async () => {
+    const signer = new SchnorrAttestationSigner(backingChallenge, 2_024n);
+    const issuer = new SyntheticBackingIssuer(signer);
 
     const result = await issuer.issue(subjectKey, claim);
 
     expect(result.status).toEqual("issued");
     if (result.status === "issued") {
       expect(result.issued.origin).toEqual("synthetic");
-      expect(result.issued.attestation.payload).toEqual({ subjectKey, claim });
+      const { payload, signature } = result.issued.attestation;
+      expect(payload).toEqual({ subjectKey, claim });
+      expect(verifyAttestationSignature(backingChallenge, payload, signature, signer.publicKey)).toBe(true);
     }
+  });
+
+  it("degrades instead of throwing when the signer fails", async () => {
+    const failing = {
+      publicKey: ecMulGenerator(1n),
+      sign: async () => {
+        throw new Error("key store locked");
+      },
+    };
+    const logError = vi.fn();
+    const issuer = new SyntheticBackingIssuer(failing, logError);
+
+    const result = await issuer.issue(subjectKey, claim);
+
+    expect(result).toEqual({ status: "degraded", reason: "signer_unavailable" });
+    expect(logError).toHaveBeenCalledTimes(1);
   });
 });
 

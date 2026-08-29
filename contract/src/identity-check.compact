@@ -53,3 +53,26 @@ export circuit proveIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: Bytes<32
   answered.increment(1);
   return outcome;
 }
+
+// The concrete instantiations an off-chain issuer calls. Compact only
+// emits a TypeScript binding for a circuit with no remaining type
+// parameters, so the generic pure circuits in Attestation.compact are
+// pinned at IdentityClaim here; they then appear on the compiled
+// contract's `pureCircuits` and the signer calls them directly. That is
+// the whole reason the signature this contract verifies and the signature
+// the issuer produces cannot drift apart: they are the same circuit.
+export pure circuit identityAttestationMessage(
+  payload: SignedPayload<IdentityClaim>
+): Vector<1, Field> {
+  return attestationMessage<IdentityClaim>(payload);
+}
+
+// Returns the FULL challenge; the signer truncates it to 248 bits
+// (mod 2^248) to match schnorrVerify's witness-assisted reduction.
+export pure circuit identityAttestationChallenge(
+  payload: SignedPayload<IdentityClaim>,
+  announcement: JubjubPoint,
+  issuerKey: JubjubPoint
+): Field {
+  return attestationChallenge<IdentityClaim>(payload, announcement, issuerKey);
+}
