@@ -22,6 +22,7 @@ import {
   type ProofState,
 } from '../src/domain/proofState';
 import type { Tier } from '../src/domain/tier';
+import { CELEBRATION_MS, MEASURED_PROOF_MS } from '../src/domain/waitStages';
 
 // The vocabulary of the proof system. Every one of these is legitimate, and
 // none of it belongs on a screen she has to get through: expanding a word
@@ -136,16 +137,20 @@ describe('buttons say what happens next', () => {
 });
 
 describe('the wait is staged, not spun', () => {
-  it('puts the whole sequence and the standing promise on the identity screen', () => {
+  it('shows the one step happening now, and the standing promise, on the identity screen', () => {
     const content = buildIdentityContent(startGenerating<boolean>(0), 6_000);
     const html = renderProofScreen(content, buildStepProgress(1, 4, 'x'));
 
-    expect(content.wait?.stages.length).toBeGreaterThanOrEqual(4);
+    expect(content.wait?.totalStages).toBeGreaterThanOrEqual(4);
     expect(html).toContain('data-role="wait"');
     expect(html).toContain('Todo esto pasa en tu teléfono');
     expect(html).toMatch(/data-status="active"/);
-    // Every stage is on screen from the start — the sequence is the screen.
-    expect([...html.matchAll(/data-stage-index="/g)]).toHaveLength(content.wait!.stages.length);
+    // Exactly one step on screen: a list of four read as a to-do list.
+    expect([...html.matchAll(/data-stage-index="/g)]).toHaveLength(1);
+    expect(html).toContain(content.wait!.current.label);
+    // The bar and the seconds carry the sense of progress the list used to.
+    expect(html).toContain('data-role="wait-meter-fill"');
+    expect(html).toContain(content.wait!.elapsedLabel);
   });
 
   it('says on both screens that the work is happening on her own device', () => {
@@ -156,6 +161,41 @@ describe('the wait is staged, not spun', () => {
       const content = build();
       expect(content.wait?.stages[0]?.label.toLowerCase()).toContain('en tu teléfono');
       expect(content.wait?.stages[0]?.detail.toLowerCase()).toContain('dispositivo');
+    }
+  });
+
+  it('keeps the real stages long enough that a held check never eats the next one', () => {
+    for (const build of [
+      (ms: number) => buildIdentityContent(startGenerating<boolean>(0), ms),
+      (ms: number) => buildBackingContent(startGenerating<Tier>(0), ms),
+    ]) {
+      // Walk the run and collect the moment each stage first appears.
+      const firstSeen = new Map<number, number>();
+      for (let elapsed = 0; elapsed <= MEASURED_PROOF_MS; elapsed += 100) {
+        const wait = build(elapsed).wait!;
+        if (!firstSeen.has(wait.activeIndex)) firstSeen.set(wait.activeIndex, elapsed);
+      }
+      const starts = [...firstSeen.entries()].sort((a, b) => a[0] - b[0]).map(([, ms]) => ms);
+      for (let i = 1; i < starts.length; i += 1) {
+        expect(starts[i]! - starts[i - 1]!, 'a stage shorter than the held beat').toBeGreaterThan(
+          CELEBRATION_MS,
+        );
+      }
+    }
+  });
+
+  it('shows only one step at a time, all the way through both waits', () => {
+    for (const build of [
+      (ms: number) => buildIdentityContent(startGenerating<boolean>(0), ms),
+      (ms: number) => buildBackingContent(startGenerating<Tier>(0), ms),
+    ]) {
+      for (let elapsed = 0; elapsed <= MEASURED_PROOF_MS + 10_000; elapsed += 200) {
+        const html = renderProofScreen(build(elapsed), buildStepProgress(1, 4, 'x'));
+        expect([...html.matchAll(/data-stage-index="/g)], `two steps at ${elapsed}ms`).toHaveLength(1);
+        // The bar and the seconds are always there to carry the progress.
+        expect(html).toContain('data-role="wait-meter-fill"');
+        expect(html).toMatch(/\d+ s (de unos|·)/);
+      }
     }
   });
 

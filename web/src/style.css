@@ -587,14 +587,11 @@ h1 {
   color: var(--cr-text-muted);
 }
 
-.wait-stages {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  counter-reset: none;
+/* One step at a time. The slot is the stage: the arriving step sits in the
+   flow so the slot takes its height straight away, and the departing one is
+   lifted out of the flow and fades over the top. */
+.wait-stage-slot {
+  position: relative;
 }
 
 .wait-stage {
@@ -603,6 +600,16 @@ h1 {
   gap: 0.55rem;
   font-size: 0.85rem;
   line-height: 1.45;
+  animation: cr-stage-enter var(--cr-dur) var(--cr-ease) both;
+}
+
+.wait-stage[data-leaving] {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  animation: cr-stage-leave var(--cr-dur) var(--cr-ease) both;
 }
 
 /* The mark is the state: an empty ring ahead, a live ring now, a check
@@ -648,30 +655,26 @@ h1 {
   min-width: 0;
 }
 
-/* --cr-text-muted clears AA on the warning tint in both themes; the
-   de-emphasis of a step not yet reached is carried by weight, not by a
-   lighter ink. */
+/* The step on screen is the one happening now, so it is never de-emphasised;
+   it only loses its weight once it is done and on its way out. */
 .wait-stage-label {
-  color: var(--cr-text-muted);
-  transition: color var(--cr-dur) var(--cr-ease);
-}
-
-.wait-stage[data-status='active'] .wait-stage-label {
   color: var(--cr-text);
   font-weight: 700;
+  transition: color var(--cr-dur) var(--cr-ease), font-weight var(--cr-dur) var(--cr-ease);
 }
 
-/* The reassurance line belongs to the step actually running. */
+.wait-stage[data-status='done'] .wait-stage-label {
+  color: var(--cr-text-muted);
+  font-weight: 400;
+}
+
+/* Only one step is ever on screen, so its reassurance line always belongs
+   to it: no reason to hide it, and hiding it on the held beat would make the
+   slot jump right before the swap. */
 .wait-stage-detail {
-  display: none;
   font-size: 0.78rem;
   line-height: 1.4;
   color: var(--cr-text-muted);
-}
-
-.wait-stage[data-status='active'] .wait-stage-detail {
-  display: block;
-  animation: cr-rise var(--cr-dur) var(--cr-ease) both;
 }
 
 /* Only when the run outlasts the measured one. Not an error: a longer proof
@@ -902,6 +905,16 @@ h1 {
 /* ── Motion ──────────────────────────────────────────────────────────────
    Every animation below marks a state change: a screen arriving, the two
    halves of the split separating, the tier landing. None is decoration. */
+@keyframes cr-stage-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-stage-leave {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-8px); }
+}
+
 @keyframes cr-rise {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
