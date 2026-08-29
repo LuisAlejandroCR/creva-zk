@@ -125,9 +125,9 @@ describe('each reason renders as its own screen', () => {
       buildBackingContent(settleDegraded<Tier>('contract_not_found'), 0),
       buildIdentityContent(settleDegraded<boolean>('contract_not_found'), 0),
     ]) {
-      expect(content.statusBody).toMatch(/no es algo que hayas hecho mal/i);
-      expect(content.statusBody).toMatch(/av[ií]sale/i);
-      expect(content.statusBody).not.toMatch(/instala|desbloqu|inícialo|c[aá]mbiala/i);
+      expect(content.body).toMatch(/no es algo que hayas hecho mal/i);
+      expect(content.body).toMatch(/av[ií]sale/i);
+      expect(content.body).not.toMatch(/instala|desbloqu|inícialo|c[aá]mbiala/i);
       expect(content.help).toBe('problemas/falta-un-dato');
     }
   });
@@ -295,7 +295,7 @@ describe('lace ports reaching the screens', () => {
 
     const content = buildBackingContent(state, 0);
     expect(content.phase).toBe('ready');
-    expect(content.statusHeading).toContain(TIER_LABELS[TIER_PROVEN_BY_CLEARED_BACKING]);
+    expect(content.title).toContain(TIER_LABELS[TIER_PROVEN_BY_CLEARED_BACKING]);
     expect(content.ctaAction).toBe('continue');
   });
 
@@ -317,8 +317,8 @@ describe('lace ports reaching the screens', () => {
     const port = createLaceBackingPort({ connectorHost: workingWallet, fetchImpl: anyFetch, levelFactory });
     const content = buildBackingContent(toProofState(await port.checkBacking(3_000n), backingHolds), 0);
     expect(content.phase).toBe('degraded');
-    expect(content.statusHeading).toBe(
-      buildBackingContent(settleDegraded<Tier>('contract_not_found'), 0).statusHeading,
+    expect(content.title).toBe(
+      buildBackingContent(settleDegraded<Tier>('contract_not_found'), 0).title,
     );
   });
 });

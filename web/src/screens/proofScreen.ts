@@ -128,7 +128,7 @@ const DEGRADED_COPY: Partial<Readonly<Record<ApiFailureReason, DegradedCopy>>> =
   // pointed it at a place where nothing is set up. Everything else on this
   // list asks her to do something; this one asks her to tell someone.
   contract_not_found: {
-    heading: 'Falta un dato de esta app',
+    title: 'Falta un dato de esta app',
     body: 'A esta app le falta la dirección del lugar donde se hace la revisión, o ese lugar ya no está, así que nadie pudo revisar nada. No es algo que hayas hecho mal ni algo que puedas arreglar desde aquí: avísale a quien te compartió la app. Tus datos siguen sin salir de este dispositivo.',
   },
 };
