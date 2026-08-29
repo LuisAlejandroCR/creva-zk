@@ -31,8 +31,7 @@ export interface CompareContent {
 export function buildCompareContent(): CompareContent {
   return {
     h1: 'Esto es lo que no entregaste',
-    intro:
-      'A la izquierda, lo que normalmente hay que dar para pedir una tarjeta. A la derecha, lo que diste hoy.',
+    intro: 'A la izquierda, lo que se pide siempre. A la derecha, lo que diste hoy.',
     leftTitle: 'Como se pide siempre',
     items: [
       { icon: '🪪', label: 'Tu identificación' },

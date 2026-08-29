@@ -8,7 +8,6 @@
 import type { Tier } from './domain/tier';
 import type { ProofState } from './domain/proofState';
 import { STUB_LATENCY_MS, idleProof } from './domain/proofState';
-import type { WaitProgress } from './domain/waitStages';
 import {
   SYNTHETIC_ISSUER_KEY,
   SYNTHETIC_REQUESTED_LIMIT,
@@ -24,7 +23,7 @@ import { buildCompareContent } from './screens/compareContent';
 import { buildOffersContent } from './screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from './render';
 import { buildStepProgress, type StepProgress } from './domain/journeyProgress';
-import { applyWaitProgress } from './waitView';
+import { applyWaitProgress, type WaitPatch } from './waitView';
 import { parseHelpRoute } from './help/helpRoute';
 import { renderHelpArticle, renderHelpCategory, renderHelpIndex } from './help/helpRender';
 
@@ -37,8 +36,8 @@ interface AppState {
 }
 
 // Each step named after what it is about rather than after the mechanism
-// behind it. The order here is the journey's order, and the tally on every
-// screen is counted from it.
+// behind it. The order here is the journey's order, and the step indicator
+// on every screen is counted from it.
 const STEP_NAMES: readonly (readonly [Step, string])[] = [
   ['identity', 'Quién eres'],
   ['backing', 'Tu respaldo'],
@@ -51,7 +50,7 @@ function progressFor(step: Step): StepProgress {
   return buildStepProgress(index + 1, STEP_NAMES.length, STEP_NAMES[index]![1]);
 }
 
-// Fast enough that the meter moves continuously rather than in one-second
+// Fast enough that the ring advances continuously rather than in one-second
 // jumps, and cheap because a tick only patches a few fields.
 const TICK_MS = 200;
 
@@ -59,7 +58,8 @@ interface ScreenView {
   /** Identity of the rendered markup: same key means only the wait moved. */
   readonly key: string;
   readonly html: string;
-  readonly wait?: WaitProgress;
+  /** Present only while a proof runs: the fields to patch in place. */
+  readonly waitPatch?: WaitPatch;
 }
 
 function initialState(): AppState {
@@ -83,7 +83,7 @@ function buildView(state: AppState, now: number): ScreenView {
     return {
       key: `identity:${content.phase}`,
       html: renderProofScreen(content, progressFor('identity')),
-      wait: content.wait,
+      waitPatch: content.wait && { wait: content.wait, title: content.title, lede: content.lede },
     };
   }
 
@@ -92,7 +92,7 @@ function buildView(state: AppState, now: number): ScreenView {
     return {
       key: `backing:${content.phase}`,
       html: renderProofScreen(content, progressFor('backing')),
-      wait: content.wait,
+      waitPatch: content.wait && { wait: content.wait, title: content.title, lede: content.lede },
     };
   }
 
@@ -149,9 +149,9 @@ export function mountApp(root: HTMLElement): void {
     const view = buildView(state, Date.now());
 
     // Same screen, still waiting: patch the few fields that moved so the CSS
-    // transitions on the meter and the stage marks are never interrupted.
-    if (view.key === renderedKey && view.wait) {
-      applyWaitProgress(root, view.wait);
+    // transitions on the ring and the step marks are never interrupted.
+    if (view.key === renderedKey && view.waitPatch) {
+      applyWaitProgress(root, view.waitPatch);
       return;
     }
 

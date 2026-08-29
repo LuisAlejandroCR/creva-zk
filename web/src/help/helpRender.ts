@@ -11,13 +11,10 @@ import {
   type HelpCategory,
 } from './helpContent';
 import { helpArticleHref, helpCategoryHref, helpIndexHref } from './helpRoute';
+import { renderTopbar } from '../ui/shell';
 
-// The ? a screen carries. Same 44px target as the back link, and it always
-// names where it goes, so it is never a mystery button.
-export function renderHelpLink(path: string, label = 'Preguntas sobre esta pantalla'): string {
-  // The visible text is the accessible name: no aria-label repeating it.
-  return `<a class="help-link" href="${helpArticleHref(path)}" data-role="help-link"><span class="help-link-mark" aria-hidden="true">?</span><span class="help-link-text">${label}</span></a>`;
-}
+// The ? a screen carries lives in src/ui/notices.ts with the rest of the
+// design system: it is a control on the journey, not a page of this centre.
 
 function backLink(href: string, label: string): string {
   return `<a class="help-back" href="${href}"><span aria-hidden="true">←</span>${label}</a>`;
@@ -50,6 +47,7 @@ function renderQuestionRow(categorySlug: string, article: HelpArticle): string {
 
 export function renderHelpIndex(): string {
   return `
+    ${renderTopbar()}
     ${backLink('#', 'Volver a mi solicitud')}
     <h1>¿En qué te ayudamos?</h1>
     <p class="intro">Preguntas que nos hacen seguido, contestadas sin rodeos. Si algo no está aquí, escríbenos.</p>
@@ -64,6 +62,7 @@ export function renderHelpCategory(categorySlug: string): string {
   if (!category) return renderHelpIndex();
 
   return `
+    ${renderTopbar()}
     ${backLink(helpIndexHref(), 'Todas las preguntas')}
     <h1><span class="help-title-icon" aria-hidden="true">${category.icon}</span>${category.title}</h1>
     <p class="intro">${category.lead}</p>
@@ -87,6 +86,7 @@ export function renderHelpArticle(categorySlug: string, articleSlug: string): st
   const note = article.note ? `<p class="help-note">${article.note}</p>` : '';
 
   return `
+    ${renderTopbar()}
     ${backLink(helpCategoryHref(category.slug), category.title)}
     <h1>${article.question}</h1>
     <p class="help-answer">${article.answer}</p>

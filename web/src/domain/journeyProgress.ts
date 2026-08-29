@@ -1,24 +1,29 @@
 // journeyProgress.ts
-// Where she is in the journey and, just as plainly, what is behind her and
-// what is left. Pure: it turns a step number into the two lines the progress
-// block renders, and knows nothing about the DOM.
+// Where she is in the journey, in one compact treatment rather than two
+// competing progress messages. Pure: it turns a step number into the counter
+// the indicator shows, the sentence a screen reader hears, and the per-step
+// states the track is drawn from. Knows nothing about the DOM.
+
+export type StepMark = 'done' | 'current' | 'ahead';
 
 export interface StepProgress {
-  /** "Paso 2 de 4 · Tu respaldo" — where she is, named for what it is about. */
+  /** "1 de 4" — the only progress wording on screen. */
+  readonly counter: string;
+  /** "Paso 1 de 4: Quién eres" — the accessible name for the whole group. */
   readonly label: string;
-  /** "1 listo · te faltan 3" — what is done and what is left. */
-  readonly tally: string;
-  /** 1-based, for the aria-valuenow the progress block carries. */
+  /** What this step is about, named for the step and not for the mechanism. */
+  readonly name: string;
+  /** One mark per step, so the track is drawn rather than described twice. */
+  readonly marks: readonly StepMark[];
+  /** 1-based. */
   readonly stepNumber: number;
   readonly totalSteps: number;
 }
 
-function done(count: number): string {
-  return count === 1 ? '1 listo' : `${count} listos`;
-}
-
-function left(count: number): string {
-  return count === 1 ? 'te falta 1' : `te faltan ${count}`;
+function markFor(index: number, stepNumber: number): StepMark {
+  if (index + 1 < stepNumber) return 'done';
+  if (index + 1 === stepNumber) return 'current';
+  return 'ahead';
 }
 
 export function buildStepProgress(
@@ -26,18 +31,14 @@ export function buildStepProgress(
   totalSteps: number,
   name: string,
 ): StepProgress {
-  const completed = stepNumber - 1;
-  // Nothing is behind her yet on the first step, and "0 listos" would be a
-  // discouraging first thing to read. It still says how many are left, so
-  // every step carries the same half of the sentence.
-  const tally =
-    completed === 0
-      ? `Son ${totalSteps} pasos · ${left(totalSteps)}`
-      : `${done(completed)} · ${left(totalSteps - completed)}`;
-
   return {
-    label: `Paso ${stepNumber} de ${totalSteps} · ${name}`,
-    tally,
+    counter: `${stepNumber} de ${totalSteps}`,
+    // The tally the flow used to print beside this ("2 listos · te faltan 2")
+    // said the same thing a second time. The track already shows what is
+    // behind her; only a screen reader, which cannot see it, is told in words.
+    label: `Paso ${stepNumber} de ${totalSteps}: ${name}`,
+    name,
+    marks: Array.from({ length: totalSteps }, (_, index) => markFor(index, stepNumber)),
     stepNumber,
     totalSteps,
   };

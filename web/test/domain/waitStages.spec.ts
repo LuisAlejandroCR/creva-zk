@@ -1,7 +1,7 @@
 // waitStages.spec.ts
 // The wait screen's sequence, tested without waiting for it: which single
 // stage is on screen at a given moment, the beat a finished stage holds its
-// check for, how the meter fills, and what happens past the measured run.
+// check for, how the ring advances, and what happens past the measured run.
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -48,8 +48,14 @@ describe('buildWaitProgress', () => {
     expect(buildWaitProgress(STAGES, MEASURED_PROOF_MS).percent).toBeLessThan(100);
   });
 
-  it('reads the elapsed time against the measured run, in plain words', () => {
-    expect(buildWaitProgress(STAGES, 11_000).elapsedLabel).toBe('11 s de unos 24 s');
+  // "11 s de unos 24 s" was precision the app cannot promise on a source
+  // whose latency it does not control. Elapsed time is a fact; the estimate
+  // it used to be measured against was not.
+  it('reports elapsed time as a fact, and claims no estimate around it', () => {
+    const progress = buildWaitProgress(STAGES, 11_000);
+    expect(progress.elapsedValue).toBe('11 s');
+    expect(progress.elapsedLabel).toBe('Llevamos 11 s');
+    expect(progress.elapsedLabel).not.toMatch(/de unos/);
   });
 
   it('holds on the last stage past the measured run instead of claiming it finished', () => {
@@ -58,14 +64,16 @@ describe('buildWaitProgress', () => {
     expect(progress.activeIndex).toBe(STAGES.length - 1);
     expect(progress.stages.at(-1)?.status).toBe('active');
     expect(progress.percent).toBeLessThan(100);
-    expect(progress.elapsedLabel).toContain('ya casi');
+    // Overtime is said by the headline the screen swaps in, not by dressing
+    // the number up: the readout keeps reporting the one thing it knows.
+    expect(progress.elapsedLabel).toBe('Llevamos 32 s');
   });
 
   it('treats a clock that ran backwards as zero rather than a negative wait', () => {
     const progress = buildWaitProgress(STAGES, -5_000);
     expect(progress.percent).toBe(0);
     expect(progress.activeIndex).toBe(0);
-    expect(progress.elapsedLabel).toBe('0 s de unos 24 s');
+    expect(progress.elapsedLabel).toBe('Llevamos 0 s');
   });
 
   it('refuses an empty sequence, which would render as a spinner', () => {

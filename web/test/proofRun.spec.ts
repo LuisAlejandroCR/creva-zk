@@ -139,7 +139,7 @@ describe('the bridge source with the proof server down', () => {
     const content = buildBackingContent(settled, Date.now());
     expect(content.phase).toBe('degraded');
     expect(content.ctaAction).toBe('retry');
-    expect(content.statusHeading).toContain('Nadie pudo revisarlo');
+    expect(content.title).toContain('No pudimos terminar la revisión');
   });
 
   it('lands the identity screen on degraded too', async () => {

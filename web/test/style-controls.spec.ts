@@ -11,9 +11,24 @@ const CSS_PATH = fileURLToPath(new URL('../src/style.css', import.meta.url));
 const source = readFileSync(CSS_PATH, 'utf8');
 
 describe('style.css control sizing and overflow', () => {
-  it('gives .btn-primary and .cr-select controls a 44px floor', () => {
+  // .cr-select and .demo-control styled a demo-scenario selector no screen
+  // ever rendered; they went out with the redesign rather than being carried
+  // forward as dead rules. Every control the app does render is checked here.
+  it('gives every interactive control a 44px floor', () => {
     expect(source).toMatch(/\.btn-primary\s*{[^}]*min-height:\s*52px/);
-    expect(source).toMatch(/\.cr-select\s*{[^}]*min-height:\s*44px/);
+    expect(source).toMatch(/\.btn-secondary\s*{[^}]*min-height:\s*44px/);
+    // The ? and the install lock are glyphs, so the target is the whole
+    // control rather than the 26px circle drawn inside it.
+    expect(source).toMatch(/\.icon-button\s*{[^}]*width:\s*44px/);
+    expect(source).toMatch(/\.icon-button\s*{[^}]*height:\s*44px/);
+  });
+
+  it('gives every control a visible focus ring, in the brand crimson', () => {
+    for (const selector of ['btn-primary', 'btn-secondary', 'icon-button', 'help-back', 'security-notice-more']) {
+      expect(source, selector).toMatch(
+        new RegExp(`\\.${selector}:focus-visible\\s*{[^}]*outline:\\s*2px solid var\\(--cr-crimson\\)`),
+      );
+    }
   });
 
   it('guards against horizontal overflow on the root elements', () => {
@@ -46,21 +61,21 @@ describe('style.css Creva token wiring', () => {
       expect(KNOWN_CREVA_TOKENS.has(token)).toBe(true);
     }
   });
+});
 
-  it('keys the generating phase off --cr-warning-*', () => {
-    expect(source).toMatch(/\[data-phase='generating'\]\s*{[^}]*--cr-warning/);
-  });
-
-  it('keys the failed phase off --cr-danger-*', () => {
-    expect(source).toMatch(/\[data-phase='failed'\]\s*{[^}]*--cr-danger/);
-  });
-
-  it('keys the ready phase off --cr-success-*', () => {
-    expect(source).toMatch(/\[data-phase='ready'\]\s*{[^}]*--cr-success/);
-  });
-
-  it('keys the degraded phase off --cr-info-*', () => {
-    expect(source).toMatch(/\[data-phase='degraded'\]\s*{[^}]*--cr-info/);
+// StatusState carries the state in one rule down its edge rather than in a
+// card around the sentence, but which semantic family that rule comes from
+// is unchanged — and the mapping is the same one the proof phases always
+// had: work in flight is warning, an answer that is yes is success, an
+// answer that is no is danger, and nobody answering is info.
+describe('style.css StatusState tones keep the Creva semantic families', () => {
+  it.each([
+    ['processing', 'cr-warning'],
+    ['success', 'cr-success'],
+    ['warning', 'cr-danger'],
+    ['error', 'cr-info'],
+  ])('keys the %s tone off --%s', (tone, family) => {
+    expect(source).toMatch(new RegExp(`\\[data-tone='${tone}'\\]\\s*{[^}]*--${family}`));
   });
 });
 
@@ -69,8 +84,8 @@ describe('style.css Creva token wiring', () => {
 // to sit under AA's 4.5:1 at their rendered size. Pin the fix so a future
 // edit can't quietly put the *-text/*-subtle token back.
 describe('style.css AA contrast fixes (axe-core measured)', () => {
-  it('.progress uses --cr-text-secondary, not the failing --cr-text-subtle', () => {
-    expect(source).toMatch(/\.progress\s*{[^}]*color:\s*var\(--cr-text-secondary\)/);
+  it('.stepper-count uses --cr-text-secondary, not the failing --cr-text-subtle', () => {
+    expect(source).toMatch(/\.stepper-count\s*{[^}]*color:\s*var\(--cr-text-secondary\)/);
   });
 
   it('.compare-counterparty uses --cr-text, not the failing --cr-danger-text', () => {
@@ -89,10 +104,23 @@ describe('style.css AA contrast fixes (axe-core measured)', () => {
     expect(source).toMatch(/\.badge-success\s*{[^}]*color:\s*var\(--cr-text\)/);
   });
 
-  it('.demo-control > span, .badge-synthetic and .status use --cr-text-muted, not the failing --cr-text-secondary', () => {
-    expect(source).toMatch(/\.demo-control > span\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
+  it('.badge-synthetic and .status use --cr-text-muted, not the failing --cr-text-secondary', () => {
     expect(source).toMatch(/\.badge-synthetic\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
     expect(source).toMatch(/\.status\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
+  });
+
+  // The new surfaces the redesign added, on the page ground rather than on a
+  // tint: --cr-text-muted is the token that clears AA on --cr-bg in both
+  // themes, and --cr-text-secondary is what the smaller metadata takes.
+  it('keeps the lede, the promise and the step copy on tokens that clear AA', () => {
+    expect(source).toMatch(/\.intro,\n\.lede\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
+    expect(source).toMatch(/\.security-notice\s*{[^}]*color:\s*var\(--cr-text-muted\)/);
+    // The step on screen is never de-emphasised; only the one holding its
+    // check on its way out takes the muted ink.
+    expect(source).toMatch(
+      /\.verify-step\[data-status='done'\] \.verify-step-label\s*{[^}]*color:\s*var\(--cr-text-muted\)/,
+    );
+    expect(source).toMatch(/\.verify-elapsed-lead\s*{[^}]*color:\s*var\(--cr-text-secondary\)/);
   });
 });
 
@@ -104,25 +132,29 @@ describe('style.css motion', () => {
     expect(timings.length).toBeGreaterThan(0);
     for (const timing of timings) {
       expect(timing).toMatch(/var\(--cr-dur(-fast|-slow)?\)/);
-      // The wait meter is the one exception, and a deliberate one: it reports
-      // elapsed time, so easing its fill would report the wrong time.
-      const isTimeReadout = timing.includes('width') && timing.includes('linear');
+      // The verification ring is the one exception, and a deliberate one: it
+      // reports elapsed time, so easing its advance would report the wrong
+      // time.
+      const isTimeReadout = timing.includes('stroke-dashoffset') && timing.includes('linear');
       if (!isTimeReadout) expect(timing).toContain('var(--cr-ease)');
     }
   });
 
-  it('animates the state changes that carry meaning: the wait, the split, the tier', () => {
-    expect(source).toMatch(/\.wait-meter-fill\s*{[^}]*transition:\s*width/);
-    expect(source).toMatch(/\.wait-stage-mark\s*{[^}]*transition:/);
+  it('animates the state changes that carry meaning: the ring, the split, the tier', () => {
+    expect(source).toMatch(/\.verify-ring-fill\s*{[^}]*transition:\s*stroke-dashoffset/);
+    expect(source).toMatch(/\.verify-step-mark\s*{[^}]*transition:/);
     // One step leaves as the next arrives, in the same slot.
-    expect(source).toMatch(/\.wait-stage\s*{[^}]*animation:\s*cr-stage-enter/);
-    expect(source).toMatch(/\.wait-stage\[data-leaving\]\s*{[^}]*animation:\s*cr-stage-leave/);
-    expect(source).toMatch(/\.wait-stage-slot\s*{[^}]*position:\s*relative/);
+    expect(source).toMatch(/\.verify-step\s*{[^}]*animation:\s*cr-step-enter/);
+    expect(source).toMatch(/\.verify-step\[data-leaving\]\s*{[^}]*animation:\s*cr-step-leave/);
+    expect(source).toMatch(/\.verify-step-slot\s*{[^}]*position:\s*relative/);
     // The departing step is lifted out of the flow, so the slot never jumps.
-    expect(source).toMatch(/\.wait-stage\[data-leaving\]\s*{[^}]*position:\s*absolute/);
+    expect(source).toMatch(/\.verify-step\[data-leaving\]\s*{[^}]*position:\s*absolute/);
+    expect(source).toMatch(/\.stepper-seg\s*{[^}]*transition:/);
     expect(source).toMatch(/\.compare-col--exposed\s*{[^}]*animation:\s*cr-enter-left/);
     expect(source).toMatch(/\.compare-col--sealed\s*{[^}]*animation:\s*cr-enter-right/);
     expect(source).toMatch(/\.tier-badge\s*{[^}]*animation:\s*cr-land/);
+    // Criterion 11's ring, which had a keyframe and no rule using it.
+    expect(source).toMatch(/\.tier-reveal::before\s*{[^}]*animation:\s*cr-milestone-ring/);
   });
 
   it('stands every animation down under prefers-reduced-motion', () => {
@@ -137,9 +169,25 @@ describe('style.css motion', () => {
 
 // The explanation left the flow: what a screen carries now is a ?, and it
 // has to be as easy to hit as the back link it sits beside.
+// Criterion 1 of the redesign: hierarchy rather than containers. These are
+// the four surfaces that used to stack on a single screen; only the split,
+// whose whole point is two things side by side, still draws a box.
+describe('style.css uses hierarchy where it used to use containers', () => {
+  it('gives the status, the wait and the disclaimer a rule rather than a card', () => {
+    expect(source).toMatch(/\.status-state\s*{[^}]*border-left:\s*3px solid/);
+    expect(source).toMatch(/\.disclaimer\s*{[^}]*border-left:\s*3px solid/);
+    expect(source).not.toMatch(/\.status-panel\s*{/);
+    expect(source).not.toMatch(/\.wait\s*{/);
+  });
+
+  it('leaves the system status no card at all, since it is about the app', () => {
+    expect(source).not.toMatch(/\.status\s*{[^}]*background:/);
+    expect(source).not.toMatch(/\.status\s*{[^}]*border:/);
+  });
+});
+
 describe('style.css help centre', () => {
-  it('gives the ? and every help row a 44px target', () => {
-    expect(source).toMatch(/\.help-link\s*{[^}]*min-height:\s*44px/);
+  it('gives every help row and the way back a 44px target', () => {
     expect(source).toMatch(/\.help-back\s*{[^}]*min-height:\s*44px/);
     expect(source).toMatch(/\.help-card,\s*\n\.help-row\s*{[^}]*min-height:\s*44px/);
   });

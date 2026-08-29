@@ -1,10 +1,14 @@
 // render.spec.ts
-// String-level checks on src/render.ts output: one h1 per screen, the
-// synthetic badge appears exactly where the content model says it should,
-// the CTA carries Creva's real button class, each proof phase carries the
-// Creva semantic data-phase attribute its CSS keys off of, and the compare
-// screen renders the same three items on both sides — crossed on the right,
-// alongside a single outcome chip.
+// String-level checks on src/render.ts output: one h1 per screen, one
+// navigation layer, the archetype each state is rendered in, the synthetic
+// badge exactly where the content model says it belongs, the CTA carrying
+// Creva's real button class, and the compare screen rendering the same three
+// items on both sides — crossed on the right, alongside a single outcome
+// chip.
+//
+// The archetype assertions are the ones that keep the redesign honest: four
+// states rendered in four shapes, rather than one layout with different
+// words in the same cards.
 
 import { describe, expect, it } from 'vitest';
 import { buildIdentityContent } from '../src/screens/identityContent';
@@ -18,52 +22,85 @@ function countOccurrences(source: string, needle: RegExp): number {
   return [...source.matchAll(needle)].length;
 }
 
+const step = buildStepProgress(1, 4, 'Quién eres');
+
 describe('renderProofScreen', () => {
   it('renders exactly one h1 and Creva\'s primary button class', () => {
-    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), buildStepProgress(1, 4, 'x'));
+    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), step);
     expect(countOccurrences(html, /<h1/g)).toBe(1);
     expect(html).toContain('class="btn-primary"');
     expect(html).not.toMatch(/disabled/);
   });
 
-  it('tags the idle status panel with the idle phase, not a semantic one', () => {
-    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), buildStepProgress(1, 4, 'x'));
-    expect(html).toContain('data-phase="idle"');
+  it('carries one navigation layer: the brand and where she is, once each', () => {
+    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), step);
+    expect(countOccurrences(html, /class="topbar"/g)).toBe(1);
+    expect(countOccurrences(html, /class="stepper"/g)).toBe(1);
+    expect(html).toContain('1 de 4');
+    expect(html).toContain('aria-label="Paso 1 de 4: Quién eres"');
+    // One segment per step, and exactly one of them is where she is.
+    expect(countOccurrences(html, /class="stepper-seg"/g)).toBe(4);
+    expect(countOccurrences(html, /data-state="current"/g)).toBe(1);
   });
 
-  it('tags the generating panel so it picks up --cr-warning-*', () => {
-    const html = renderProofScreen(
-      buildIdentityContent({ phase: 'generating', startedAt: 0 }, 5000),
-      buildStepProgress(1, 4, 'x'),
-    );
-    expect(html).toContain('data-phase="generating"');
-    expect(html).toContain('disabled');
+  it('renders each proof state in an archetype of its own', () => {
+    const archetypeOf = (html: string): string =>
+      html.match(/data-archetype="([a-z]+)"/)?.[1] ?? '';
+
+    const archetypes = [
+      archetypeOf(renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), step)),
+      archetypeOf(renderProofScreen(buildIdentityContent({ phase: 'generating', startedAt: 0 }, 5000), step)),
+      archetypeOf(renderProofScreen(buildIdentityContent(settleReady(true), 0), step)),
+      archetypeOf(renderProofScreen(buildIdentityContent(settleDegraded('call_failed'), 0), step)),
+    ];
+
+    expect(archetypes).toEqual(['intro', 'verifying', 'confirm', 'recover']);
   });
 
-  it('tags the failed panel so it picks up --cr-danger-*', () => {
-    const html = renderProofScreen(buildIdentityContent(settleFailed<boolean>(), 0), buildStepProgress(1, 4, 'x'));
-    expect(html).toContain('data-phase="failed"');
+  // The semantic families are still keyed off the phase, so a future edit
+  // cannot quietly detach a state from Creva's own palette.
+  it.each([
+    ['idle', idleProof<boolean>()],
+    ['generating', { phase: 'generating' as const, startedAt: 0 }],
+    ['failed', settleFailed<boolean>()],
+    ['ready', settleReady(true)],
+    ['degraded', settleDegraded<boolean>('call_failed')],
+  ])('tags the %s screen with its phase', (phase, state) => {
+    const html = renderProofScreen(buildIdentityContent(state, 5_000), step);
+    expect(html).toContain(`data-phase="${phase}"`);
   });
 
-  it('tags the ready panel so it picks up --cr-success-*', () => {
-    const html = renderProofScreen(buildIdentityContent(settleReady(true), 0), buildStepProgress(1, 4, 'x'));
-    expect(html).toContain('data-phase="ready"');
+  it('makes the verification the hero while a proof runs, and offers no button', () => {
+    const html = renderProofScreen(buildIdentityContent({ phase: 'generating', startedAt: 0 }, 5000), step);
+    expect(html).toContain('data-role="wait-ring"');
+    // One step in its slot, never a list of four.
+    expect(html).toContain('class="verify-step-slot"');
+    expect([...html.matchAll(/data-stage-index="/g)]).toHaveLength(1);
+    // Nothing to press: a disabled button would only repeat the ring.
+    expect(html).not.toContain('data-role="cta"');
   });
 
-  it('tags the degraded panel so it picks up --cr-info-*', () => {
-    const html = renderProofScreen(buildIdentityContent(settleDegraded('call_failed'), 0), buildStepProgress(1, 4, 'x'));
-    expect(html).toContain('data-phase="degraded"');
-  });
-
-  it('omits the synthetic badge from the status panel while idle', () => {
-    const html = renderProofScreen(buildIdentityContent(idleProof<boolean>(), 0), buildStepProgress(1, 4, 'x'));
-    const statusPanel = html.split('<div class="status-panel"')[1]!;
-    expect(statusPanel).not.toContain('badge-synthetic');
+  it('omits the synthetic badge before anything has settled', () => {
+    for (const state of [idleProof<boolean>(), { phase: 'generating' as const, startedAt: 0 }]) {
+      expect(renderProofScreen(buildIdentityContent(state, 5_000), step)).not.toContain('badge-synthetic');
+    }
   });
 
   it('shows the synthetic badge once a value has settled', () => {
-    const html = renderProofScreen(buildIdentityContent(settleReady(true), 0), buildStepProgress(1, 4, 'x'));
+    const html = renderProofScreen(buildIdentityContent(settleReady(true), 0), step);
     expect(html).toContain('badge-synthetic');
+  });
+
+  // Criterion 6 of the redesign: only show a component where it helps that
+  // particular state. The promise belongs where she hands something over.
+  it('shows the security notice while her data is being handled, and not after', () => {
+    const during = [idleProof<boolean>(), { phase: 'generating' as const, startedAt: 0 }];
+    for (const state of during) {
+      expect(renderProofScreen(buildIdentityContent(state, 5_000), step)).toContain('security-notice');
+    }
+    for (const state of [settleReady(true), settleFailed<boolean>()]) {
+      expect(renderProofScreen(buildIdentityContent(state, 0), step)).not.toContain('security-notice');
+    }
   });
 });
 
@@ -107,5 +144,10 @@ describe('renderOffersScreen', () => {
     expect(html).toContain('Bronce');
     expect(html).toContain('badge-synthetic');
     expect(html.toLowerCase()).toContain('catálogo de crédito');
+  });
+
+  it('lands on its own archetype, so the result never reads as one more step', () => {
+    const html = renderOffersScreen(buildOffersContent('gold'), buildStepProgress(4, 4, 'x'));
+    expect(html).toContain('data-archetype="celebrate"');
   });
 });
