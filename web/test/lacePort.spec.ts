@@ -1,13 +1,18 @@
 // web/test/lacePort.spec.ts
 // Proves the browser-direct arm of the seam: 'lace' is a source the seam
-// knows and the three it already knew still resolve, each of the four
+// knows and the three it already knew still resolve, each of the five
 // reasons the path can produce reaches the screens as its own degraded copy
 // — never as a rejection — and the generating screen names the local proof
 // server the whole privacy claim rests on.
 
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiFailureReason, JubjubPoint } from '@creva-zk/api';
-import { createLaceBackingPort, createLaceIdentityPort, type ConnectorHost } from '@creva-zk/api/lace';
+import {
+  createLaceBackingPort,
+  createLaceIdentityPort,
+  TIER_PROVEN_BY_CLEARED_BACKING,
+  type ConnectorHost,
+} from '@creva-zk/api/lace';
 import { activePortSource, resolvePortSource, toProofState } from '../src/proofPort';
 import { generatingBodyFor, LOCAL_PROOF_SERVER_URL } from '../src/screens/proofProvenance';
 import { buildProofScreenContent, DEFAULT_GENERATING_BODY } from '../src/screens/proofScreen';
@@ -18,6 +23,7 @@ import {
   createLaceIdentityPort as laceUnavailableIdentityPort,
 } from '../src/laceUnavailable';
 import { settleDegraded, settleFailed, startGenerating } from '../src/domain/proofState';
+import { TIER_LABELS } from '../src/domain/tier';
 import { backingHolds, identityHolds } from '../src/domain/demoInputs';
 import type { Tier } from '../src/domain/tier';
 
@@ -25,12 +31,17 @@ import type { Tier } from '../src/domain/tier';
 const SYNTHETIC_ISSUER_KEY: JubjubPoint = { compressed: 'ab'.repeat(32) };
 const SYNTHETIC_TAX_ID_HASH = 'cd'.repeat(32);
 
-// The four the browser-direct preflight can tell apart.
+// The five the browser-direct path can tell apart before a proof is even
+// attempted. contract_not_found is the one this path alone can hit: it joins
+// a contract deployed from the CLI rather than deploying one in the page, so
+// "the build named no address" is a precondition the other sources have not
+// got.
 const LACE_REASONS: readonly ApiFailureReason[] = [
   'wallet_absent',
   'wallet_locked',
   'wallet_wrong_network',
   'proof_server_unreachable',
+  'contract_not_found',
 ];
 
 describe('proof port source selection', () => {
@@ -105,6 +116,21 @@ describe('each reason renders as its own screen', () => {
     expect(buildBackingContent(settleDegraded<Tier>('wallet_locked'), 0).statusBody).toContain('Lace');
     expect(buildBackingContent(settleDegraded<Tier>('wallet_wrong_network'), 0).statusBody).toContain('preprod');
   });
+
+  // The one reason on this list she cannot act on herself. It must not ask
+  // her to install, unlock or start anything — that would send her chasing a
+  // fault in somebody else's configuration.
+  it('tells her a missing contract is not hers to fix, and asks nothing of her', () => {
+    for (const content of [
+      buildBackingContent(settleDegraded<Tier>('contract_not_found'), 0),
+      buildIdentityContent(settleDegraded<boolean>('contract_not_found'), 0),
+    ]) {
+      expect(content.statusBody).toMatch(/no es algo que hayas hecho mal/i);
+      expect(content.statusBody).toMatch(/av[ií]sale/i);
+      expect(content.statusBody).not.toMatch(/instala|desbloqu|inícialo|c[aá]mbiala/i);
+      expect(content.help).toBe('problemas/falta-un-dato');
+    }
+  });
 });
 
 describe('where the proof is generated is stated, per source', () => {
@@ -174,6 +200,43 @@ describe('lace ports reaching the screens', () => {
   const noWallet: ConnectorHost = {};
   const anyFetch = vi.fn(async () => new Response(null, { status: 200 })) as unknown as typeof fetch;
 
+  // 64 hex characters, no 0x — the shape assertIsContractAddress accepts.
+  // Synthetic: nothing was ever deployed at it, and nothing here joins.
+  const SYNTHETIC_CONTRACT_ADDRESS = 'ab'.repeat(32);
+
+  // A wallet that answers everything, so the preflight passes and the join
+  // step is the thing under test. The connector's own surface, no more.
+  const workingWallet: ConnectorHost = {
+    mnLace: {
+      rdns: 'io.lace.midnight',
+      name: 'Fake Lace',
+      icon: '',
+      apiVersion: '4.0.1',
+      connect: async () =>
+        ({
+          getConnectionStatus: async () => ({ status: 'connected', networkId: 'preprod' }),
+          getConfiguration: async () => ({
+            indexerUri: 'https://indexer.example/graphql',
+            indexerWsUri: 'wss://indexer.example/graphql/ws',
+            substrateNodeUri: 'https://rpc.example',
+            proverServerUri: LOCAL_PROOF_SERVER_URL,
+            networkId: 'preprod',
+          }),
+          getShieldedAddresses: async () => ({
+            shieldedAddress: 'synthetic',
+            shieldedCoinPublicKey: '11'.repeat(32),
+            shieldedEncryptionPublicKey: '22'.repeat(32),
+          }),
+        }) as never,
+    },
+  };
+
+  // levelPrivateStateProvider builds its store lazily, so no test here ever
+  // opens IndexedDB — which a jsdom-less run has none of anyway.
+  const levelFactory = (() => {
+    throw new Error('the private state store must not be opened by a unit test');
+  }) as never;
+
   it('renders the backing screen with the missing-wallet copy', async () => {
     const port = createLaceBackingPort({ connectorHost: noWallet, fetchImpl: anyFetch });
     const content = buildBackingContent(toProofState(await port.checkBacking(3_000n), backingHolds), 0);
@@ -187,5 +250,53 @@ describe('lace ports reaching the screens', () => {
     const content = buildIdentityContent(toProofState(result, identityHolds), 0);
     expect(content.phase).toBe('degraded');
     expect(content.statusHeading).toBe(buildIdentityContent(settleDegraded<boolean>('wallet_absent'), 0).statusHeading);
+  });
+
+  // The point of the whole path: with everything up it produces a tier, not
+  // a fifth way to degrade. The join and call steps are seams here — the
+  // compiled circuit is a build artifact a unit test may not require — but
+  // everything above them is the real port, the real preflight and the real
+  // six-provider stack.
+  it('renders a real tier once the contract is joined and the proof clears', async () => {
+    const port = createLaceBackingPort({
+      connectorHost: workingWallet,
+      fetchImpl: anyFetch,
+      levelFactory,
+      contractAddress: SYNTHETIC_CONTRACT_ADDRESS,
+      join: (async () => ({ status: 'ok', value: { callTx: {} } })) as never,
+      call: (async () => ({ status: 'ok', value: { cleared: true, answered: 3_000n } })) as never,
+    });
+
+    const state = toProofState(await port.checkBacking(3_000n), backingHolds);
+    expect(state.phase).toBe('ready');
+    expect(state.value).toBe(TIER_PROVEN_BY_CLEARED_BACKING);
+
+    const content = buildBackingContent(state, 0);
+    expect(content.phase).toBe('ready');
+    expect(content.statusHeading).toContain(TIER_LABELS[TIER_PROVEN_BY_CLEARED_BACKING]);
+    expect(content.ctaAction).toBe('continue');
+  });
+
+  it('renders the failed screen, not a degraded one, when the proof runs and does not clear', async () => {
+    const port = createLaceBackingPort({
+      connectorHost: workingWallet,
+      fetchImpl: anyFetch,
+      levelFactory,
+      contractAddress: SYNTHETIC_CONTRACT_ADDRESS,
+      join: (async () => ({ status: 'ok', value: { callTx: {} } })) as never,
+      call: (async () => ({ status: 'ok', value: { cleared: false, answered: 0n } })) as never,
+    });
+
+    const content = buildBackingContent(toProofState(await port.checkBacking(9_000_000n), backingHolds), 0);
+    expect(content.phase).toBe('failed');
+  });
+
+  it('renders the missing-contract screen when the build named no address', async () => {
+    const port = createLaceBackingPort({ connectorHost: workingWallet, fetchImpl: anyFetch, levelFactory });
+    const content = buildBackingContent(toProofState(await port.checkBacking(3_000n), backingHolds), 0);
+    expect(content.phase).toBe('degraded');
+    expect(content.statusHeading).toBe(
+      buildBackingContent(settleDegraded<Tier>('contract_not_found'), 0).statusHeading,
+    );
   });
 });

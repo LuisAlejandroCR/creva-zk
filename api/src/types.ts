@@ -17,7 +17,11 @@ export type ApiFailureReason =
   | "wallet_absent" // no Midnight wallet is injected into this browser
   | "wallet_locked" // a wallet is there but handed back no usable connection
   | "wallet_wrong_network" // the wallet is connected to a different network
-  | "proof_server_unreachable"; // the user's local proof server never answered
+  | "proof_server_unreachable" // the user's local proof server never answered
+  // The browser joins a contract deployed once from the CLI rather than
+  // deploying one of its own, so "the build named no address" and "nothing
+  // usable is at that address" are one precondition, and its own reason.
+  | "contract_not_found";
 
 export interface ApiDegraded {
   readonly step: string;

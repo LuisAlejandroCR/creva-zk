@@ -66,6 +66,7 @@ export function buildBackingContent(proof: ProofState<Tier>, now: number): Proof
       wallet_locked: helpPath('problemas', 'cartera-bloqueada'),
       wallet_wrong_network: helpPath('problemas', 'red-equivocada'),
       proof_server_unreachable: helpPath('problemas', 'servidor-local'),
+      contract_not_found: helpPath('problemas', 'falta-un-dato'),
     },
   });
 }

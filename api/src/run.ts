@@ -13,10 +13,10 @@
 import pino from "pino";
 import { startLocalEnvironment } from "./localEnvironment.js";
 import { createProviders } from "./providers.js";
+import { zkConfigPath } from "./zkConfigPath.js";
 import {
   deployBacking,
   callProveBacking,
-  zkConfigPath,
   BACKING_CIRCUIT_ID,
   BACKING_PRIVATE_STATE_ID,
   type BackingPrivateState,

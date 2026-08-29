@@ -2,8 +2,9 @@
   README.md
   Acceptance criteria for the web/ screen journey, written before the
   screens were built and revised when the journey was rewritten for plain
-  language, plus what a reviewer must have installed to exercise the
-  browser-direct (Lace) proof path. Update this file if a criterion changes.
+  language, plus the exact checklist a reviewer must satisfy to exercise the
+  browser-direct (Lace) proof path, which now joins a deployed contract and
+  runs a real proof. Update this file if a criterion changes.
 -->
 
 # Creva ZK — web screen journey
@@ -34,12 +35,14 @@ made with. No screen decides an outcome for itself.
    - `degraded` — nobody could check. The proof server did not answer. Only
      `ready` advances the journey; `degraded` offers retry, never a way past
      an unanswered check, because telling her she does not qualify when
-     nothing was evaluated is a lie. Four reasons the browser-direct path can
+     nothing was evaluated is a lie. Five reasons the browser-direct path can
      tell apart before a proof is even attempted — `wallet_absent`,
-     `wallet_locked`, `wallet_wrong_network`, `proof_server_unreachable` —
-     get a heading and body of their own, naming the one thing to fix. All
-     four are still degraded screens, still say nobody could check, and still
-     offer only `Reintentar`.
+     `wallet_locked`, `wallet_wrong_network`, `proof_server_unreachable`,
+     `contract_not_found` — get a heading and body of their own, naming the
+     one thing to fix. All five are still degraded screens, still say nobody
+     could check, and still offer only `Reintentar`. The fifth is the only
+     one she cannot act on herself, and its copy says so: it asks her to tell
+     whoever installed the app, not to install or start anything.
 3. **Split before/after screen.** The same three items — document, selfie,
    balance — appear on both sides. Left: legible, each crossing over to the
    counterparty (an arrow per row, the counterparty named at the bottom).
@@ -215,11 +218,17 @@ unrecognised falls back to the stub.
 | `bridge` | `api/`'s local HTTP proof server, backed by the real port | `npm run serve --workspace api`, Docker, the Compact toolchain |
 | `lace` | the browser itself, via Lace | the checklist below |
 
-On `bridge` the backing screen now shows a real proof — `proveBacking` against the local network,
-~23.7s — instead of a degraded result. It reports `bronze` when the collateral clears, because
-that is the strongest tier a boolean circuit proves; see [`api/README.md`](../api/README.md).
-The identity screen still degrades on that source: `proveIdentity` has no TypeScript binding and
-no JubJub signer, and the reason is spelled out there.
+On `bridge` and on `lace` the backing screen shows a real proof — `proveBacking`, ~23.7s —
+instead of a degraded result. Both report `bronze` when the collateral clears, because that is
+the strongest tier a boolean circuit proves; see [`api/README.md`](../api/README.md).
+
+**The identity screen still degrades on every real source**, `lace` included: `proveIdentity` has
+no TypeScript binding and no JubJub signer, and the reason is spelled out in `api/README.md`.
+That matters for how the journey reads on those sources — the CTA only advances on a `ready`
+proof, so step 1 does not hand over to step 2 and the backing screen is not reachable by clicking
+through. To watch a real browser proof today, call `selectBackingPort().checkBacking(...)` from
+the console, or run the journey on `stub` for the flow and on `lace` for the proof. Wiring past
+that gate would mean fabricating an identity outcome, which this repository will not do.
 
 ## The browser-direct path (`VITE_PORT_SOURCE=lace`)
 
@@ -233,16 +242,45 @@ Node process of ours sits in the middle: `api/`'s proof server is the
 
 ### What a reviewer must have installed
 
+Every one of these is a precondition with a screen of its own: miss one and
+the page says which, in her words, and offers only `Reintentar`.
+
 1. **A Chromium browser** — the extension below is not published for others.
 2. **Lace, Midnight Preview build, publisher IOG.** Testnet only; there is no
    mainnet Midnight for it to talk to. Create or restore a wallet and unlock
-   it before loading the page.
-3. **A local Midnight proof server**, and Lace pointed at it: *Settings »
+   it before loading the page. → `wallet_absent` / `wallet_locked`.
+3. **Lace on the network this build expects**, `preprod` by default. → 
+   `wallet_wrong_network`. The identifier a given Lace build reports is the
+   one thing this repository cannot settle from its own dependencies: read
+   the console (`lace reported its connection status`), and if it is not
+   `preprod`, set `VITE_LACE_NETWORK_ID` to whatever it printed. See "Which
+   network id" below.
+4. **tDUST in that wallet.** Every call transaction pays a fee, and Lace
+   balances it: an empty wallet fails inside `balanceUnsealedTransaction` and
+   reaches the screen as `call_failed`, ~24s in, not as a precondition.
+   Fund it from the network's faucet before the demo, not during it.
+5. **A local Midnight proof server**, and Lace pointed at it: *Settings »
    Midnight » Local*, `http://localhost:6300`. The screens name this address
    verbatim, because a reviewer watching a stalled proof needs the number.
-   The proof server must answer cross-origin requests from the dev server's
-   origin (`http://localhost:5173` by default); one that is listening but
-   refuses CORS will pass the reachability probe and then fail the proof.
+   → `proof_server_unreachable`.
+
+   ```bash
+   docker compose -f ../api/proof-server-local.yml up
+   ```
+
+   **It must answer cross-origin requests from the page's origin**
+   (`http://localhost:5173` by default). The probe is a real cross-origin
+   `GET` carrying `Content-Type: application/octet-stream` — not a
+   safelisted value, so the browser preflights exactly as it will for the
+   prover's own `POST /check` and `POST /prove`. A server that rejects CORS
+   therefore fails the probe rather than passing it and dying ~20s later
+   inside the prover. The rejection itself is a bare `TypeError` to a page,
+   indistinguishable from a dead port, so the error is logged to the console
+   — `local proof server probe failed` — and the screen says the honest,
+   coarser thing.
+6. **The backing contract, deployed once, and its address in the build.**
+   The browser JOINS it; it never deploys. → `contract_not_found`. See
+   "Deploy it once" below.
 4. **The compiled circuit's ZK artifacts, served over HTTP.** The browser has
    no filesystem, so `FetchZkConfigProvider` fetches them, in exactly the
    layout `compactc` writes and `NodeZkConfigProvider` reads:
@@ -258,14 +296,53 @@ Node process of ours sits in the middle: `api/`'s proof server is the
    in this workspace, so `npm run verify` (which compiles first) and the web
    build both get them. See "The 2 MB the artifacts cost" below. Override the
    base URL with `VITE_ZK_CONFIG_URL` if they are served from somewhere else.
-5. **Node 24.11.1+ and `npm ci`** at the repository root, as for any other
+8. **Node 24.11.1+ and `npm ci`** at the repository root, as for any other
    source.
 
 Then:
 
+```bash
+npm run compact:build                     # the circuit and its artifacts
+npm run zk:copy --workspace web           # serve them from web/public/zk/
+VITE_PORT_SOURCE=lace \
+VITE_BACKING_CONTRACT_ADDRESS=<64 hex chars> \
+  npm run dev --workspace web
 ```
-VITE_PORT_SOURCE=lace npm run dev --workspace web
+
+### Deploy it once
+
+The browser joins a contract; it does not deploy one. Deploying in the page
+would cost her the ~19s the Node path pays **and** ask her to sign a
+deployment that is not hers — so the wait would be ~43s instead of ~24s for
+work she did not ask for and does not own. The deployment is a one-off,
+done from the CLI by whoever sets the demo up:
+
+```bash
+npm run demo --workspace api   # deploys, then proves twice; prints the address
 ```
+
+Hand that address to the build as `VITE_BACKING_CONTRACT_ADDRESS` (64 hex
+characters, no `0x` — see `assertIsContractAddress` in
+`@midnight-ntwrk/midnight-js-utils`). Without it the port degrades
+`contract_not_found` and joins nothing; it never falls back to deploying.
+
+Her wallet then signs exactly one thing: her own proof.
+
+### Which network id
+
+`VITE_LACE_NETWORK_ID` defaults to `preprod`, and that is read off the
+installed packages rather than guessed. The well-known set is declared in
+`@midnight-ntwrk/wallet-sdk-abstractions/dist/NetworkId.js` — `mainnet`,
+`testnet`, `devnet`, `qanet`, `undeployed`, `preview`, `preprod` — and
+`@midnight-ntwrk/testkit-js`'s `PreprodTestEnvironment` reports exactly
+`preprod`. `testnet` is a different member of that set, not a synonym, which
+is why this default changed.
+
+What no installed package can say is which member **Lace Midnight Preview**
+reports; it may well report `preview`. So the value the wallet actually sends
+is logged on every connection, from both `getConnectionStatus()` and
+`getConfiguration()`, and the override is an environment variable rather than
+a code edit.
 
 ### The 2 MB the artifacts cost
 
@@ -303,10 +380,10 @@ A measured proof costs ~23.7s (`tools/PROOF-LATENCY.md`). `generating` is a
 first-class screen state with a live elapsed-time readout for exactly that
 reason, and on this source its copy names where the proof is being generated.
 
-### The four ways this path degrades
+### The five ways this path degrades
 
 Every external step returns a typed degraded result and never throws. All
-four are `degraded`, never `failed`, per criterion 2: nothing was evaluated,
+five are `degraded`, never `failed`, per criterion 2: nothing was evaluated,
 so none of them may read as a rejection. They are checked in this order, so
 the screen names the first thing to fix.
 
@@ -316,9 +393,17 @@ the screen names the first thing to fix.
 | `wallet_locked` | "Cartera bloqueada" | Unlock it and authorise the site |
 | `wallet_wrong_network` | "Red equivocada" | Switch Lace to Midnight preprod |
 | `proof_server_unreachable` | "El servidor local no responde" | Start the proof server on `:6300` |
+| `contract_not_found` | "Falta un dato de esta app" | Set `VITE_BACKING_CONTRACT_ADDRESS` |
 
-Every other reason — `call_failed` included — keeps the shipped "No pudimos
-verificarlo" copy.
+Every other reason — `call_failed` included — keeps the shipped "Nadie pudo
+revisarlo" copy. `call_failed` is where a real failure *after* the
+preconditions lands: no tDUST to balance the fee, a proof server that dies
+mid-proof, an indexer that loses the connection.
+
+The raw cause behind every one of them goes to the browser console (the seam
+in `src/proofPort.ts` supplies the only logger this app installs) and never
+into the reason itself, which is a fixed string precisely so it cannot carry
+an endpoint or a stack fragment onto the screen.
 
 ### Configuration
 
@@ -342,10 +427,21 @@ WebAssembly nothing references. With it:
 
 | Build | `dist/` |
 | --- | --- |
-| default | 164 kB — 13.9 kB of JS, no WASM, no lace chunk |
-| `VITE_PORT_SOURCE=lace` | ~12 MB — 15.3 kB entry, a 590 kB lace chunk, 11.5 MB of WASM |
+| default | 215 kB — 32.5 kB of JS (11.1 kB gzipped), one chunk, no WASM, no lace chunk |
+| `VITE_PORT_SOURCE=lace` | megabytes — a lace chunk plus the ledger's WASM |
 
-The size on the lace source is inherent to proving in the page.
+Measured with `npx vite build` in this workspace. The default build emits a
+single JS chunk and 31 modules; `grep` for `laceProofPort`, `dapp-connector`
+or `browser-level` in it returns nothing. Joining the contract added 1.1 kB
+raw / 0.3 kB gzipped to it — the fifth degraded reason's copy, its help
+article, and the console logger — and no chunk.
+
+The size on the lace source is inherent to proving in the page, and it is now
+the *only* build that carries the compiled circuit: `contract.ts` reaches
+`contract/src/managed/`, so **`VITE_PORT_SOURCE=lace` builds require
+`npm run compact:build` first**, as does typechecking this workspace. The
+default build does not — the alias above keeps that module out of its graph
+entirely.
 
 ## Out of scope
 
@@ -356,9 +452,23 @@ toolchain, no Docker) — see the session report for what that leaves
 unverified.
 
 The browser-direct path has never been run end to end: there is no browser,
-no Lace and no proof server in the environment it was written in. It is
-typechecked, bundled for the browser (verified to contain zero `node:`
-imports), and unit-tested against a fake dapp connector and a fake fetch.
-The deploy and call step on top of its provider stack is the same unfinished
-wiring the `real` source has, and degrades honestly rather than inventing a
-result.
+no Lace, no proof server and no Compact toolchain in the environment it was
+written in. It is unit-tested against a fake dapp connector, a fake fetch and
+fake join/call seams, and the default build is measured. What a human still
+has to confirm, with Lace in front of them:
+
+- The network id Lace Midnight Preview reports. The default is `preprod`,
+  read off the installed packages; if the console prints `preview`, set
+  `VITE_LACE_NETWORK_ID=preview`.
+- That the join actually finds the CLI's deployment, and that the verifier
+  keys served from `/zk/` match the ones on chain — a mismatch is
+  `contract_not_found` too, by design, and the console says which.
+- That `balanceUnsealedTransaction` and `submitTransaction` accept the
+  hex the wallet provider sends. Hex is not assumed here: the reference
+  `DAppConnectorWalletAdapter` in
+  `@midnight-ntwrk/testkit-js/dist/index.mjs` — which `implements
+  ConnectedAPI` — decodes both with `fromHex` and returns
+  `{ tx: toHex(finalized.serialize()) }`. The connector's own `api.d.ts`
+  and README only say `tx: string`.
+- That the proof server's CORS configuration passes the preflight the probe
+  now sends, and that the whole call lands near ~24s rather than ~43s.

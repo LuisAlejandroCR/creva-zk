@@ -1,9 +1,9 @@
 <!-- api/README.md -->
 The Midnight client for this repository: the typed proof ports `web/` consumes, the four
-implementations behind them (stub, real, bridge, lace), the deploy/call wrappers for the backing
-circuit, and a local HTTP proof server that puts a live proof within reach of a browser. The
-`real` port runs the circuit: one deployment per process, reused across requests, holding an
-exclusive lock. Everything external here returns a typed degraded result rather than throwing.
+implementations behind them (stub, real, bridge, lace), the deploy/join/call wrappers for the
+backing circuit, and a local HTTP proof server that puts a live proof within reach of a browser.
+The `real` port deploys and calls in Node; the `lace` port joins the same contract from the
+browser. Everything external here returns a typed degraded result rather than throwing.
 
 # `@creva-zk/api`
 
@@ -27,8 +27,10 @@ Three implementations, selected by `web/`'s seam (`web/src/proofPort.ts`) throug
   it lives behind `@creva-zk/api/real`, so no browser build can reach it.
 - **`bridge`** — browser-safe. One `fetch` per call to the proof server below, which is backed by
   the `real` port. It imports nothing from `node:` and nothing that reaches testcontainers.
-- **`lace`** — the browser-direct path, behind `@creva-zk/api/lace`. See
-  [`web/README.md`](../web/README.md).
+- **`lace`** — the browser-direct path, behind `@creva-zk/api/lace`. It builds the six providers
+  in the page from Lace's own configuration, then **joins** the backing contract at an address
+  the build supplies and calls `proveBacking` through the same `contract.ts` wrappers the `real`
+  port uses. It never deploys. See [`web/README.md`](../web/README.md).
 
 ### What the real port proves today
 
@@ -36,6 +38,30 @@ Three implementations, selected by `web/`'s seam (`web/src/proofPort.ts`) throug
 |---|---|
 | `createRealBackingPort` | **Wired.** Deploys once, then calls `proveBacking` per request. |
 | `createRealIdentityPort` | **Degraded**, and not for want of plumbing — see below. |
+| `createLaceBackingPort` | **Wired.** Joins at `contractAddress`, then calls `proveBacking`. |
+| `createLaceIdentityPort` | **Degraded**, for the same reason as the real one. |
+
+### Deploy once, join many
+
+`contract.ts` exports both halves and one call path:
+
+| Function | Who runs it | Cost |
+|---|---|---|
+| `deployBacking` | the CLI, once (`npm run demo --workspace api`) | ~19s |
+| `joinBacking` | every browser, per session | an indexer round trip |
+| `callProveBacking` | both | ~23.7s |
+
+`callProveBacking` takes a `FoundBacking`, not a `DeployedBacking`: a deployment is a found
+contract, so one call path serves the process that deployed and the browser that joined.
+`joinBacking` bounds its own wait (`DEFAULT_JOIN_TIMEOUT_MS`, 20s) because
+`findDeployedContract` waits on `watchForDeployTxData`, and an address with nothing at it never
+answers "no" — it simply never answers. A malformed address, an empty one, an indexer that never
+answers and a contract whose verifier keys do not match this build are all one thing to the user
+— `contract_not_found` — and the raw cause goes to the logger.
+
+The browser joining rather than deploying is a product decision, not a plumbing one: deploying in
+the page would cost her the ~19s *and* a signature on a deployment that is not hers. See
+[`web/README.md`](../web/README.md).
 
 `proveBacking` answers a `Boolean`: the collateral cleared the requested limit, or it did not.
 It carries no tier ladder — that is `backing-tier.compact`'s `proveBackingTier`. So a cleared

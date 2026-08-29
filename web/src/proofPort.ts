@@ -65,18 +65,33 @@ export function activePortSource(): PortSource {
 // applies.
 const BRIDGE_OPTIONS = { baseUrl: import.meta.env?.VITE_BRIDGE_URL } as const;
 
-// The browser-direct path needs no server of ours at all, so the only things
-// a build can say are which network to insist on and where the compiled
-// circuit's ZK artifacts are served from. Both stay unset unless the build
+// The browser-direct path needs no server of ours at all. What a build must
+// say is where the backing contract lives: this path JOINS a contract
+// deployed once from the CLI instead of deploying one in the page, which
+// costs her ~19s and a signature on a deployment that is not hers. Without
+// the address the port degrades `contract_not_found` — it never falls back
+// to deploying. Network id and artifact base URL stay unset unless the build
 // sets them, so @creva-zk/api's own defaults apply. The port itself loads
 // lazily — see lacePort.ts — so no other build carries the ledger's WASM.
 const LACE_OPTIONS: LaceOptions = {
+  ...(import.meta.env?.VITE_BACKING_CONTRACT_ADDRESS === undefined
+    ? {}
+    : { contractAddress: import.meta.env.VITE_BACKING_CONTRACT_ADDRESS }),
   ...(import.meta.env?.VITE_LACE_NETWORK_ID === undefined
     ? {}
     : { expectedNetworkId: import.meta.env.VITE_LACE_NETWORK_ID }),
   ...(import.meta.env?.VITE_ZK_CONFIG_URL === undefined
     ? {}
     : { zkConfigBaseUrl: import.meta.env.VITE_ZK_CONFIG_URL }),
+  // The one place this app prints anything. The network id a given Lace
+  // build reports is not something this repository can know, and a reviewer
+  // staring at "Red equivocada" needs to read the string the wallet actually
+  // sent — so it, and every raw provider error behind a degraded reason, go
+  // to the console. Nothing user-facing is decided by it.
+  logger: {
+    info: (obj, msg) => console.info(`[creva-zk] ${msg}`, obj),
+    error: (obj, msg) => console.error(`[creva-zk] ${msg}`, obj),
+  },
 };
 
 export function selectBackingPort(): BackingProofPort {

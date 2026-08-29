@@ -254,6 +254,20 @@ export const HELP_CATEGORIES: readonly HelpCategory[] = [
         note: 'Que la revisión ocurra en tu computadora y no en la nuestra es a propósito: por eso tus datos no viajan.',
         keywords: ['servidor', 'no responde', 'localhost', 'apagado', 'no arranca'],
       },
+      {
+        slug: 'falta-un-dato',
+        question: 'Dice que a la app le falta un dato. ¿Qué hago?',
+        answer:
+          'Le falta la dirección del lugar donde se hace la revisión. Eso lo configura quien instaló la app, no tú.',
+        steps: [
+          'No es algo que hayas hecho mal: la app llegó sin ese dato o el lugar ya no está.',
+          'Avísale a quien te compartió la app para que lo corrija.',
+          'Cuando te digan que ya está, vuelve a intentarlo.',
+        ],
+        resolvedBy: 'El botón Reintentar, una vez que quien instaló la app lo corrija.',
+        note: 'Aunque falte ese dato, tus datos nunca salieron de este dispositivo: la revisión ni siquiera empezó.',
+        keywords: ['falta un dato', 'no está configurada', 'dirección', 'no encuentra', 'mal instalada'],
+      },
     ],
   },
 ];

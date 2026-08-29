@@ -151,6 +151,8 @@ describe('a ? that leads nowhere fails the build', () => {
     ['identity/wallet_locked', buildIdentityContent(settleDegraded<boolean>('wallet_locked'), 0).help],
     ['backing/wallet_wrong_network', buildBackingContent(settleDegraded<Tier>('wallet_wrong_network'), 0).help],
     ['backing/proof_server_unreachable', buildBackingContent(settleDegraded<Tier>('proof_server_unreachable'), 0).help],
+    ['backing/contract_not_found', buildBackingContent(settleDegraded<Tier>('contract_not_found'), 0).help],
+    ['identity/contract_not_found', buildIdentityContent(settleDegraded<boolean>('contract_not_found'), 0).help],
     ['backing/call_failed', buildBackingContent(settleDegraded<Tier>('call_failed'), 0).help],
   ];
 
@@ -165,6 +167,9 @@ describe('a ? that leads nowhere fails the build', () => {
     );
     expect(buildBackingContent(settleDegraded<Tier>('proof_server_unreachable'), 0).help).toBe(
       'problemas/servidor-local',
+    );
+    expect(buildBackingContent(settleDegraded<Tier>('contract_not_found'), 0).help).toBe(
+      'problemas/falta-un-dato',
     );
     // A reason with nothing specific to say keeps the screen's own article.
     expect(buildBackingContent(settleReady<Tier>('silver'), 0).help).toBe(

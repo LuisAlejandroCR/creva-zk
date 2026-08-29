@@ -5,6 +5,7 @@
 // the screens can tell the three apart. Imports nothing from node:.
 
 import type { Configuration, ConnectedAPI, InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
+import type { PortLogger } from "./portLogger.js";
 import type { ApiDegraded, ApiResult } from "./types.js";
 
 // Where a wallet installs its connector. `window` is `globalThis` in a
@@ -13,11 +14,20 @@ import type { ApiDegraded, ApiResult } from "./types.js";
 // this Node-typed workspace.
 export type ConnectorHost = Record<string, InitialAPI | undefined>;
 
-// Lace Midnight Preview (publisher IOG) is testnet-only, so the browser
-// path has exactly one network to be on. The exact identifier string the
-// wallet reports is a value we cannot read off a machine here, which is why
-// it is an option rather than a hardcoded check — see web/README.md.
-export const DEFAULT_LACE_NETWORK_ID = "testnet";
+// The identifier the browser path insists on. Not a guess, and not
+// "testnet": the well-known set is declared in the installed
+// @midnight-ntwrk/wallet-sdk-abstractions/dist/NetworkId.js as
+// { mainnet, testnet, devnet, qanet, undeployed, preview, preprod }, and
+// @midnight-ntwrk/testkit-js's PreprodTestEnvironment reports exactly
+// 'preprod' for the network this app targets (dist/index.mjs). 'testnet' is
+// a different member of that set, not a synonym for it.
+//
+// What no installed package can say is which member a given Lace build
+// reports — Lace Midnight *Preview* may well report 'preview'. So the value
+// the wallet actually reports is logged on every connection, read it in the
+// console, and VITE_LACE_NETWORK_ID overrides this without a code change.
+// See web/README.md.
+export const DEFAULT_LACE_NETWORK_ID = "preprod";
 
 // Matched case-insensitively against InitialAPI.rdns, which is a reverse-DNS
 // wallet id. A substring match, not an equality one: the exact rdns Lace
@@ -32,6 +42,8 @@ export interface LaceWalletOptions {
   readonly walletRdns?: string;
   /** Injectable for tests; defaults to the browser's own `globalThis.midnight`. */
   readonly connectorHost?: ConnectorHost;
+  /** Where the network id the wallet reports is written. Silent by default. */
+  readonly logger?: PortLogger;
 }
 
 export interface LaceConnection {
@@ -82,31 +94,59 @@ export async function connectLaceWallet(step: string, options: LaceWalletOptions
 
   const expectedNetworkId = options.expectedNetworkId ?? DEFAULT_LACE_NETWORK_ID;
 
+  const logger = options.logger;
+
   let connected: ConnectedAPI;
   try {
     connected = await wallet.connect(expectedNetworkId);
-  } catch {
+  } catch (error) {
+    logger?.error?.({ err: error, rdns: wallet.rdns }, "wallet.connect rejected");
     return degraded(step, "wallet_locked");
   }
 
   try {
     const status = await connected.getConnectionStatus();
+    // Logged before it is judged, and whatever it says. Which identifier a
+    // given Lace build reports is the one thing this path cannot settle from
+    // the installed packages, so a human with the wallet in front reads it
+    // here rather than inferring it from a red screen.
+    logger?.info(
+      {
+        rdns: wallet.rdns,
+        apiVersion: wallet.apiVersion,
+        reportedNetworkId: status.status === "connected" ? status.networkId : null,
+        expectedNetworkId,
+      },
+      "lace reported its connection status",
+    );
     if (status.status !== "connected") {
       return degraded(step, "wallet_locked");
     }
     if (status.networkId !== expectedNetworkId) {
       return degraded(step, "wallet_wrong_network");
     }
-  } catch {
+  } catch (error) {
+    logger?.error?.({ err: error }, "getConnectionStatus rejected");
     return degraded(step, "wallet_locked");
   }
 
   let configuration: Configuration;
   try {
     configuration = await connected.getConfiguration();
-  } catch {
+  } catch (error) {
+    logger?.error?.({ err: error }, "getConfiguration rejected");
     return degraded(step, "wallet_locked");
   }
+
+  logger?.info(
+    {
+      reportedNetworkId: configuration.networkId,
+      expectedNetworkId,
+      indexerUri: configuration.indexerUri,
+      proverServerUri: configuration.proverServerUri ?? null,
+    },
+    "lace reported its configuration",
+  );
 
   // Belt and braces: a wallet that reports a connected status for one
   // network and a configuration for another is still the wrong network.
