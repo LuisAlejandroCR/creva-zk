@@ -13,3 +13,14 @@ const ZK_CONFIG_DIR = fileURLToPath(new URL("../../contract/src/managed/backing"
 export function zkConfigPath(): string {
   return ZK_CONFIG_DIR;
 }
+
+// Same, for the identity circuit. A second directory rather than a shared
+// parent because NodeZkConfigProvider indexes prover keys by circuit name
+// under the path it is given, and the two contracts have separate key sets.
+const IDENTITY_ZK_CONFIG_DIR = fileURLToPath(
+  new URL("../../contract/src/managed/identity-check", import.meta.url),
+);
+
+export function identityZkConfigPath(): string {
+  return IDENTITY_ZK_CONFIG_DIR;
+}

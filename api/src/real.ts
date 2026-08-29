@@ -6,9 +6,16 @@
 
 export {
   createRealBackingPort,
-  createRealIdentityPort,
   shutdownRealPorts,
   DEFAULT_COLLATERAL_AMOUNT,
   TIER_PROVEN_BY_CLEARED_BACKING,
   type RealPortOptions,
 } from "./realProofPort.js";
+
+export {
+  createRealIdentityPort,
+  realIdentityIssuerKey,
+  shutdownIdentityPort,
+  DEFAULT_TAX_ID_HEX,
+  type RealIdentityPortOptions,
+} from "./realIdentityPort.js";

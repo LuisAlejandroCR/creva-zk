@@ -21,9 +21,11 @@
 
 import pino, { type Logger } from "pino";
 import type { ApiResult } from "./types.js";
-import type { BackingProofPort, IdentityProofPort, JubjubPoint, Tier } from "./proofPort.js";
+import type { BackingProofPort, Tier } from "./proofPort.js";
 import type { PortLogger } from "./portLogger.js";
 import { startLocalEnvironment, type LocalEnvironmentHandle } from "./localEnvironment.js";
+import { sharedEnvironment, shutdownSharedEnvironment } from "./sharedEnvironment.js";
+import { shutdownIdentityPort } from "./realIdentityPort.js";
 import { createProviders } from "./providers.js";
 import { zkConfigPath } from "./zkConfigPath.js";
 import { DEFAULT_COLLATERAL_AMOUNT, TIER_PROVEN_BY_CLEARED_BACKING } from "./backingClaim.js";
@@ -113,7 +115,9 @@ async function openDeployment(options: RealPortOptions, logger: Logger): Promise
       contract = loaded.value;
     }
 
-    const started = await start(logger);
+    // Shared with every other real port in this process: the private-state
+    // LevelDB lock is exclusive, so there is exactly one environment.
+    const started = await sharedEnvironment(logger, start);
     if (started.status === "degraded") return started;
     const environment = started.value;
 
@@ -126,7 +130,7 @@ async function openDeployment(options: RealPortOptions, logger: Logger): Promise
       // Release the exclusive private-state lock before giving up, so the
       // next attempt — or the demo runner — is not locked out by a
       // half-started process.
-      await environment.shutdown().catch(() => undefined);
+      await shutdownSharedEnvironment();
       return deployed;
     }
 
@@ -160,12 +164,9 @@ function deployment(options: RealPortOptions, logger: Logger): Promise<ApiResult
 export async function shutdownRealPorts(): Promise<void> {
   const pending = deploymentPromise;
   deploymentPromise = undefined;
-  if (pending === undefined) return;
-
-  const settled = await pending.catch(() => undefined);
-  if (settled !== undefined && settled.status === "ok") {
-    await settled.value.environment.shutdown().catch(() => undefined);
-  }
+  await pending?.catch(() => undefined);
+  await shutdownIdentityPort();
+  await shutdownSharedEnvironment();
 }
 
 export function createRealBackingPort(logger: Logger | PortLogger = silentLogger(), options: RealPortOptions = {}): BackingProofPort {
@@ -196,27 +197,6 @@ export function createRealBackingPort(logger: Logger | PortLogger = silentLogger
         "proveBacking answered",
       );
       return { status: "ok", value: outcome.value.cleared ? TIER_PROVEN_BY_CLEARED_BACKING : "none" };
-    },
-  };
-}
-
-// Still degraded, and for a reason that is not "nobody got to it": there is
-// no TypeScript binding for identity-check.compact — no compiled-contract
-// export in contract/src/index.ts and no identityAttestation witness — and
-// building one needs a JubJub/Poseidon signer this repository does not have.
-// attestation/src/signing.ts says so itself: it signs with Ed25519 as an
-// explicit stand-in, so an attestation issued today fails schnorrVerify
-// inside the circuit. Wiring a deploy/call here would produce a port that
-// aborts on every proof while looking finished, which is worse than saying
-// so. See api/README.md.
-export function createRealIdentityPort(logger: Logger | PortLogger = silentLogger()): IdentityProofPort {
-  return {
-    async checkIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
-      logger.info(
-        { issuerKeyX: issuerKey.x.toString(), issuerKeyY: issuerKey.y.toString(), expectedTaxIdHash },
-        "real identity port called; the Schnorr signer exists now, but identity-check.compact still has no TypeScript binding",
-      );
-      return { status: "degraded", degraded: { step: "checkIdentity", reason: "contract_not_compiled" } };
     },
   };
 }

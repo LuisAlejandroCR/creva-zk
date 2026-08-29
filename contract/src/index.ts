@@ -7,6 +7,9 @@ import { CompiledContract } from "@midnight-ntwrk/midnight-js-protocol/compact-j
 
 export * from "./managed/backing/contract/index.js";
 export * from "./witnesses.js";
+// Namespaced: the identity binding's generated module exports the same names
+// (Contract, Ledger, pureCircuits) as the backing one, so it cannot be flat.
+export * as Identity from "./identity.js";
 
 import * as Generated from "./managed/backing/contract/index.js";
 import * as Witnesses from "./witnesses.js";

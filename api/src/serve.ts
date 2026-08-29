@@ -8,7 +8,8 @@
 // after it pays only the ~23.7s proof, against that one deployment.
 
 import pino from "pino";
-import { createRealBackingPort, createRealIdentityPort, shutdownRealPorts } from "./realProofPort.js";
+import { createRealBackingPort, shutdownRealPorts } from "./realProofPort.js";
+import { createRealIdentityPort } from "./realIdentityPort.js";
 import { DEFAULT_PROOF_SERVER_PORT, startProofServer, type ProofPorts } from "./proofServer.js";
 
 const logger = pino({ transport: { target: "pino-pretty" } });

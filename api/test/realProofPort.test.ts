@@ -9,21 +9,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import pino from "pino";
 import {
   createRealBackingPort,
-  createRealIdentityPort,
   shutdownRealPorts,
   TIER_PROVEN_BY_CLEARED_BACKING,
   type RealPortOptions,
 } from "../src/realProofPort.js";
 import type { LocalEnvironmentHandle } from "../src/localEnvironment.js";
 import type { ApiResult } from "../src/types.js";
-import type { JubjubPoint } from "../src/proofPort.js";
 
 // Synthetic public arguments only.
-// Synthetic issuer key. JubjubPoint travels as (x, y) since the Schnorr
-// signer landed — the compressed hex it used to carry had no owner able
-// to decompress it.
-const SYNTHETIC_ISSUER_KEY: JubjubPoint = { x: 1n, y: 2n };
-const SYNTHETIC_TAX_ID_HASH = "cd".repeat(32);
 
 const silent = pino({ level: "silent" });
 
@@ -230,18 +223,5 @@ describe("shutdownRealPorts", () => {
 
   it("is a no-op when nothing was ever deployed", async () => {
     await expect(shutdownRealPorts()).resolves.toBeUndefined();
-  });
-});
-
-describe("createRealIdentityPort", () => {
-  // identity-check.compact has no TypeScript binding and no JubJub signer,
-  // so this port degrades. This test is what will fail when that lands.
-  it("degrades, naming the uncompiled contract", async () => {
-    await expect(
-      createRealIdentityPort(silent).checkIdentity(SYNTHETIC_ISSUER_KEY, SYNTHETIC_TAX_ID_HASH),
-    ).resolves.toEqual({
-      status: "degraded",
-      degraded: { step: "checkIdentity", reason: "contract_not_compiled" },
-    });
   });
 });
