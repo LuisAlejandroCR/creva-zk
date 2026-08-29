@@ -11,6 +11,8 @@ contract/src/managed/
 **/*.zkir
 **/*.bzkir
 keys/
+# Copia servida al navegador — la escribe web/scripts/copy-zk-artifacts.mjs
+web/public/zk/
 
 # Entorno y secretos — nunca, bajo ningún nombre
 .env
