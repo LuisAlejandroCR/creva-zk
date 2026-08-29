@@ -9,11 +9,13 @@ import type { ApiResult, BackingProofPort, IdentityProofPort } from '@creva-zk/a
 import {
   createBridgeBackingPort,
   createBridgeIdentityPort,
-  createRealBackingPort,
-  createRealIdentityPort,
   createStubBackingPort,
   createStubIdentityPort,
 } from '@creva-zk/api';
+// Not from '@creva-zk/api': the real port runs the circuit in-process and
+// reaches Docker and node:, so it is not in that entry at all. A browser
+// asking for it gets the honest stand-in.
+import { createRealBackingPort, createRealIdentityPort } from './realUnavailable';
 import type { LaceOptions } from '@creva-zk/api/lace';
 import { createLazyLaceBackingPort, createLazyLaceIdentityPort } from './lacePort';
 import type { ProofState } from './domain/proofState';
@@ -24,8 +26,10 @@ export type PortSource = 'stub' | 'real' | 'bridge' | 'lace';
 // 'stub' by default so a clone, a test run and every screen render stay
 // instant. Three opt-ins drive the screens from an actual proof instead:
 //
-//   VITE_PORT_SOURCE=real   the in-process port — Node only, so this is for
-//                           a Node caller, not for the browser.
+//   VITE_PORT_SOURCE=real   the in-process port — it starts the local
+//                           network, deploys once and calls the circuit, so
+//                           it is for a Node caller (api/'s own serve and
+//                           demo). In a browser it degrades, by design.
 //   VITE_PORT_SOURCE=bridge the browser-safe port: it fetches the local
 //                           proof server in api/ (`npm run serve --workspace
 //                           api`), which owns the Node-only call path and

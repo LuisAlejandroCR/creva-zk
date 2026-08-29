@@ -1,8 +1,9 @@
 <!-- api/README.md -->
-The Midnight client for this repository: the typed proof ports `web/` consumes, the three
-implementations behind them (stub, real, bridge), the deploy/call wrappers for the backing
-circuit, and a local HTTP proof server that puts a live proof within reach of a browser.
-Everything external here returns a typed degraded result rather than throwing.
+The Midnight client for this repository: the typed proof ports `web/` consumes, the four
+implementations behind them (stub, real, bridge, lace), the deploy/call wrappers for the backing
+circuit, and a local HTTP proof server that puts a live proof within reach of a browser. The
+`real` port runs the circuit: one deployment per process, reused across requests, holding an
+exclusive lock. Everything external here returns a typed degraded result rather than throwing.
 
 # `@creva-zk/api`
 
@@ -20,10 +21,42 @@ Three implementations, selected by `web/`'s seam (`web/src/proofPort.ts`) throug
 `VITE_PORT_SOURCE`:
 
 - **`stub`** (default) — deterministic outcomes from the public arguments alone. No network.
-- **`real`** — the in-process implementation. Node only: its call path reaches `node:` modules
-  and Docker-backed containers, so importing it in a browser fails at import.
-- **`bridge`** — browser-safe. One `fetch` per call to the proof server below. It imports
-  nothing from `node:` and nothing that reaches testcontainers.
+- **`real`** — the in-process implementation, and the one that runs the circuit. Node only: it
+  starts the local network, deploys `backing.compact` and calls `proveBacking`, so it reaches
+  `node:` modules and Docker-backed containers. It is not exported from `@creva-zk/api` at all —
+  it lives behind `@creva-zk/api/real`, so no browser build can reach it.
+- **`bridge`** — browser-safe. One `fetch` per call to the proof server below, which is backed by
+  the `real` port. It imports nothing from `node:` and nothing that reaches testcontainers.
+- **`lace`** — the browser-direct path, behind `@creva-zk/api/lace`. See
+  [`web/README.md`](../web/README.md).
+
+### What the real port proves today
+
+| Port | State |
+|---|---|
+| `createRealBackingPort` | **Wired.** Deploys once, then calls `proveBacking` per request. |
+| `createRealIdentityPort` | **Degraded**, and not for want of plumbing — see below. |
+
+`proveBacking` answers a `Boolean`: the collateral cleared the requested limit, or it did not.
+It carries no tier ladder — that is `backing-tier.compact`'s `proveBackingTier`. So a cleared
+proof is reported as **the lowest tier the proof actually supports**, `bronze`
+(`TIER_PROVEN_BY_CLEARED_BACKING`), and a proof that does not clear as `none`. Reporting `silver`
+to match the stub would be claiming more than the circuit proved.
+
+`proveIdentity` is not wired, and connecting it is not a plumbing job. `identity-check.compact`
+has no TypeScript binding — no compiled-contract export in `contract/src/index.ts` and no
+`identityAttestation` witness — and building one needs a JubJub/Poseidon signer this repository
+does not have. `attestation/src/signing.ts` says so in its own header: it signs with Ed25519 as
+an explicit stand-in for Midnight's curve and `transientHash` challenge. An attestation issued
+today fails `schnorrVerify` inside the circuit, so a wired-looking port would abort on every
+proof. It returns `contract_not_compiled` instead, which is the truth. The same blocker holds
+`proveBackingTier` back, since it verifies an attestation too.
+
+### The collateral is fixed at deploy time
+
+The deployment holds the collateral as witness-only private state, so it is a port option
+(`collateralAmount`, default `5000n` — synthetic) and not a per-call argument. Only the requested
+limit, the circuit's public argument, varies from call to call.
 
 ## Running the proof server
 
@@ -49,8 +82,26 @@ VITE_PORT_SOURCE=bridge npm run dev --workspace web
 ```
 
 **Only one process may run at a time.** The private-state store is a LevelDB that takes an
-exclusive lock, and the server holds it — do not run `npm run demo` (or a second server)
-alongside it.
+exclusive lock, and the server holds it for as long as it runs — do not run `npm run demo` (or a
+second server) alongside it. A second process degrades rather than sharing it. `SIGINT`/`SIGTERM`
+close the listener and then tear the deployment down, so the lock is released for the next
+process; killing the server with `SIGKILL` leaves it held until the container is reaped.
+
+### One deployment, many proofs
+
+Starting the network and deploying costs roughly **19 s** on top of each ~23.7 s proof. The
+server pays that once: the deployment is memoised for the process lifetime, shared by every
+request and by both ports, and concurrent first requests share one in-flight attempt rather than
+starting two networks. Nothing is deployed until the first request arrives, so the port binds
+immediately instead of after a cold start.
+
+A **degraded** start is deliberately not memoised — a server that outlives a Docker restart picks
+it up on the next request. The cost of that choice is that a machine with no Docker at all pays a
+fresh failed attempt per request; each one still returns a typed degraded result.
+
+A missing compiled circuit is a degraded result too, not a crash: `contract.ts` is imported
+lazily on first deployment, so `npm run serve` starts and answers `contract_not_compiled` on a
+machine where `npm run compact:build` has not run.
 
 ### Timeouts
 

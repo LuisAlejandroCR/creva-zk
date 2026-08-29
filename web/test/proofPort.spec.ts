@@ -1,11 +1,15 @@
 // web/test/proofPort.spec.ts
-// Proves the seam: swaps the stub and real @creva-zk/api ports in and
-// renders each resulting ProofState through the same screen builders
-// app.ts uses, covering every phase a proof screen can be in.
+// Proves the seam: swaps the stub port and the browser's real-source
+// stand-in in, and renders each resulting ProofState through the same screen
+// builders app.ts uses, covering every phase a proof screen can be in. The
+// real port itself is Node-only now — it starts Docker and deploys — so what
+// a browser build selects is src/realUnavailable.ts, and that is what is
+// exercised here.
 
 import { describe, expect, it } from 'vitest';
-import { createRealBackingPort, createRealIdentityPort, createStubBackingPort, createStubIdentityPort } from '@creva-zk/api';
+import { createStubBackingPort, createStubIdentityPort } from '@creva-zk/api';
 import type { BackingProofPort, IdentityProofPort, JubjubPoint } from '@creva-zk/api';
+import { createRealBackingPort, createRealIdentityPort } from '../src/realUnavailable';
 import { toProofState } from '../src/proofPort';
 import { backingHolds, identityHolds } from '../src/domain/demoInputs';
 import { buildBackingContent } from '../src/screens/backingContent';
@@ -34,7 +38,7 @@ describe('proof port seam', () => {
     expect(content.ctaAction).toBe('continue');
   });
 
-  it('renders the backing screen degraded from the real port (unfinished, always degrades)', async () => {
+  it('renders the backing screen degraded from the real source in a browser', async () => {
     const content = await renderBacking(createRealBackingPort());
     expect(content.phase).toBe('degraded');
     expect(content.ctaAction).toBe('retry');
@@ -55,7 +59,7 @@ describe('proof port seam', () => {
     expect(content.ctaAction).toBe('continue');
   });
 
-  it('renders the identity screen degraded from the real port (unfinished, always degrades)', async () => {
+  it('renders the identity screen degraded from the real source in a browser', async () => {
     const content = await renderIdentity(createRealIdentityPort());
     expect(content.phase).toBe('degraded');
     expect(content.ctaAction).toBe('retry');
