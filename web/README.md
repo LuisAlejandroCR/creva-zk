@@ -61,6 +61,20 @@ made with. No screen decides an outcome for itself.
    drawn from token values by `scripts/generate-icons.py`, never copied out
    of creva_finance: tokens are inherited by decision, image assets are not.
    `manifest.webmanifest` carries `#17130F` (`--cr-bg` on the ink palette).
+
+   **Theme mechanism.** Light is the default, as it is in creva_finance. The
+   ink palette is reachable two ways, and `test/theme-mechanism.spec.ts` keeps
+   the two arms identical:
+
+   | situation | what applies | result |
+   |---|---|---|
+   | standalone, OS light | `:root` | cream |
+   | standalone, OS dark | `@media (prefers-color-scheme: dark)` | ink |
+   | embedded, host sets `.dark` | `.dark` | ink |
+   | embedded, host stays light on a dark OS | `.light` on the root | cream |
+
+   That last row is the one an embedding host must opt into: without `.light`
+   the media query would force ink on a host that is showing light.
 8. **Language: Spanish only, decided.** Creva ships for Mexican
    entrepreneurs; this is a Creva feature, not a standalone demo. Every
    screen, label, button, and status message is in Spanish — no English, and
