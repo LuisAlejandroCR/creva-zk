@@ -399,11 +399,16 @@ they are gitignored — `contract/src/managed/` and the served copy at
 
 | File | Size |
 | --- | --- |
-| `keys/<id>.prover` — backing | 672 kB |
-| `keys/<id>.prover` — identity | 1.3 MB |
-| `keys/<id>.verifier` | ~1.6 kB each |
-| `zkir/<id>.bzkir` | small |
-| **total** | **~2 MB** |
+| `keys/proveBacking.prover` | 149 kB |
+| `keys/proveBackingTier.prover` | 688 kB |
+| `keys/proveIdentity.prover` | 1.35 MB |
+| `keys/<id>.verifier` | 1.4–1.6 kB each |
+| `zkir/<id>.bzkir` | 126–267 B each |
+| **total** | **2.2 MB** |
+
+Measured with `du` on `web/public/zk/` after `npm run compact:build`, 2026-08-29.
+The two larger keys are the two circuits that verify a signature in-circuit;
+`proveBacking` does not, which is the whole difference.
 
 That is ~2 MB on top of the 164 kB shell, and it is a real first-load weight
 for an installable PWA. Two decisions follow from it, and both are held by
