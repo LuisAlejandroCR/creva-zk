@@ -1,9 +1,10 @@
 <!-- api/README.md -->
 The Midnight client for this repository: the typed proof ports `web/` consumes, the four
 implementations behind them (stub, real, bridge, lace), the deploy/join/call wrappers for the
-backing circuit, and a local HTTP proof server that puts a live proof within reach of a browser.
-The `real` port deploys and calls in Node; the `lace` port joins the same contract from the
-browser. Everything external here returns a typed degraded result rather than throwing.
+backing and identity circuits, and a local HTTP proof server that puts a live proof within reach
+of a browser. The `real` port deploys and calls both circuits in Node; the `lace` port joins the
+backing contract from the browser. Everything external here returns a typed degraded result
+rather than throwing.
 
 # `@creva-zk/api`
 
@@ -21,8 +22,9 @@ Three implementations, selected by `web/`'s seam (`web/src/proofPort.ts`) throug
 `VITE_PORT_SOURCE`:
 
 - **`stub`** (default) — deterministic outcomes from the public arguments alone. No network.
-- **`real`** — the in-process implementation, and the one that runs the circuit. Node only: it
-  starts the local network, deploys `backing.compact` and calls `proveBacking`, so it reaches
+- **`real`** — the in-process implementation, and the one that runs the circuits. Node only: it
+  starts the local network, deploys `backing.compact` and `identity-check.compact` and calls
+  `proveBacking` / `proveIdentity`, so it reaches
   `node:` modules and Docker-backed containers. It is not exported from `@creva-zk/api` at all —
   it lives behind `@creva-zk/api/real`, so no browser build can reach it.
 - **`bridge`** — browser-safe. One `fetch` per call to the proof server below, which is backed by
@@ -37,9 +39,9 @@ Three implementations, selected by `web/`'s seam (`web/src/proofPort.ts`) throug
 | Port | State |
 |---|---|
 | `createRealBackingPort` | **Wired.** Deploys once, then calls `proveBacking` per request. |
-| `createRealIdentityPort` | **Degraded**, and not for want of plumbing — see below. |
+| `createRealIdentityPort` | **Wired.** Deploys `identity-check.compact` once, then calls `proveIdentity` per request. Answers only for the issuer key it signed with — see below. |
 | `createLaceBackingPort` | **Wired.** Joins at `contractAddress`, then calls `proveBacking`. |
-| `createLaceIdentityPort` | **Degraded**, for the same reason as the real one. |
+| `createLaceIdentityPort` | **Degraded.** The binding exists, but the browser-direct path has no identity contract to join. |
 
 ### Deploy once, join many
 
@@ -49,7 +51,7 @@ Three implementations, selected by `web/`'s seam (`web/src/proofPort.ts`) throug
 |---|---|---|
 | `deployBacking` | the CLI, once (`npm run demo --workspace api`) | ~19s |
 | `joinBacking` | every browser, per session | an indexer round trip |
-| `callProveBacking` | both | ~23.7s |
+| `callProveBacking` | both | ~23.7s (measured, backing only) |
 
 `callProveBacking` takes a `FoundBacking`, not a `DeployedBacking`: a deployment is a found
 contract, so one call path serves the process that deployed and the browser that joined.
@@ -69,14 +71,32 @@ proof is reported as **the lowest tier the proof actually supports**, `bronze`
 (`TIER_PROVEN_BY_CLEARED_BACKING`), and a proof that does not clear as `none`. Reporting `silver`
 to match the stub would be claiming more than the circuit proved.
 
-`proveIdentity` is not wired, and connecting it is not a plumbing job. `identity-check.compact`
-has no TypeScript binding — no compiled-contract export in `contract/src/index.ts` and no
-`identityAttestation` witness — and building one needs a JubJub/Poseidon signer this repository
-does not have. `attestation/src/signing.ts` says so in its own header: it signs with Ed25519 as
-an explicit stand-in for Midnight's curve and `transientHash` challenge. An attestation issued
-today fails `schnorrVerify` inside the circuit, so a wired-looking port would abort on every
-proof. It returns `contract_not_compiled` instead, which is the truth. The same blocker holds
-`proveBackingTier` back, since it verifies an attestation too.
+### What `proveIdentity` proves, and what it does not
+
+`identity-check.compact` has a TypeScript binding: `contract/src/identity.ts` exports the
+compiled contract and its `identityAttestation` witness, and `realIdentityPort.ts` deploys it
+and calls `proveIdentity` per request. The blocker that used to hold it back — no signer on
+Midnight's own curve — is gone: `attestation/src/signing.ts` signs **Schnorr over Jubjub** with
+the Compact runtime's own curve operations, and it obtains the challenge by calling the
+contract's `identityAttestationChallenge` pure circuit rather than reimplementing Compact's
+`transientHash` in TypeScript. Signer and verifier therefore agree by construction.
+
+**The issuer is synthetic.** Creva's KYC provider signs nothing today, so the deployment issues
+its own Schnorr key and attests to a claim that belongs to nobody (`api/src/identityClaim.ts`).
+What is *not* synthetic is the verification: `verifyAttestation` runs inside the circuit on
+every proof. An attestation signed by a different issuer makes the circuit **abort**, and that
+comes back as a typed **degraded** result — never as `false`. "Nobody could check" and "the
+check ran and the answer is no" stay two different answers.
+
+**The issuer key is per process, and nothing serves it over HTTP.** `realIdentityIssuerKey()`
+returns the key the deployment signed with, but it is only reachable in-process (via
+`@creva-zk/api/real`); `POST /proof/identity` takes an issuer key and hands none back. So a
+`bridge` caller holding a hard-coded key — which is what `web/` sends — hits the abort case and
+sees `degraded`. Fixing that means either pinning `issuerSecretKey` on both sides or serving the
+key; neither is done, and this file will not pretend otherwise.
+
+`proveBackingTier` is still not reachable from TypeScript: `backing-tier.compact` has no
+compiled-contract binding yet. That is a plumbing gap now, not a missing signer.
 
 ### The collateral is fixed at deploy time
 
@@ -117,8 +137,8 @@ process; killing the server with `SIGKILL` leaves it held until the container is
 
 ### One deployment, many proofs
 
-Starting the network and deploying costs roughly **19 s** on top of each ~23.7 s proof. The
-server pays that once: the deployment is memoised for the process lifetime, shared by every
+Starting the network and deploying costs roughly **19 s** on top of each backing proof (~23.7 s
+measured; the identity proof's latency is not measured — see below). The server pays that once: the deployment is memoised for the process lifetime, shared by every
 request and by both ports, and concurrent first requests share one in-flight attempt rather than
 starting two networks. Nothing is deployed until the first request arrives, so the port binds
 immediately instead of after a cold start.
@@ -133,8 +153,11 @@ machine where `npm run compact:build` has not run.
 
 ### Timeouts
 
-A proof measured **~23.7 s** (23697 ms for the clearing call, 18316 ms for the non-clearing one),
-so no default anywhere on this path may be 30 s. The server's per-request budget is 180 s and the
+A **backing** proof measured **~23.7 s** (23697 ms for the clearing call, 18316 ms for the
+non-clearing one), so no default anywhere on this path may be 30 s. That number was measured on
+`backing.compact`, which does **no** in-circuit signature verification. `proveIdentity` does
+verify a Schnorr signature inside the circuit, so its proof is slower — by how much is **not
+measured**, and no number for it is stated here. The server's per-request budget is 180 s and the
 bridge port's client timeout is 120 s — both a ceiling, not a wait: a server that is down fails
 the call immediately.
 

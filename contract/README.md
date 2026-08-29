@@ -1,9 +1,19 @@
+<!-- contract/README.md -->
+Owns the Compact sources of this repository and the TypeScript bindings the compiler emits for
+them: the backing predicate, the identity predicate, and the Schnorr/Attestation building blocks
+both share. It does not own the Midnight client, the proof ports, or any application consumer of
+the generated APIs — those live in `api/` and `web/`.
+
 # `@creva-zk/contract`
 
-Owns the Compact circuit: `backing.compact`, the backing predicate that compares a private
-collateral amount against a public requested limit and discloses only the outcome. It does not own
-the identity predicate (not implemented in this workspace yet), the Midnight client, or any
-TypeScript consumer of the generated APIs — those live in other workspaces.
+Two predicates are compiled here. `backing.compact` compares a private collateral amount against
+a public requested limit and discloses only the outcome. `identity-check.compact` verifies a
+signed attestation inside the circuit and discloses a single boolean. Both are bound to
+TypeScript: `src/index.ts` for backing, `src/identity.ts` for identity — separate modules because
+the two generated contracts export the same names, so only one of them can be re-exported flat.
+
+`backing-tier.compact` compiles, but has **no** compiled-contract binding yet, so
+`proveBackingTier` is not reachable from TypeScript.
 
 ## Disclosure table
 
@@ -62,13 +72,23 @@ toolchain has run.
 ## Build
 
 ```bash
-npm run compact --workspace contract   # compiles src/backing.compact -> src/managed/backing
+npm run compact:build                  # from the repo root: all three circuits
 npm run typecheck --workspace contract
 ```
+
+`compact:build` runs the three compilations in turn — `src/backing.compact`,
+`src/backing-tier.compact` and `src/identity-check.compact` into `src/managed/<name>`. The
+identity binding in `src/identity.ts` does not typecheck until the third of those has run.
 
 Requires the Compact toolchain pinned at `0.31.1` (see the root README for why). The local
 `undeployed` network used for development ships a funded genesis wallet, so no faucet is needed.
 
-`backing.compact` has no in-circuit signature verification: its prover key is 145 KB. A circuit that
-adds in-circuit signature verification (e.g. the identity predicate, once written) compiles to a
-672 KB prover key.
+In-circuit signature verification is not free. `backing.compact` does none and its prover key is
+672 kB; `identity-check.compact` verifies a Schnorr signature and its prover key is 1.3 MB. Both
+sizes are the ones the build measures and copies to `web/public/zk` — see the artifact table in
+[`web/README.md`](../web/README.md).
+
+That extra work is also why an identity proof takes **longer** than a backing one. The ~23.7 s
+figure in `tools/PROOF-LATENCY.md` was measured on `backing.compact` only. How much longer the
+identity proof takes **has not been measured**, and no number for it is stated anywhere in this
+repository.

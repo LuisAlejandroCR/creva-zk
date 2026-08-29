@@ -5,7 +5,9 @@
 // process, may run at a time — it owns the private-state LevelDB, whose lock
 // is exclusive, so the demo runner must not be running alongside it. The
 // first request pays ~19s to start the network and deploy; every request
-// after it pays only the ~23.7s proof, against that one deployment.
+// after it pays only the proof itself, against that one deployment (~23.7s
+// measured for backing; the identity proof verifies a signature in-circuit
+// and is slower by an unmeasured amount).
 
 import pino from "pino";
 import { createRealBackingPort, shutdownRealPorts } from "./realProofPort.js";
@@ -19,10 +21,12 @@ function resolvePort(raw: string | undefined): number {
   return Number.isInteger(parsed) && parsed > 0 && parsed < 65_536 ? parsed : DEFAULT_PROOF_SERVER_PORT;
 }
 
-// The real ports are what the browser is reaching for. Backing runs the
-// circuit; identity still degrades, and the screens are built to render
-// that. Nothing is deployed until the first request arrives, so the server
-// binds its port immediately rather than after a cold start.
+// The real ports are what the browser is reaching for. Both run their
+// circuit. Identity answers only for the issuer key its deployment signed
+// with, and that key is fresh per process and is not served over HTTP, so a
+// caller with a hard-coded key gets a degraded result — the screens are
+// built to render that. Nothing is deployed until the first request arrives,
+// so the server binds its port immediately rather than after a cold start.
 const ports: ProofPorts = {
   backing: createRealBackingPort(logger),
   identity: createRealIdentityPort(logger),

@@ -257,11 +257,10 @@ export function createLaceBackingPort(options: LaceOptions = {}): BackingProofPo
 }
 
 // Still degraded, and not because nobody got to it: identity-check.compact
-// has no TypeScript binding — no compiled-contract export in
-// contract/src/index.ts and no identityAttestation witness — and building
-// one needs a JubJub/Poseidon signer this repository does not have. The
-// browser-direct path reaches exactly as far as the backing one does; it has
-// no second contract to join. See api/README.md.
+// does have a TypeScript binding now (contract/src/identity.ts), but the
+// browser-direct path joins a contract at an address the build supplies and
+// no identity deployment address is supplied. It reaches exactly as far as
+// the backing one does; it has no second contract to join. See api/README.md.
 export function createLaceIdentityPort(options: LaceOptions = {}): IdentityProofPort {
   const logger = options.logger ?? noopLogger;
   return {
@@ -278,7 +277,7 @@ export function createLaceIdentityPort(options: LaceOptions = {}): IdentityProof
           expectedTaxIdHash,
           proofServerUrl: stack.value.proofServerUrl,
         },
-        "lace identity port reached a complete browser provider stack; identity-check.compact has no TypeScript binding yet",
+        "lace identity port reached a complete browser provider stack; no identity contract address to join",
       );
       return degraded("checkIdentity", "call_failed");
     },
