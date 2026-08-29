@@ -83,10 +83,11 @@ identity binding in `src/identity.ts` does not typecheck until the third of thos
 Requires the Compact toolchain pinned at `0.31.1` (see the root README for why). The local
 `undeployed` network used for development ships a funded genesis wallet, so no faucet is needed.
 
-In-circuit signature verification is not free. `backing.compact` does none and its prover key is
-672 kB; `identity-check.compact` verifies a Schnorr signature and its prover key is 1.3 MB. Both
-sizes are the ones the build measures and copies to `web/public/zk` — see the artifact table in
-[`web/README.md`](../web/README.md).
+In-circuit signature verification is not free, and the three circuits make the cost visible.
+`backing.compact` verifies no signature and its prover key is 149 kB; `backing-tier.compact` does
+and its key is 688 kB; `identity-check.compact` does and its key is 1.35 MB. Measured with `du` on
+the compiled output, 2026-08-29 — the same numbers the build copies to `web/public/zk`, tabulated
+in [`web/README.md`](../web/README.md).
 
 That extra work is also why an identity proof takes **longer** than a backing one. The ~23.7 s
 figure in `tools/PROOF-LATENCY.md` was measured on `backing.compact` only. How much longer the
