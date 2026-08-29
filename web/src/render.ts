@@ -8,7 +8,12 @@ import type { CompareContent } from './screens/compareContent';
 import type { OffersContent } from './screens/offersContent';
 import type { ProofScreenContent } from './screens/proofScreen';
 import type { StepProgress } from './domain/journeyProgress';
-import { OVERTIME_NOTE, WAIT_PROMISE, type WaitProgress } from './domain/waitStages';
+import {
+  OVERTIME_NOTE,
+  WAIT_PROMISE,
+  type CurrentWaitStage,
+  type WaitProgress,
+} from './domain/waitStages';
 import { renderHelpLink } from './help/helpRender';
 
 const SYNTHETIC_BADGE = '<span class="badge-synthetic">Sintético</span>';
@@ -24,23 +29,20 @@ function renderProgress(progress: StepProgress): string {
   `;
 }
 
-// The wait screen. Every stage is on screen from the first millisecond —
-// done, running or still ahead — so the ~24s reads as a sequence she can
-// follow rather than a spinner she has to trust.
-function renderWait(wait: WaitProgress): string {
-  const stages = wait.stages
-    .map(
-      (stage, index) => `
-      <li class="wait-stage" data-stage-index="${index}" data-status="${stage.status}">
+// One step, the one happening now. A list of four read as a to-do list she
+// still had to get through; a single line reads as work being done. The
+// meter and the seconds carry the sense of progress the list used to.
+export function renderWaitStage(stage: CurrentWaitStage): string {
+  return `<div class="wait-stage" data-role="wait-stage" data-stage-index="${stage.index}" data-status="${stage.status}">
         <span class="wait-stage-mark" aria-hidden="true"></span>
         <span class="wait-stage-copy">
           <span class="wait-stage-label">${stage.label}</span>
           <span class="wait-stage-detail">${stage.detail}</span>
         </span>
-      </li>`,
-    )
-    .join('');
+      </div>`;
+}
 
+function renderWait(wait: WaitProgress): string {
   return `
     <section class="wait" data-role="wait" data-overtime="${wait.overtime}">
       <p class="wait-promise"><span class="wait-lock" aria-hidden="true">🔒</span>${WAIT_PROMISE}</p>
@@ -48,7 +50,7 @@ function renderWait(wait: WaitProgress): string {
         <span class="wait-meter-fill" data-role="wait-meter-fill" style="width: ${wait.percent}%"></span>
       </div>
       <p class="wait-elapsed" data-role="wait-elapsed">${wait.elapsedLabel}</p>
-      <ol class="wait-stages" aria-live="polite">${stages}</ol>
+      <div class="wait-stage-slot" data-role="wait-stage-slot" aria-live="polite">${renderWaitStage(wait.current)}</div>
       <p class="wait-overtime" data-role="wait-overtime">${OVERTIME_NOTE}</p>
     </section>
   `;

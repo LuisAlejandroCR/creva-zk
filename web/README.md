@@ -129,14 +129,29 @@ made with. No screen decides an outcome for itself.
     only moment the product's promise is visible instead of asserted, so it
     is staged rather than hidden: a standing promise that nothing has left
     the device, a meter paced against the measured run, a seconds readout,
-    and four named steps of the work — all four on screen from the first
-    millisecond, each marked done, running or still ahead. The model lives in
-    `src/domain/waitStages.ts` and is tested without waiting for it. Past the
-    measured run the last step holds and the meter stops short of full: a
-    slower proof has not failed, and claiming it finished would be a lie.
-    While a proof runs the region is patched field by field
+    and the **one** step of the work happening right now. Four steps stacked
+    read as a to-do list she still had to get through; one line reads as work
+    being done, so the meter and the seconds carry the sense of progress on
+    their own — which is why they must stay honest (`MAX_PERCENT = 96`, no
+    false "listo", the overtime line intact).
+
+    When a step finishes it takes its check and holds it for
+    `CELEBRATION_MS` before the next arrives. With one step on screen that
+    beat is the only moment a completed step is ever seen, so it is never
+    cut; it is derived from elapsed time alone, which keeps the whole
+    sequence a pure function of the clock. A step is marked done only once
+    its successor is already running, and the last step is never marked done
+    at all — the answer has not arrived yet.
+
+    The model lives in `src/domain/waitStages.ts` and is tested without
+    waiting for it, including a walk of the whole run at the app's own tick
+    rate. While a proof runs the region is patched field by field
     (`src/waitView.ts`) rather than re-rendered, so no transition is ever
-    interrupted.
+    interrupted; a step swap inserts the arriving step into the flow and
+    lifts the departing one out of it, so the slot never jumps. Under
+    `prefers-reduced-motion` the swap happens without animating, still one
+    step at a time, and the held beat survives because it is timing rather
+    than motion.
 13. **Plain language, and an answer when she wants one.** Primary copy is
     written for a Mexican entrepreneur applying for a card, most of whom have
     never touched crypto. No *predicado*, *atestación*, *circuito*,

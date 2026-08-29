@@ -114,6 +114,12 @@ describe('style.css motion', () => {
   it('animates the state changes that carry meaning: the wait, the split, the tier', () => {
     expect(source).toMatch(/\.wait-meter-fill\s*{[^}]*transition:\s*width/);
     expect(source).toMatch(/\.wait-stage-mark\s*{[^}]*transition:/);
+    // One step leaves as the next arrives, in the same slot.
+    expect(source).toMatch(/\.wait-stage\s*{[^}]*animation:\s*cr-stage-enter/);
+    expect(source).toMatch(/\.wait-stage\[data-leaving\]\s*{[^}]*animation:\s*cr-stage-leave/);
+    expect(source).toMatch(/\.wait-stage-slot\s*{[^}]*position:\s*relative/);
+    // The departing step is lifted out of the flow, so the slot never jumps.
+    expect(source).toMatch(/\.wait-stage\[data-leaving\]\s*{[^}]*position:\s*absolute/);
     expect(source).toMatch(/\.compare-col--exposed\s*{[^}]*animation:\s*cr-enter-left/);
     expect(source).toMatch(/\.compare-col--sealed\s*{[^}]*animation:\s*cr-enter-right/);
     expect(source).toMatch(/\.tier-badge\s*{[^}]*animation:\s*cr-land/);
