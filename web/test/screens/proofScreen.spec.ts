@@ -10,7 +10,8 @@ const base = {
   intro: 'intro text',
   readyHeading: (v: boolean) => `ready:${v}`,
   readyBody: (v: boolean) => `body:${v}`,
-  degradedBody: (v: boolean) => `degraded:${v}`,
+  failedBody: () => 'failed-body',
+  degradedBody: () => 'degraded-body',
 };
 
 describe('buildProofScreenContent', () => {
@@ -35,17 +36,19 @@ describe('buildProofScreenContent', () => {
     expect(content.synthetic).toBe(true);
   });
 
-  it('failed: offers retry, no settled value needed', () => {
+  it('failed: the predicate was evaluated and does not hold; offers retry', () => {
     const content = buildProofScreenContent({ ...base, phase: 'failed', now: 0 });
     expect(content.ctaAction).toBe('retry');
     expect(content.ctaDisabled).toBe(false);
-    expect(content.statusHeading.toLowerCase()).toContain('fallida');
+    expect(content.statusBody).toBe('failed-body');
+    expect(content.statusHeading.toLowerCase()).toContain('no se cumple');
   });
 
-  it('degraded: offers continue anyway and marks the value synthetic', () => {
-    const content = buildProofScreenContent({ ...base, phase: 'degraded', now: 0, value: false });
-    expect(content.ctaAction).toBe('continue-anyway');
-    expect(content.statusBody).toBe('degraded:false');
+  it('degraded: needs no value, offers retry, and never reads as a rejection', () => {
+    const content = buildProofScreenContent({ ...base, phase: 'degraded', now: 0 });
+    expect(content.ctaAction).toBe('retry');
+    expect(content.statusBody).toBe('degraded-body');
+    expect(content.statusHeading.toLowerCase()).toContain('no pudimos');
     expect(content.synthetic).toBe(true);
   });
 

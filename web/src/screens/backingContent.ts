@@ -18,7 +18,9 @@ export function buildBackingContent(proof: ProofState<Tier>, now: number): Proof
     value: proof.value,
     readyHeading: (tier) => `✓ Prueba de respaldo lista — ${TIER_LABELS[tier]}`,
     readyBody: () => 'El nivel de arriba es el único valor revelado. La siguiente pantalla dividida muestra qué significa eso.',
-    degradedBody: (tier) =>
-      `Se alcanzó el nivel ${TIER_LABELS[tier]} mediante una vía de verificación alterna. Trátalo como de menor confianza que una verificación completa.`,
+    failedBody: () =>
+      'Tu colateral no alcanza el límite solicitado. El circuito revela solo ese desenlace, nunca el monto de tu colateral ni tu saldo.',
+    degradedBody: () =>
+      'El servicio de pruebas no respondió, así que no se evaluó tu respaldo. Esto no significa que no califiques: significa que no lo sabemos. Tu colateral y tu saldo siguen sin salir de este dispositivo.',
   });
 }

@@ -5,7 +5,7 @@
 import type { ProofPhase } from '../domain/proofState';
 import { formatElapsed } from '../domain/proofState';
 
-export type CtaAction = 'start' | 'retry' | 'continue' | 'continue-anyway';
+export type CtaAction = 'start' | 'retry' | 'continue';
 
 export interface ProofScreenContent {
   readonly h1: string;
@@ -28,14 +28,16 @@ export interface BuildProofScreenOptions<T> {
   readonly value?: T;
   readonly readyHeading: (value: T) => string;
   readonly readyBody: (value: T) => string;
-  readonly degradedBody: (value: T) => string;
+  // The predicate was evaluated and does not hold.
+  readonly failedBody: () => string;
+  // No value: a degraded proof has no outcome to describe.
+  readonly degradedBody: () => string;
 }
 
 const CTA_LABELS: Readonly<Record<CtaAction, string>> = {
   start: 'Iniciar prueba',
   retry: 'Reintentar',
   continue: 'Continuar',
-  'continue-anyway': 'Continuar de todas formas',
 };
 
 export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): ProofScreenContent {
@@ -76,8 +78,9 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
       h1: opts.h1,
       intro: opts.intro,
       phase,
-      statusHeading: 'Verificación fallida',
-      statusBody: 'La prueba no se verificó. No se reveló ningún dato parcial. Puedes reintentar.',
+      // The proof ran and the answer is no — not a malfunction.
+      statusHeading: 'El requisito no se cumple',
+      statusBody: opts.failedBody(),
       ctaLabel: CTA_LABELS.retry,
       ctaAction: 'retry',
       ctaDisabled: false,
@@ -85,23 +88,25 @@ export function buildProofScreenContent<T>(opts: BuildProofScreenOptions<T>): Pr
     };
   }
 
-  // phase is 'ready' or 'degraded'; both require a settled value.
-  if (value === undefined) {
-    throw new Error(`proof phase "${phase}" requires a settled value`);
-  }
-
   if (phase === 'degraded') {
     return {
       h1: opts.h1,
       intro: opts.intro,
       phase,
-      statusHeading: 'Degradado — verificado por una vía alterna',
-      statusBody: opts.degradedBody(value),
-      ctaLabel: CTA_LABELS['continue-anyway'],
-      ctaAction: 'continue-anyway',
+      // Not a rejection: nothing was evaluated, so the honest action is to
+      // try again, never to continue as though the predicate had held.
+      statusHeading: 'No pudimos verificarlo',
+      statusBody: opts.degradedBody(),
+      ctaLabel: CTA_LABELS.retry,
+      ctaAction: 'retry',
       ctaDisabled: false,
       synthetic: true,
     };
+  }
+
+  // Only a ready proof carries a value.
+  if (value === undefined) {
+    throw new Error(`proof phase "${phase}" requires a settled value`);
   }
 
   return {

@@ -7,9 +7,10 @@ import { describe, expect, it } from 'vitest';
 import { createRealBackingPort, createRealIdentityPort, createStubBackingPort, createStubIdentityPort } from '@creva-zk/api';
 import type { BackingProofPort, IdentityProofPort, JubjubPoint } from '@creva-zk/api';
 import { toProofState } from '../src/proofPort';
+import { backingHolds, identityHolds } from '../src/domain/demoInputs';
 import { buildBackingContent } from '../src/screens/backingContent';
 import { buildIdentityContent } from '../src/screens/identityContent';
-import { idleProof, settleDegraded, startGenerating } from '../src/domain/proofState';
+import { idleProof, startGenerating } from '../src/domain/proofState';
 
 // Synthetic public arguments only — no real issuer key or tax ID anywhere
 // in this test.
@@ -18,12 +19,12 @@ const SYNTHETIC_TAX_ID_HASH = 'cd'.repeat(32);
 
 async function renderBacking(port: BackingProofPort) {
   const result = await port.checkBacking(3_000n);
-  return buildBackingContent(toProofState(result), Date.now());
+  return buildBackingContent(toProofState(result, backingHolds), Date.now());
 }
 
 async function renderIdentity(port: IdentityProofPort) {
   const result = await port.checkIdentity(SYNTHETIC_ISSUER_KEY, SYNTHETIC_TAX_ID_HASH);
-  return buildIdentityContent(toProofState(result), Date.now());
+  return buildIdentityContent(toProofState(result, identityHolds), Date.now());
 }
 
 describe('proof port seam', () => {
@@ -33,10 +34,19 @@ describe('proof port seam', () => {
     expect(content.ctaAction).toBe('continue');
   });
 
-  it('renders the backing screen failed from the real port (unfinished, always degrades)', async () => {
+  it('renders the backing screen degraded from the real port (unfinished, always degrades)', async () => {
     const content = await renderBacking(createRealBackingPort());
-    expect(content.phase).toBe('failed');
+    expect(content.phase).toBe('degraded');
     expect(content.ctaAction).toBe('retry');
+  });
+
+  it('renders the backing screen failed when the predicate does not hold', async () => {
+    // Over the stub's clearing threshold: a real answer, and it is "no".
+    const result = await createStubBackingPort().checkBacking(9_000n);
+    const content = buildBackingContent(toProofState(result, backingHolds), Date.now());
+
+    expect(result.status).toBe('ok');
+    expect(content.phase).toBe('failed');
   });
 
   it('renders the identity screen ready from the stub port outcome', async () => {
@@ -45,20 +55,37 @@ describe('proof port seam', () => {
     expect(content.ctaAction).toBe('continue');
   });
 
-  it('renders the identity screen failed from the real port (unfinished, always degrades)', async () => {
+  it('renders the identity screen degraded from the real port (unfinished, always degrades)', async () => {
     const content = await renderIdentity(createRealIdentityPort());
-    expect(content.phase).toBe('failed');
+    expect(content.phase).toBe('degraded');
     expect(content.ctaAction).toBe('retry');
   });
 
-  it('still renders idle, generating and degraded — states no port produces but the screen must still support', () => {
+  it('renders the identity screen failed when the predicate does not hold', () => {
+    const content = buildIdentityContent(
+      toProofState({ status: 'ok', value: false }, identityHolds),
+      Date.now(),
+    );
+
+    expect(content.phase).toBe('failed');
+  });
+
+  it('still renders idle and generating — states no port produces but the screen must still support', () => {
     const idle = buildBackingContent(idleProof(), Date.now());
     const generating = buildBackingContent(startGenerating(Date.now()), Date.now());
-    const degraded = buildBackingContent(settleDegraded('bronze'), Date.now());
 
     expect(idle.phase).toBe('idle');
     expect(generating.phase).toBe('generating');
+  });
+
+  it('never lets a degraded result be read as a rejection', () => {
+    const degraded = buildBackingContent(
+      toProofState<'silver'>({ status: 'degraded', degraded: { step: 'checkBacking', reason: 'call_failed' } }),
+      Date.now(),
+    );
+
     expect(degraded.phase).toBe('degraded');
-    expect(degraded.ctaAction).toBe('continue-anyway');
+    // Retry, never a way past an unanswered check.
+    expect(degraded.ctaAction).toBe('retry');
   });
 });

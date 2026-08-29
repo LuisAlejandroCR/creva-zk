@@ -1,8 +1,8 @@
 // web/test/bridgePort.spec.ts
 // Proves the bridge arm of the seam: 'bridge' is a source the seam knows,
 // and with the proof server down both screens settle into the degraded
-// state the app already renders — a failed phase offering retry — instead
-// of throwing at the caller or hanging on the request.
+// phase — "nobody could check", offering retry — rather than the failed
+// phase, which would claim the predicate was evaluated and did not hold.
 
 import { describe, expect, it, vi } from 'vitest';
 import { createBridgeBackingPort, createBridgeIdentityPort } from '@creva-zk/api';
@@ -42,7 +42,7 @@ describe('bridge port with the proof server down', () => {
     const content = buildBackingContent(toProofState(result), Date.now());
 
     expect(result.status).toBe('degraded');
-    expect(content.phase).toBe('failed');
+    expect(content.phase).toBe('degraded');
     expect(content.ctaAction).toBe('retry');
   });
 
@@ -53,7 +53,7 @@ describe('bridge port with the proof server down', () => {
     const content = buildIdentityContent(toProofState(result), Date.now());
 
     expect(result.status).toBe('degraded');
-    expect(content.phase).toBe('failed');
+    expect(content.phase).toBe('degraded');
     expect(content.ctaAction).toBe('retry');
   });
 
@@ -68,6 +68,6 @@ describe('bridge port with the proof server down', () => {
 
     const content = buildBackingContent(toProofState(await port.checkBacking(3_000n)), Date.now());
 
-    expect(content.phase).toBe('failed');
+    expect(content.phase).toBe('degraded');
   });
 });
