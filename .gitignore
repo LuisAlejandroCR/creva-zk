@@ -3,8 +3,10 @@ dist/
 build/
 .turbo/
 
-# Worktrees de agentes paralelos — ver docs/agentes-paralelos.md del expediente
-.claude/worktrees/
+# Carpeta de herramienta: worktrees de agentes, fotogramas de referencia y
+# cualquier scratch. Nada de aquí pertenece al repositorio entregado.
+# Ver docs/agentes-paralelos.md del expediente.
+.claude/
 
 # Compact — artefactos generados por el compilador
 contract/src/managed/
