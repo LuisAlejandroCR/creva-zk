@@ -25,6 +25,13 @@ web/public/zk/
 wallet.json
 seed*
 
+# Grabaciones — el mp4 de la demo pesa ~95 MB y no pertenece al repositorio.
+# docs/pitch/index.html lo referencia por ruta relativa; se sube a YouTube o
+# a Devpost, no a git.
+*.mp4
+*.mov
+*.webm
+
 # Logs y estado local
 logs/
 *.log

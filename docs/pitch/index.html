@@ -1,0 +1,407 @@
+<!doctype html>
+<!--
+  docs/pitch/index.html
+  Página de pitch de Creva ZK: el video de la demo real como plano de apertura,
+  y debajo el recorrido en secciones con zoom al entrar. Toda cifra de aquí está
+  medida o verificada en fuente primaria; ninguna es estimada. Hereda el idioma
+  visual de la página del hackathon anterior (aurora, grano, entradas escalonadas).
+-->
+<html lang="es-MX" class="no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Creva ZK — Pide tu tarjeta sin entregar tu vida</title>
+<meta name="description" content="Dos pruebas de conocimiento cero sobre Midnight: identidad y respaldo. El documento y el saldo nunca salen del dispositivo. Midnight Hackathon, agosto 2026 — Major League Hacking.">
+<script>document.documentElement.className='js'</script>
+<style>
+:root{
+  /* Tokens de marca de Creva, tomados del tema del propio producto */
+  --ink:#F6F1E7; --ink2:#FFFFFF; --ink3:#FFE8EE;
+  --gold:#C41E3A; --warm:#9E1329; --teal:#FF8FAE;
+  --tx:#1A1613; --muted:rgba(26,22,19,.72); --line:rgba(26,22,19,.10);
+  --ease:cubic-bezier(.16,1,.3,1); --slow:1.1s; --mid:.62s;
+  --pad:clamp(1.25rem,5vw,6rem);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--ink);color:var(--tx);
+  font:400 16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,sans-serif;
+  overflow-x:hidden;
+}
+img,video{max-width:100%;display:block}
+section{position:relative;padding:clamp(4.5rem,11vh,9rem) var(--pad);overflow:hidden}
+.wrap{max-width:1180px;margin:0 auto;position:relative;z-index:2}
+h1,h2,h3{line-height:1.06;letter-spacing:-.03em;font-weight:700}
+h1{font-size:clamp(2.4rem,7.4vw,5.6rem)}
+h2{font-size:clamp(1.9rem,4.6vw,3.4rem)}
+h3{font-size:clamp(1.1rem,2vw,1.45rem);letter-spacing:-.02em}
+p{max-width:66ch}
+.lead{font-size:clamp(1.05rem,1.9vw,1.32rem);color:var(--muted);line-height:1.62}
+.eyebrow{font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--gold);font-weight:650;margin-bottom:1.1rem}
+.gold{color:var(--gold)}.teal{color:var(--teal)}.warm{color:var(--warm)}
+.dim{color:var(--muted)}
+a{color:var(--gold)}
+
+/* ── camas cinematográficas ── */
+.bed{position:absolute;inset:0;z-index:0;overflow:hidden;background:var(--ink2)}
+.aurora{position:absolute;inset:-25%;opacity:.55;
+  background:
+    radial-gradient(38% 46% at 22% 30%,rgba(255,143,174,.36),transparent 62%),
+    radial-gradient(34% 42% at 76% 24%,rgba(196,30,58,.14),transparent 60%),
+    radial-gradient(46% 52% at 58% 78%,rgba(255,232,238,.60),transparent 64%);
+  filter:blur(28px);animation:drift 26s var(--ease) infinite alternate}
+@keyframes drift{
+  0%{transform:translate3d(-3%,-2%,0) scale(1)}
+  50%{transform:translate3d(3%,2%,0) scale(1.09)}
+  100%{transform:translate3d(-2%,3%,0) scale(1.03)}
+}
+.bed::after{content:'';position:absolute;inset:0;
+  background:radial-gradient(115% 85% at 18% 12%,rgba(246,241,231,.20) 0%,rgba(246,241,231,.75) 62%,var(--ink) 100%)}
+.grain{position:absolute;inset:0;z-index:1;opacity:.4;pointer-events:none;
+  background-image:radial-gradient(rgba(26,22,19,.05) 1px,transparent 1px);
+  background-size:3px 3px}
+
+/* ── entradas y zoom ── */
+.rise{opacity:0;transform:translate3d(0,26px,0);
+  transition:opacity var(--slow) var(--ease),transform var(--slow) var(--ease)}
+.rise.in{opacity:1;transform:none}
+.d1{transition-delay:.09s}.d2{transition-delay:.18s}.d3{transition-delay:.27s}.d4{transition-delay:.36s}
+/* El zoom es el gesto de esta página: cada bloque entra un punto más cerca
+   de lo que estaba, nunca al revés — nada se aleja de la lectora. */
+.zoom{opacity:0;transform:scale(.9);transform-origin:50% 60%;
+  transition:opacity 1s var(--ease),transform 1.35s var(--ease)}
+.zoom.in{opacity:1;transform:scale(1)}
+@media (prefers-reduced-motion:reduce){
+  .rise,.zoom{transition:none;opacity:1;transform:none}
+  .aurora{animation:none}
+  html{scroll-behavior:auto}
+}
+
+/* ── portada ── */
+#hero{min-height:100svh;display:flex;align-items:center;padding-top:5rem}
+.brand{display:flex;align-items:center;gap:.7rem;margin-bottom:clamp(1.6rem,5vh,3rem)}
+.mark{width:34px;height:34px;border-radius:9px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--gold),var(--warm));
+  box-shadow:0 20px 60px rgba(196,30,58,.35)}
+.brand b{font-size:1.02rem;letter-spacing:-.01em}
+.brand span{color:var(--muted);font-size:.86rem}
+#hero h1{max-width:15ch}
+#hero h1 em{font-style:normal;display:block;
+  background:linear-gradient(100deg,var(--gold),var(--warm) 55%,var(--teal));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin-top:1.5rem;max-width:54ch}
+.meta{display:flex;flex-wrap:wrap;gap:.55rem;margin-top:2.2rem}
+.chip{border:1px solid var(--line);border-radius:999px;padding:.44rem .9rem;
+  font-size:.78rem;color:var(--muted);background:#FFFFFF}
+.chip b{color:var(--tx);font-weight:600}
+.scroll{position:absolute;bottom:2rem;left:var(--pad);font-size:.72rem;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--muted);z-index:3}
+
+/* ── el plano: el video ── */
+#demo{background:var(--ink2)}
+.frame{margin-top:2.6rem;border-radius:20px;overflow:hidden;border:1px solid var(--line);
+  background:#000;box-shadow:0 40px 120px rgba(26,22,19,.22)}
+.frame video{width:100%;height:auto;display:block}
+.beats{display:grid;gap:1px;margin-top:1.6rem;background:var(--line);
+  border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.beat{background:var(--ink2);padding:1.35rem 1.25rem}
+.beat b{display:block;font-variant-numeric:tabular-nums;font-size:.74rem;
+  letter-spacing:.16em;color:var(--gold);margin-bottom:.5rem}
+.beat p{font-size:.9rem;color:var(--muted);max-width:none}
+
+/* ── las dos pruebas ── */
+.pieces{display:grid;gap:1.15rem;margin-top:3rem;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.piece{border:1px solid var(--line);border-radius:18px;padding:1.9rem 1.6rem;
+  background:#FFFFFF;position:relative;overflow:hidden;box-shadow:0 12px 32px rgba(26,22,19,.06)}
+.piece::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),transparent)}
+.piece .num{font-size:.72rem;letter-spacing:.2em;color:var(--gold);font-weight:650}
+.piece h3{margin:.85rem 0 .7rem}
+.piece p{font-size:.94rem;color:var(--muted);max-width:none}
+.code{margin-top:1.1rem;padding:.9rem 1rem;border-radius:12px;
+  background:rgba(26,22,19,.045);border:1px solid var(--line);
+  font:500 .8rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:var(--tx);overflow-x:auto;white-space:pre}
+
+/* ── cifras ── */
+.eyes{display:grid;gap:1.15rem;margin-top:3rem;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.stat{border:1px solid var(--line);border-radius:16px;padding:1.7rem 1.5rem;
+  background:#FFFFFF;box-shadow:0 12px 32px rgba(26,22,19,.06)}
+.stat .n{font-size:clamp(2.3rem,5.2vw,3.6rem);font-weight:700;letter-spacing:-.04em;line-height:1;
+  font-variant-numeric:tabular-nums}
+.stat .l{margin-top:.7rem;font-size:.9rem;color:var(--muted);max-width:none}
+.stat .src{margin-top:.9rem;font-size:.72rem;color:rgba(26,22,19,.52);max-width:none}
+
+/* ── frontera de divulgación ── */
+.split{display:grid;gap:1px;margin-top:3rem;background:var(--line);
+  border:1px solid var(--line);border-radius:18px;overflow:hidden;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.side{background:var(--ink2);padding:2rem 1.7rem}
+.side.out{background:#FFF7F9}
+.side b{display:block;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
+  margin-bottom:1rem}
+.side.keep b{color:var(--warm)}
+.side.out b{color:var(--gold)}
+.side ul{list-style:none}
+.side li{font-size:.95rem;color:var(--muted);padding:.5rem 0;border-bottom:1px solid var(--line)}
+.side li:last-child{border-bottom:0}
+.side li::before{content:'';display:inline-block;width:7px;height:7px;border-radius:99px;
+  margin-right:.7rem;vertical-align:middle;background:var(--warm)}
+.side.out li::before{background:var(--gold)}
+
+/* ── degradado honesto ── */
+.rows{display:grid;gap:.7rem;margin-top:2.6rem}
+.row{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:1.1rem;
+  align-items:baseline;padding:1rem 1.2rem;border:1px solid var(--line);
+  border-radius:14px;background:#FFFFFF}
+.row b{font-size:.9rem}
+.row span{font-size:.9rem;color:var(--muted)}
+
+/* ── cierre ── */
+#cierre{background:var(--ink2)}
+.no{display:grid;gap:.75rem;margin-top:2.4rem}
+.no div{padding:1rem 1.25rem;border-left:2px solid var(--gold);
+  font-size:.95rem;color:var(--muted);background:rgba(196,30,58,.03)}
+footer{padding:3rem var(--pad) 4rem;border-top:1px solid var(--line);background:var(--ink)}
+footer p{font-size:.85rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<section id="hero">
+  <div class="bed"><div class="aurora" aria-hidden="true"></div></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="brand rise">
+      <div class="mark" aria-hidden="true"></div>
+      <b>Creva ZK</b>
+      <span>· Midnight Hackathon · Agosto 2026 · MLH</span>
+    </div>
+    <h1 class="rise d1">Pedir una tarjeta<em>sin entregar tu vida.</em></h1>
+    <p class="lead sub rise d2">
+      Una emprendedora pide una tarjeta colateralizada y ve a qué califica <b>sin entregarle a
+      nadie su documento ni su saldo</b>. Dos pruebas de conocimiento cero sobre Midnight,
+      generadas en su propio teléfono.
+    </p>
+    <div class="meta rise d3">
+      <span class="chip"><b>2</b> predicados en circuito</span>
+      <span class="chip"><b>743</b> pruebas automatizadas</span>
+      <span class="chip"><b>23.7 s</b> por prueba, medido</span>
+      <span class="chip">Contrato vivo en <b>preprod</b></span>
+    </div>
+  </div>
+  <div class="scroll">Desliza ↓</div>
+</section>
+
+<section id="demo">
+  <div class="wrap">
+    <p class="eyebrow rise">La demo, sin cortes</p>
+    <h2 class="rise d1">Ochenta y seis segundos<br>de app real.</h2>
+    <p class="lead rise d2" style="margin-top:1.3rem">
+      Nada de esto es una maqueta. Las esperas que ves son pruebas generándose de verdad;
+      no se aceleró ni un fotograma, porque esa espera <b>es</b> la garantía.
+    </p>
+
+    <div class="frame zoom">
+      <video controls preload="metadata" playsinline src="../../web/creva-zk.mp4"></video>
+    </div>
+
+    <div class="beats rise d2">
+      <div class="beat"><b>0:00 — 0:20</b><p>Prueba de identidad. El anillo cuenta segundos reales; el documento nunca se sube.</p></div>
+      <div class="beat"><b>0:22 — 0:45</b><p>Prueba de respaldo. Compara el colateral con el límite pedido, dentro del circuito.</p></div>
+      <div class="beat"><b>0:45 — 1:05</b><p>El desenlace: un tramo. Y la pantalla que enumera lo que se quedó en el dispositivo.</p></div>
+      <div class="beat"><b>1:17 — 1:26</b><p>La PWA instalada, con su icono junto a los demás. Funciona sin conexión.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="pruebas">
+  <div class="wrap">
+    <p class="eyebrow rise">Un primitivo, dos momentos</p>
+    <h2 class="rise d1">Verificar una atestación firmada,<br>evaluar el predicado,<br>divulgar solo el desenlace.</h2>
+
+    <div class="pieces">
+      <div class="piece zoom">
+        <div class="num">PRUEBA 1</div>
+        <h3>Identidad</h3>
+        <p>Al pedir la tarjeta. El circuito comprueba tres cosas a la vez y devuelve una sola:
+        si las tres se cumplen. Ni el RFC ni la fecha de nacimiento cruzan ninguna frontera.</p>
+        <div class="code">disclose(
+  claim.verified
+  &amp;&amp; claim.ofAge
+  &amp;&amp; claim.taxId == expectedTaxIdHash
+)</div>
+      </div>
+      <div class="piece zoom">
+        <div class="num">PRUEBA 2</div>
+        <h3>Respaldo</h3>
+        <p>Al ver a qué califica. Compara el colateral con el límite solicitado. Lo que sale
+        es el tramo, nunca la cantidad — y el monto no queda escrito en ninguna parte.</p>
+        <div class="code">disclose(
+  collateral &gt;= requestedLimit
+)</div>
+      </div>
+    </div>
+
+    <p class="lead rise d3" style="margin-top:2.6rem">
+      Las dos verifican la firma del emisor <b class="gold">dentro del circuito</b>, antes de
+      mirar el contenido. Compact 0.31.1 no trae primitivo de firma, así que el Schnorr sobre
+      Jubjub viene del ejemplo oficial de Midnight — y el firmante obtiene el desafío
+      <b>llamando al propio contrato</b>, no reimplementando su hash.
+    </p>
+  </div>
+</section>
+
+<section id="frontera" style="background:var(--ink2)">
+  <div class="wrap">
+    <p class="eyebrow rise">La frontera de divulgación</p>
+    <h2 class="rise d1">Lo que sigue siendo suyo.</h2>
+    <div class="split zoom">
+      <div class="side keep">
+        <b>Nunca sale del dispositivo</b>
+        <ul>
+          <li>El documento de identidad</li>
+          <li>La biometría</li>
+          <li>El RFC</li>
+          <li>El saldo y el monto del colateral</li>
+          <li>La llave del sujeto y la firma del emisor</li>
+        </ul>
+      </div>
+      <div class="side out">
+        <b>Lo único que se divulga</b>
+        <ul>
+          <li>Identidad: un booleano</li>
+          <li>Respaldo: un tramo — Bronce, Plata u Oro</li>
+          <li>Un contador de llamadas, sin sujeto ni desenlace</li>
+        </ul>
+      </div>
+    </div>
+    <p class="lead rise d2" style="margin-top:2.4rem">
+      El desenlace de identidad <b>no se ancla nunca</b>. Un registro público de «esta llave fue
+      verificada» sería exactamente el rastro vinculable que el producto promete no dejar.
+    </p>
+  </div>
+</section>
+
+<section id="medido">
+  <div class="wrap">
+    <p class="eyebrow rise">Medido, no estimado</p>
+    <h2 class="rise d1">Y un resultado<br>que contradijo la hipótesis.</h2>
+    <p class="lead rise d2" style="margin-top:1.3rem">
+      Este repositorio afirmaba que verificar una firma dentro del circuito haría la prueba de
+      identidad más lenta. Era un argumento, no una medición. La medición dijo que no.
+    </p>
+
+    <div class="eyes">
+      <div class="stat zoom">
+        <div class="n">23.7 s</div>
+        <p class="l">Prueba de respaldo. Sin verificación de firma en circuito.</p>
+        <p class="src">Medido 2026-08-29 · <code>npm run demo</code></p>
+      </div>
+      <div class="stat zoom">
+        <div class="n">23.65 s</div>
+        <p class="l">Prueba de identidad. <b>Con</b> verificación de firma, y clave de prueba nueve veces mayor.</p>
+        <p class="src">Medido 2026-08-29 · <code>npm run demo:identity</code></p>
+      </div>
+      <div class="stat zoom">
+        <div class="n">0.245 s</div>
+        <p class="l">Emisor desconocido: el circuito aborta. Devuelve degradado, <b>nunca</b> «no coincide».</p>
+        <p class="src">Dos órdenes de magnitud por debajo de una prueba</p>
+      </div>
+    </div>
+
+    <div class="eyes">
+      <div class="stat zoom">
+        <div class="n">2.2 MB</div>
+        <p class="l">Artefactos ZK que el navegador descarga: tres claves de prueba, tres verificadoras, tres ZKIR.</p>
+        <p class="src">Medido con <code>du</code> sobre la salida del compilador</p>
+      </div>
+      <div class="stat zoom">
+        <div class="n">743</div>
+        <p class="l">Pruebas automatizadas en 55 archivos, incluidas las invariantes de divulgación.</p>
+        <p class="src">Unidad · fuzz · invariantes, con fast-check</p>
+      </div>
+      <div class="stat zoom">
+        <div class="n">42.3 %</div>
+        <p class="l">De las empresas donde una mujer es dueña o socia mayoritaria ha tenido financiamiento alguna vez. Cuando es un hombre, 47.4 %.</p>
+        <p class="src">INEGI · ENAFIN 2024 · comunicado 62/25, 28 may 2025</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="degradado" style="background:var(--ink2)">
+  <div class="wrap">
+    <p class="eyebrow rise">Cuando algo falta</p>
+    <h2 class="rise d1">Decirlo, en vez de<br>inventarse una respuesta.</h2>
+    <p class="lead rise d2" style="margin-top:1.3rem">
+      Toda dependencia externa devuelve un resultado tipado, nunca una excepción. Y ninguna de
+      estas pantallas dice que ella no calificó — porque nadie revisó nada.
+    </p>
+    <div class="rows">
+      <div class="row zoom"><b>Falta la cartera</b><span>No hay ninguna cartera de Midnight en este navegador.</span></div>
+      <div class="row zoom"><b>Cartera bloqueada</b><span>Está instalada pero no entregó una conexión.</span></div>
+      <div class="row zoom"><b>Red equivocada</b><span>Conectada a otra red distinta de la de prueba.</span></div>
+      <div class="row zoom"><b>Servidor local caído</b><span>El servidor de pruebas de su propia computadora no respondió.</span></div>
+      <div class="row zoom"><b>Falta un dato de la app</b><span>No es algo que ella pueda arreglar, y la pantalla lo dice así.</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="cierre">
+  <div class="wrap">
+    <p class="eyebrow rise">Trabajo previo, declarado</p>
+    <h2 class="rise d1">Qué existía antes<br>y qué se escribió aquí.</h2>
+    <p class="lead rise d2" style="margin-top:1.3rem">
+      Entregado al track <b>Integrate Midnight</b>, donde el trabajo previo se permite si se
+      declara. Creva, la plataforma, ya existía: este repositorio <b>no contiene una línea de su
+      código</b> y la consume como sistema externo, detrás de un único adaptador. Lo escrito
+      durante el evento es el circuito Compact, los witnesses, el cliente de Midnight, la
+      interfaz y el puerto de anclaje.
+    </p>
+
+    <div class="no rise d3">
+      <div><b>No</b> es un puente cross-chain. Se ancla un compromiso; nada se mueve entre cadenas.</div>
+      <div><b>No</b> es una app nativa. Es una PWA instalable.</div>
+      <div>Corre en <b>red de prueba</b>, nunca en mainnet.</div>
+      <div>Prototipo de fin de semana. El circuito <b>no</b> tiene auditoría criptográfica.</div>
+      <div>Todo dato en pantalla es <b>sintético</b>. Ninguno pertenece a una persona real.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    Creva ZK · Midnight Hackathon, agosto 2026 · Major League Hacking ·
+    Compact 0.31.1 · midnight.js 4.1.1 · Apache-2.0 ·
+    <a href="https://github.com/LuisAlejandroCR/creva-zk">github.com/LuisAlejandroCR/creva-zk</a>
+  </p>
+</footer>
+
+<script>
+// Una sola pasada de observación para las dos clases de entrada. `once` porque
+// una sección que reaparece ya fue leída: reanimarla distrae en vez de guiar.
+(function () {
+  var targets = document.querySelectorAll('.rise, .zoom');
+  if (!('IntersectionObserver' in window)) {
+    targets.forEach(function (el) { el.classList.add('in'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('in');
+      io.unobserve(entry.target);
+    });
+  }, { rootMargin: '0px 0px -12% 0px', threshold: 0.12 });
+  targets.forEach(function (el) { io.observe(el); });
+})();
+</script>
+</body>
+</html>
