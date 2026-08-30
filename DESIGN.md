@@ -225,6 +225,28 @@ Una pantalla se arma con ellos; no escribe marcado propio.
 | `statusState.ts` | El bloque de resultado, por tono semántico. |
 | `verification.ts` | El estado de trabajo en curso. |
 | `notices.ts` | Aviso de seguridad, botón de ayuda, estado del sistema. |
+| `progressMoment.ts` | El micro-momento que sale de la franja durante una espera. |
+| `momentVisual.ts` | Los iconos de esos momentos. |
+
+### Iconos
+
+Un solo idioma, el mismo de las filas de ajustes de Creva: glifo de línea sobre
+chip circular.
+
+| Qué | Valor |
+| --- | --- |
+| Lienzo | `viewBox="0 0 24 24"`, dibujado a 24 px |
+| Trazo | `stroke-width: 1.75`, `stroke="currentColor"`, `fill="none"` |
+| Remates | `stroke-linecap="round"`, `stroke-linejoin="round"` |
+| Chip | círculo de 44 px, `background: var(--cr-surface-2)` |
+| Tinta | `color: var(--cr-danger-text)` — nunca `--cr-crimson`, ver prohibición 1 |
+
+El chip va `aria-hidden`: el título de al lado ya dice lo mismo en palabras. Un
+glifo que carga significado es un gráfico, y por WCAG 1.4.11 necesita 3:1
+contra su fondo — otra razón por la que la tinta es `--cr-danger-text` y no la
+marca: `--cr-crimson` mide 2.91:1 sobre `--cr-surface-1` en tema oscuro.
+
+Los iconos se dibujan en este repositorio. No se importa una librería.
 
 ### Arquetipos de pantalla
 

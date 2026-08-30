@@ -128,7 +128,11 @@ describe('style.css AA contrast fixes (axe-core measured)', () => {
 // own easing and duration tokens rather than hand-picked numbers.
 describe('style.css motion', () => {
   it('times every transition and animation with --cr-ease and a --cr-dur* token', () => {
-    const timings = [...source.matchAll(/(?:transition|animation):[^;]+;/g)].map((m) => m[0]);
+    const timings = [...source.matchAll(/(?:transition|animation):[^;]+;/g)]
+      .map((m) => m[0])
+      // "animation: none" stands one down rather than timing it: there is no
+      // duration to express in tokens because nothing runs.
+      .filter((declaration) => !/:\s*none\s*(!important)?\s*;/.test(declaration));
     expect(timings.length).toBeGreaterThan(0);
     for (const timing of timings) {
       expect(timing).toMatch(/var\(--cr-dur(-fast|-slow)?\)/);

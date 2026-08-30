@@ -256,6 +256,54 @@ made with. No screen decides an outcome for itself.
     which `style-controls.spec.ts` pins. `render.spec.ts` pins that the four
     proof states resolve to four different archetypes.
 
+17. **Micro-momentos dentro de la espera.** Mientras una prueba corre sale un
+    popover de la franja de navegación — el mismo gesto que `icon-button-tip` —
+    que dice una cosa y se va solo. No es una tarjeta ni un modal, no pide
+    interacción y no tiene botón de cerrar.
+
+    **El momento pertenece a la espera, no al paso.** Se arma cuando el estado
+    pasa a `generating` y se desarma cuando llega la respuesta. Ningún momento
+    lo dispara un toque, y ninguno alarga el recorrido: una señal que la
+    respuesta alcanzó a adelantar se descarta en vez de mostrarse tarde.
+    `test/momentView.spec.ts` lo fija en las dos direcciones.
+
+    **Cuatro pasos, dos esperas.** El recorrido sólo hace esperar dos veces —
+    la prueba de identidad y la de respaldo, unos 23.7 s cada una — así que el
+    arco de cuatro tiempos se reparte dentro de esas dos. Momentos 1 y 2 en la
+    espera de identidad, 3 en la de respaldo, y 4 al aterrizar la respuesta:
+    decir "listo" con la barra en 81 % sería la única mentira que esta pantalla
+    nunca ha dicho.
+
+    **El dibujo va primero.** Cada momento abre con un icono de línea sobre
+    chip circular — el idioma de las filas de ajustes de Creva: trazo 1.75,
+    remates redondos, `--cr-danger-text` sobre `--cr-surface-2` — y el texto es
+    su pie de foto. Los cuatro iconos son distintos: puerta, bicicleta, capas
+    ensamblándose, celebración.
+
+    **Nunca se solapa con la acción.** Ancla arriba porque la franja es la
+    única parte del marco que ella no está buscando tocar. Verificado con
+    `elementFromPoint` y con intersección de rectángulos contra el CTA, el
+    anillo y el paso visible, en 320/390/768 y en los dos temas.
+
+    **Tiempos.** Entra en `--cr-dur` (240 ms), se queda 3 s, sale en 240 ms.
+    Bajo `prefers-reduced-motion` aparece y desaparece sin desplazarse, con el
+    mismo tiempo en pantalla: eso es un temporizador, no movimiento.
+
+    **Lo que falta se cuenta como avance.** El momento estructural muestra
+    dónde va en el recorrido — lo hecho junto a lo que queda — leído del estado
+    real, no de una lista inventada de papeleo. Máximo dos pendientes visibles;
+    el resto se cuenta ("+ 2 elementos más"). Por eso la pantalla de comparación
+    dejó de encabezarse "Esto es lo que no entregaste".
+
+    **Una sola cifra en todo el recorrido**, y
+    `test/content/waitingMoments.spec.ts` falla si aparece una segunda. Sólo se
+    publica lo verificado en fuente primaria: ENAFIN 2024 (INEGI, comunicado
+    62/25, 28 de mayo de 2025), con URL y fecha de consulta en el módulo. Se usa
+    el verbo del comunicado, "ha tenido financiamiento", y no el de la gráfica,
+    "solicitado": haber solicitado y haber tenido no son la misma medida. Otra
+    prueba falla si aparece cualquiera de las cifras que no se pudieron
+    verificar.
+
 ## Proof-port sources
 
 `VITE_PORT_SOURCE` picks which implementation backs the seam. Anything

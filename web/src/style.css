@@ -1299,6 +1299,200 @@ h1 {
   animation: cr-land var(--cr-dur-slow) var(--cr-ease) var(--cr-dur) both;
 }
 
+/* ── El micro-momento ────────────────────────────────────────────────────
+   A popover that comes out of the navigation strip, the same gesture
+   .icon-button-tip uses, rather than a card floating over the flow. It hangs
+   from the strip because the strip is the one part of the frame she is never
+   reaching for: the primary action is far below it at every width, so nothing
+   she needs in order to continue is ever behind this.
+
+   It lives inside a wait. It is armed when a proof starts and dropped when
+   the answer lands, so it is never a notification about something she already
+   finished.
+
+   The host is fixed and its position is measured from the strip at show time
+   (momentView.ts), so a change to the strip's height cannot leave this
+   floating in the wrong place. */
+.progress-moment-host {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+  /* Never takes a tap that belonged to the screen behind it. */
+  pointer-events: none;
+}
+
+.progress-moment {
+  max-width: min(19rem, 100%);
+  padding: 0.7rem 0.8rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid var(--cr-border);
+  background: var(--cr-surface-1);
+  box-shadow: var(--cr-shadow-brand-sm);
+  /* Enters and leaves with the same 240ms as every other state change here,
+     and travels the same 4px the tip does. */
+  animation: cr-moment-enter var(--cr-dur) var(--cr-ease) both;
+}
+
+.progress-moment[data-leaving='true'] {
+  animation: cr-moment-leave var(--cr-dur) var(--cr-ease) both;
+}
+
+/* The icon leads. It is the first thing on the card and it states the moment
+   before a word of the copy is read — the same chip the settings rows use: a
+   soft circle with a line glyph on it. */
+.moment-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 0.5rem;
+  border-radius: 50%;
+  background: var(--cr-surface-2);
+  /* --cr-crimson is the brand ink and measures 2.91:1 on --cr-surface-1 in
+     the ink palette — under the 3:1 a graphic that carries meaning needs.
+     --cr-danger-text is the same hue resolved per theme and clears both.
+     See DESIGN.md, "Las tres prohibiciones". */
+  color: var(--cr-danger-text);
+}
+
+.moment-art svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* One eased gesture per icon, played once: the way in draws through the door,
+   the bicycle rolls, the last course arrives, the check lands. */
+.moment-art-move {
+  animation: cr-art-move var(--cr-dur-slow) var(--cr-ease) both;
+}
+
+.moment-art[data-visual='assembling'] .moment-art-move {
+  animation: cr-art-drop var(--cr-dur-slow) var(--cr-ease) both;
+}
+
+.moment-art-rays {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cr-art-rays var(--cr-dur-slow) var(--cr-ease) both;
+}
+
+.moment-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.moment-eyebrow {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--cr-text-muted);
+}
+
+.moment-title {
+  font-family: var(--font-playfair);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--cr-text);
+}
+
+/* 0.7rem is not a taste: it is the largest size at which the longest sentence
+   this component may ever carry — the ENAFIN measure, 93 characters, whose
+   wording is fixed by the source and cannot be shortened — still sits on two
+   lines in a 288px popover at a 320px viewport. At 0.72rem it runs to three.
+   Measured in the real popover, not estimated. */
+.moment-body {
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--cr-text-muted);
+}
+
+.moment-source {
+  margin-top: 0.25rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--cr-text-muted);
+}
+
+/* Where she is in the journey, and the reason this component exists at all:
+   what is finished is shown beside what is left, so the moment reads as
+   progress rather than as a list of things she failed to hand over. */
+.moment-checklist {
+  display: grid;
+  gap: 0.22rem;
+  margin: 0.55rem 0 0;
+  padding: 0.5rem 0 0;
+  border-top: 1px solid var(--cr-border);
+  list-style: none;
+}
+
+.moment-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  /* --cr-text-secondary measures 4.44:1 on --cr-surface-1 in the ink palette,
+     under AA at this size; --cr-text-muted clears it in both themes. */
+  color: var(--cr-text-muted);
+}
+
+.moment-check-mark {
+  flex: none;
+  width: 0.9rem;
+  text-align: center;
+}
+
+.moment-check[data-state='done'] .moment-check-mark {
+  color: var(--cr-success-text);
+}
+
+.moment-check[data-state='active'] .moment-check-mark {
+  color: var(--cr-danger-text);
+}
+
+.moment-check[data-state='done'] .moment-check-label,
+.moment-check[data-state='active'] .moment-check-label {
+  color: var(--cr-text);
+  font-weight: 700;
+}
+
+.moment-check--more {
+  padding-left: 1.3rem;
+}
+
+@keyframes cr-moment-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-moment-leave {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes cr-art-move {
+  from { opacity: 0; transform: translateX(-3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-art-drop {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-art-rays {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 1ms !important;
@@ -1312,5 +1506,21 @@ h1 {
        means "already there", not "there, late". */
     animation-delay: 0ms !important;
     transition-delay: 0ms !important;
+  }
+
+  /* The popover appears and disappears without travelling. The rule above
+     already collapses the duration; this drops the 4px so nothing slides
+     under the eye. It still gets its full time on screen — that is a timer,
+     not motion. */
+  .progress-moment,
+  .progress-moment[data-leaving='true'],
+  .moment-art-move,
+  .moment-art[data-visual='assembling'] .moment-art-move,
+  .moment-art-rays {
+    animation: none !important;
+  }
+
+  .progress-moment[data-leaving='true'] {
+    opacity: 0;
   }
 }

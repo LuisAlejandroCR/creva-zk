@@ -24,6 +24,8 @@ import { buildOffersContent } from './screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from './render';
 import { buildStepProgress, type StepProgress } from './domain/journeyProgress';
 import { applyWaitProgress, type WaitPatch } from './waitView';
+import { createMomentScheduler, type MomentScheduler } from './momentView';
+import { PROGRESS_MOMENT_HOST_ID, type MomentChecklistItem } from './ui';
 import { parseHelpRoute } from './help/helpRoute';
 import { renderHelpArticle, renderHelpCategory, renderHelpIndex } from './help/helpRender';
 
@@ -138,6 +140,21 @@ export function mountApp(root: HTMLElement): void {
   // ticker, and simply stops drawing. A proof started before she left is
   // still running when she comes back.
   let showingHelp = false;
+  // Where she is in the journey, in the journey's own words. The structural
+  // moment shows this instead of a list of paperwork nobody asked her for:
+  // every row is real state, so nothing on it is invented.
+  function journeyChecklist(): readonly MomentChecklistItem[] {
+    const current = STEP_NAMES.findIndex(([name]) => name === state.step);
+    return STEP_NAMES.map(([, label], index) => ({
+      label,
+      state: index < current ? 'done' : index === current ? 'active' : 'pending',
+    }));
+  }
+
+  const momentHost = document.getElementById(PROGRESS_MOMENT_HOST_ID);
+  const moments: MomentScheduler | undefined = momentHost
+    ? createMomentScheduler(momentHost, { checklist: journeyChecklist })
+    : undefined;
 
   function stopTicking(): void {
     if (tickHandle !== undefined) clearInterval(tickHandle);
@@ -177,7 +194,15 @@ export function mountApp(root: HTMLElement): void {
         kind === 'identity'
           ? { ...state, identity: next as ProofState<boolean> }
           : { ...state, backing: next as ProofState<Tier> };
-      if (next.phase !== 'generating') stopTicking();
+      // The moments belong to the processing period, so they are armed the
+      // instant it is entered and dropped the instant it is left. Nothing
+      // here is triggered by a tap.
+      if (next.phase === 'generating') {
+        moments?.startWait(kind);
+      } else {
+        stopTicking();
+        moments?.endWait(kind, next.phase === 'ready' ? 'ready' : 'unanswered');
+      }
       render();
     };
 
@@ -237,6 +262,7 @@ export function mountApp(root: HTMLElement): void {
       // offers: start over
       generation += 1;
       stopTicking();
+      moments?.reset();
       state = initialState();
       render();
     });
