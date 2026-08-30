@@ -15,6 +15,7 @@
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "demo": "tsx src/run.ts",
-    "serve": "tsx src/serve.ts"
+    "serve": "tsx src/serve.ts",
+    "demo:identity": "tsx src/runIdentity.ts"
   }
 }

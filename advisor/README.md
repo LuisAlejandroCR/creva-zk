@@ -1,3 +1,8 @@
+advisor/README.md
+Contrato del workspace del asesor: qué posee, qué no, y por qué el modelo solo
+ve el tramo derivado. La regla que gobierna este directorio es que ningún dato
+financiero privado sale del dispositivo hacia un modelo alojado.
+
 # `@creva-zk/advisor`
 
 Owns the local tier advisor for the Integrate Midnight AI track: `AdvisorPort.advise` takes exactly

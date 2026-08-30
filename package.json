@@ -26,9 +26,10 @@
     "measure": "bash tools/measure-proof-latency.sh",
     "verify": "npm run check:runtime && npm run compact:build && npm run typecheck && npm run test && npm run build",
     "postinstall": "npm dedupe --no-audit --no-fund",
-    "check:runtime": "node scripts/check-runtime.mjs"
+    "check:runtime": "node scripts/check-runtime.mjs",
+    "demo:identity": "npm run demo:identity --workspace api"
   },
-  "comment:overrides": "onchain-runtime-v3 ships a WASM module whose classes are compared with instanceof. compact-runtime allows ^3.0.0 and hoists 3.1.0, while midnight-js-protocol pins 3.0.0 and gets a nested copy — two module instances, so a StateValue from one is not an instanceof the other's class and every circuit call dies with 'expected instance of StateValue'. Pinning one copy is the fix.",
+  "comment:overrides": "onchain-runtime-v3 ships a WASM module whose classes are compared with instanceof. compact-runtime allows ^3.0.0 and hoists 3.1.0, while midnight-js-protocol pins 3.0.0 and gets a nested copy \u2014 two module instances, so a StateValue from one is not an instanceof the other's class and every circuit call dies with 'expected instance of StateValue'. Pinning one copy is the fix.",
   "overrides": {
     "@midnight-ntwrk/onchain-runtime-v3": "3.0.0"
   },

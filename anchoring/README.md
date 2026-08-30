@@ -1,3 +1,8 @@
+anchoring/README.md
+Contrato del workspace de anclaje: el esquema de compromiso cegado y el puerto
+agnóstico de cadena con sus dos adaptadores. Lo que llega a una cadena externa
+es un compromiso al desenlace, nunca el desenlace, y nunca nada de identidad.
+
 # `@creva-zk/anchoring`
 
 Owns the chain-agnostic anchoring port: a blinded sha256 commitment scheme over a `BackingOutcome`
