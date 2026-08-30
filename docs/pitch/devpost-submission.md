@@ -199,13 +199,15 @@ yet), get a real issuer signature from a KYC provider instead of a synthetic key
 chain client behind the anchoring adapters. The native Android path through the Kuira SDK is the
 post-hackathon road, not the weekend one.
 
-## Prior-work declaration
+## Originality: everything here was built this weekend
 
-Submitted to the **Integrate Midnight** track, where prior work is allowed when declared.
+**This submission contains no prior work.** Every line in this repository was written during the
+event, and the repository itself was created for it. Submitted to the **Integrate Midnight** track.
 
-- **What existed before:** Creva, a financial platform for women entrepreneurs in Mexico. This
-  repository contains **none of its code**; it consumes Creva as an external system through its
-  public API, behind a single adapter.
+- **What is NOT in this repository:** Creva, a financial platform for women entrepreneurs in
+  Mexico, existed before the event and is a separate product. This repository contains **none of
+  its code**; it consumes Creva as an external system through its public API, behind a single
+  adapter.
 - **What was written during the event:** everything in this repository — the Compact circuits, the
   witnesses, the Midnight client, the interface, and the anchoring port.
 - **Scaffold:** the project structure starts from
@@ -288,8 +290,8 @@ thumbnail** — it is what shows in the gallery listing, so it carries the most 
 non-negotiable: it shows a **real email address** (`alsg013@gmail.com`) on a real account. This
 project's own rule is that no value on screen belongs to a real person, and a Devpost gallery is
 public and indexable. Redact it — or better, do not use that screen at all: it is a screen of
-*Creva*, the prior product, not of Creva ZK, and mixing them muddies exactly the boundary the
-prior-work declaration exists to draw.
+*Creva*, the separate product, not of Creva ZK, and mixing them muddies exactly the boundary
+the originality statement exists to draw.
 
 ### Shot list to capture (in this order)
 
@@ -457,8 +459,11 @@ measurement you skip is the one that was going to change your architecture.
 
 | # | Check | Done |
 |---|---|---|
-| 1 | Prior-work declaration in the Devpost form, the `README.md` **and** the first 15 s of the video | ⏳ |
+| 1 | "No prior work" stated in the Devpost form and the `README.md`; the video must NOT say the words "prior-work declaration" | ⏳ |
 | 2 | Track selected: **Integrate Midnight** (plus AI, Mobile, Cross-Chain) | ⏳ |
 | 3 | Repository URL public, `AGENTS.md` / `CLAUDE.md` / `docs/` still gitignored | ⏳ |
-| 4 | Video uploaded (`web/creva-zk-final.mp4`) and playable from a private browser window | ⏳ |
+| 4 | Video uploaded (`web/creva-zk-final.mp4`, 1:40, under the 2-minute cap) and playable from a private browser window | ⏳ |
+| 4b | Video opens with the speaker's name **and** the hackathon name, as MLH requires | ⏳ |
+| 4c | Live demo link added: <https://luisalejandrocr.github.io/creva-zk/> | ⏳ |
+| 4d | Registration e-mail identical on Devpost and on the MLH event page, and checked in on both | ⏳ |
 | 5 | Gallery images carry the SYNTHETIC badge and no real email address | ⏳ |

@@ -58,6 +58,13 @@ event; the repository itself was created for it. Submitted to the **Integrate Mi
   Compact's `transientHash` in TypeScript; and that circuit is generic over the message length
   rather than fixed at `Vector<4>`, which had it hashing a different struct than the verifier.
 
+### Try it without installing anything
+
+**<https://luisalejandrocr.github.io/creva-zk/>** — the whole journey in a browser, installable as
+a PWA. The hosted build runs the journey with **simulated proof timing**, so it needs no Docker,
+no wallet and no proof server. The real proofs — 23.7 s each, measured — need the setup below;
+the video shows them end to end.
+
 ### Running it
 
 Requires **Node 24.11.1+**, Docker, and the Compact toolchain pinned at `0.31.1` — `0.34.0` requires
@@ -155,6 +162,13 @@ evento; el repositorio se creó para él. Entregado al track **Integrate Midnigh
   obtenga el desafío llamando al contrato en vez de reimplementar el `transientHash` de Compact en
   TypeScript; y ese circuito es genérico sobre el largo del mensaje en vez de fijo en `Vector<4>`,
   que hacía que hasheara una estructura distinta a la del verificador.
+
+### Probarlo sin instalar nada
+
+**<https://luisalejandrocr.github.io/creva-zk/>** — el recorrido completo en el navegador, e
+instalable como PWA. La versión publicada corre con **tiempos de prueba simulados**, así que no
+necesita Docker, ni cartera, ni servidor de pruebas. Las pruebas reales —23.7 s cada una, medidas—
+necesitan lo de abajo; el video las enseña de punta a punta.
 
 ### Correrlo
 
