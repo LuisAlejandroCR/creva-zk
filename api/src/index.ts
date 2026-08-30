@@ -24,3 +24,10 @@ export {
 } from "./bridgeProofPort.js";
 
 export { DEMO_TAX_ID_HEX } from "./identityDemo.js";
+// The one encoding the issuer key travels in outside the runtime: decimal
+// (x, y). Browser-safe, so the build's own variable can be parsed here.
+export {
+  formatIssuerKey,
+  parseIssuerKey,
+  ISSUER_KEY_SEPARATOR,
+} from "./identityIssuerKey.js";

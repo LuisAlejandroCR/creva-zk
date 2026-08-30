@@ -1,7 +1,8 @@
 // api/src/laceDeploy.ts
-// The operator-only deployment on the browser-direct path: connects Lace,
-// builds the same six providers a proof uses, deploys the backing contract
-// once with the user's own wallet, and hands back nothing but the address.
+// The operator-only deployments on the browser-direct path: connects Lace,
+// builds the same six providers a proof uses, deploys the backing contract or
+// the identity contract once with the user's own wallet, and hands back the
+// address (and, for identity, the issuer key a proof cannot do without).
 // It is not part of the product journey — a deployment costs tDUST and
 // creates a new contract, so nothing here ever runs on its own.
 //
@@ -15,6 +16,7 @@ import { degraded } from "./laceWallet.js";
 import { DEFAULT_COLLATERAL_AMOUNT } from "./backingClaim.js";
 import { DEFAULT_DEPLOY_TIMEOUT_MS, TIMED_OUT, withTimeout } from "./timeouts.js";
 import type { PortLogger } from "./portLogger.js";
+import type { JubjubPoint } from "./proofPort.js";
 import type { ApiDegraded, ApiResult } from "./types.js";
 
 // Type-only, exactly as laceProofPort.ts does it: the compiled contract is
@@ -129,5 +131,136 @@ export async function deployBackingWithLace(options: LaceDeployOptions = {}): Pr
     // exception.
     logger.error?.({ err: error }, "the browser-direct deployment threw instead of degrading");
     return degraded(DEPLOY_STEP, "deploy_failed");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The identity deployment. Same shape as the backing one above and for the
+// same reasons; what differs is what it hands back and what it costs the
+// operator to lose: a deployment with no issuer key is a contract nobody can
+// prove against, so both values come out together or neither does.
+// ---------------------------------------------------------------------------
+
+// Type-only, exactly as above: the compiled identity circuit is WebAssembly
+// and must not load at module scope.
+type IdentityModule = typeof import("./identityContract.js");
+type IdentityClaimModule = typeof import("./identityClaim.js");
+type DeployIdentity = IdentityModule["deployIdentity"];
+type IdentityDeployProviders = Parameters<DeployIdentity>[0];
+
+/** One step name for the whole action, as with the backing deployment. */
+export const IDENTITY_DEPLOY_STEP = "deployIdentity";
+
+export interface LaceIdentityDeployOptions extends LaceOptions {
+  /** How long the whole deployment may take; see DEFAULT_DEPLOY_TIMEOUT_MS. */
+  readonly deployTimeoutMs?: number;
+  // Test seams. Each defaults to the real thing, loaded lazily; they exist so
+  // the degrade and never-throw contracts can be exercised without a browser,
+  // a wallet, a proof server or the compiled circuit.
+  readonly deployIdentity?: DeployIdentity;
+  readonly issue?: IdentityClaimModule["issueIdentityAttestation"];
+  readonly claim?: IdentityClaimModule["defaultIdentityClaim"];
+  /** The contract's own challenge circuit. Nothing else may reimplement it. */
+  readonly challenge?: IdentityModule["identityAttestationChallenge"];
+}
+
+// BOTH values, deliberately. The address alone is useless: the circuit
+// verifies the attestation's signature against the issuer key the caller
+// names, so a build that knows only where the contract lives makes every
+// proof abort — which reads on screen as "todavía no se puede" about an
+// identity that was in fact valid.
+export interface LaceIdentityDeployment {
+  readonly contractAddress: string;
+  /** Decimal (x, y). Never a compressed point — see identityIssuerKey.ts. */
+  readonly issuerKey: JubjubPoint;
+}
+
+async function loadIdentityModules(
+  logger: PortLogger,
+): Promise<ApiResult<{ readonly contract: IdentityModule; readonly claim: IdentityClaimModule }>> {
+  try {
+    const [contract, claim] = await Promise.all([import("./identityContract.js"), import("./identityClaim.js")]);
+    return { status: "ok", value: { contract, claim } };
+  } catch (error) {
+    logger.error?.({ err: error }, "compiled identity contract is missing — run npm run compact:build");
+    return degraded(IDENTITY_DEPLOY_STEP, "contract_not_compiled");
+  }
+}
+
+function restepIdentity<T>(result: { readonly degraded: ApiDegraded }): ApiResult<T> {
+  return { status: "degraded", degraded: { step: IDENTITY_DEPLOY_STEP, reason: result.degraded.reason } };
+}
+
+// Deploys the identity contract from the browser, with Lace as the wallet.
+// NEVER THROWS, and never runs by itself.
+//
+// The attestation it deploys with is issued right here, by a synthetic issuer
+// whose Schnorr key is generated in the page — the same thing
+// realIdentityPort.ts does in a Node process. It is signed through the
+// CONTRACT'S OWN challenge circuit, never a second copy of that hash, which
+// is the only reason the proof later clears instead of aborting.
+//
+// The private state this writes is what a later proof reads: the attestation
+// is the caller's, not the deployment's, and only the issuer that signed it
+// can produce one. See joinIdentity in identityContract.ts.
+export async function deployIdentityWithLace(
+  options: LaceIdentityDeployOptions = {},
+): Promise<ApiResult<LaceIdentityDeployment>> {
+  const logger = options.logger ?? noopLogger;
+  try {
+    const stack = await prepareLaceStack<string, string, unknown>(IDENTITY_DEPLOY_STEP, options);
+    if (stack.status === "degraded") {
+      logger.info({ reason: stack.degraded.reason }, "lace identity deploy preflight degraded");
+      return stack;
+    }
+
+    let deploy = options.deployIdentity;
+    let issue = options.issue;
+    let claim = options.claim;
+    let challenge = options.challenge;
+    if (deploy === undefined || issue === undefined || claim === undefined || challenge === undefined) {
+      const loaded = await loadIdentityModules(logger);
+      if (loaded.status === "degraded") return restepIdentity(loaded);
+      deploy ??= loaded.value.contract.deployIdentity;
+      issue ??= loaded.value.claim.issueIdentityAttestation;
+      claim ??= loaded.value.claim.defaultIdentityClaim;
+      challenge ??= loaded.value.contract.identityAttestationChallenge;
+    }
+
+    // The claim is the demo's own: a verified adult whose tax-ID hash is the
+    // single synthetic one identityDemo.ts owns, so the value this deployment
+    // attests to and the value the screen later asks about are the same bytes.
+    const issued = await issue(challenge, claim());
+
+    const providers = stack.value.providers as unknown as IdentityDeployProviders;
+
+    const budget = options.deployTimeoutMs ?? DEFAULT_DEPLOY_TIMEOUT_MS;
+    const deployed = await withTimeout(deploy(providers, issued.attestation as never, logger), budget);
+    if (deployed === TIMED_OUT) {
+      logger.error?.(
+        { timeoutMs: budget },
+        "identity deployment never confirmed — it may still land; check before deploying again",
+      );
+      return degraded(IDENTITY_DEPLOY_STEP, "deploy_failed");
+    }
+    if (deployed.status === "degraded") return restepIdentity(deployed);
+
+    const contractAddress = deployed.value.deployTxData.public.contractAddress;
+    if (typeof contractAddress !== "string" || contractAddress === "") {
+      logger.error?.({}, "identity deployment reported no contract address");
+      return degraded(IDENTITY_DEPLOY_STEP, "deploy_failed");
+    }
+
+    // The issuer's PUBLIC key only. The secret that signed the attestation
+    // was generated in this page, was never written anywhere, and dies with
+    // the call — nothing here may hand it out.
+    logger.info(
+      { contractAddress, issuerKeyX: issued.issuerKey.x.toString(), issuerKeyY: issued.issuerKey.y.toString() },
+      "identity contract deployed from the browser",
+    );
+    return { status: "ok", value: { contractAddress, issuerKey: issued.issuerKey } };
+  } catch (error) {
+    logger.error?.({ err: error }, "the browser-direct identity deployment threw instead of degrading");
+    return degraded(IDENTITY_DEPLOY_STEP, "deploy_failed");
   }
 }

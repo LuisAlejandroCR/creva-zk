@@ -5,14 +5,16 @@
 // ecAdd / ecMul schnorr.compact compiles down to — and the challenge hash
 // is supplied by the contract, never recomputed here.
 
-import { createHash, randomBytes as nodeRandomBytes } from "node:crypto";
 import {
   ecAdd,
   ecMul,
   ecMulGenerator,
   type JubjubPoint,
 } from "@midnight-ntwrk/midnight-js-protocol/compact-runtime";
+import { webCryptoEntropy, type SignerEntropy } from "./signerEntropy.js";
 import type { SchnorrSignature, SignedPayload } from "./types.js";
+
+export { webCryptoEntropy, type SignerEntropy };
 
 // Order of the Jubjub prime-order subgroup: the modulus every scalar in a
 // signature lives in. Verified against the runtime, not copied from a
@@ -74,13 +76,32 @@ function toNonZeroScalar(value: bigint): bigint {
 // signer's own business, the verifier never recomputes it, and routing a
 // secret key through a circuit binding would put it somewhere it has no
 // reason to be. A plain domain-separated SHA-512 is the right tool.
-function deriveNonce(secretKey: bigint, payloadCommitment: bigint): bigint {
-  const hash = createHash("sha512")
-    .update("creva-zk:schnorr-nonce:v1")
-    .update(toScalarBytes(secretKey))
-    .update(toScalarBytes(payloadCommitment))
-    .digest();
+//
+// Async because the digest comes from the entropy seam, whose SHA-512 is
+// Web Crypto's — the one hash both Node and a browser have without
+// importing `node:crypto`.
+async function deriveNonce(
+  entropy: SignerEntropy,
+  secretKey: bigint,
+  payloadCommitment: bigint,
+): Promise<bigint> {
+  const hash = await entropy.sha512(
+    concatBytes(NONCE_DOMAIN, toScalarBytes(secretKey), toScalarBytes(payloadCommitment)),
+  );
   return toNonZeroScalar(bytesToBigInt(hash));
+}
+
+// Domain separation for the nonce hash, encoded once at module scope.
+const NONCE_DOMAIN = new TextEncoder().encode("creva-zk:schnorr-nonce:v1");
+
+function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
 }
 
 // The curve's identity element, used as a stand-in announcement to get a
@@ -91,9 +112,10 @@ function deriveNonce(secretKey: bigint, payloadCommitment: bigint): bigint {
 const IDENTITY_POINT: JubjubPoint = { x: 0n, y: 1n };
 
 // Fixed 32-byte big-endian encoding, so two different scalars can never
-// feed the nonce hash the same bytes.
-function toScalarBytes(value: bigint): Buffer {
-  const out = Buffer.alloc(32);
+// feed the nonce hash the same bytes. A plain Uint8Array rather than a
+// Buffer: Node's Buffer is another global no browser defines.
+function toScalarBytes(value: bigint): Uint8Array {
+  const out = new Uint8Array(32);
   let v = value;
   for (let i = 31; i >= 0; i -= 1) {
     out[i] = Number(v & 0xffn);
@@ -112,19 +134,27 @@ export class SchnorrAttestationSigner<T> implements AttestationSigner<T> {
   readonly publicKey: JubjubPoint;
   private readonly secretKey: bigint;
 
+  private readonly entropy: SignerEntropy;
+
+  // `entropy` is the one seam that makes this signer runnable in a browser:
+  // both the secret key and the nonce hash come from it, so nothing here
+  // reaches for `node:crypto` and nothing branches on `typeof window`.
   constructor(
     private readonly challenge: AttestationChallenge<T>,
-    secretKey: bigint = SchnorrAttestationSigner.generateSecretKey(),
+    secretKey?: bigint,
+    entropy: SignerEntropy = webCryptoEntropy,
   ) {
+    this.entropy = entropy;
     // Normalised once, here, so publicKey and every later signature are
     // derived from the same scalar the runtime will accept.
-    this.secretKey = toNonZeroScalar(secretKey);
+    this.secretKey = toNonZeroScalar(secretKey ?? SchnorrAttestationSigner.generateSecretKey(entropy.randomBytes(64)));
     this.publicKey = ecMulGenerator(this.secretKey);
   }
 
   // A uniformly random scalar in [1, JUBJUB_ORDER). Drawn from 64 bytes
-  // rather than 32 so the modular reduction's bias is negligible.
-  static generateSecretKey(seed: Uint8Array = nodeRandomBytes(64)): bigint {
+  // rather than 32 so the modular reduction's bias is negligible. The seed
+  // is passed in rather than drawn here, so the caller's seam owns it.
+  static generateSecretKey(seed: Uint8Array = webCryptoEntropy.randomBytes(64)): bigint {
     return toNonZeroScalar(bytesToBigInt(seed));
   }
 
@@ -134,7 +164,7 @@ export class SchnorrAttestationSigner<T> implements AttestationSigner<T> {
   // operations are the runtime's.
   async sign(payload: SignedPayload<T>): Promise<SchnorrSignature> {
     const commitment = this.challenge(payload, IDENTITY_POINT, this.publicKey);
-    const nonce = deriveNonce(this.secretKey, commitment);
+    const nonce = await deriveNonce(this.entropy, this.secretKey, commitment);
     const announcement = ecMulGenerator(nonce);
 
     const c = truncateChallenge(this.challenge(payload, announcement, this.publicKey));

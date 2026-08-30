@@ -1,13 +1,14 @@
 // deployOptions.ts
-// The build-time options the operator deployment runs with. Separate from
+// The build-time options the operator deployments run with. Separate from
 // the seam in proofPort.ts on purpose: that one configures the journey's
 // proofs, this one configures a tool the journey never reaches. It reads the
 // same network id and artifact base URL, so a deployment is made against
 // exactly the setup the app will later prove against, and deliberately does
 // NOT read VITE_BACKING_CONTRACT_ADDRESS — an address is what it produces.
 
-import type { LaceDeployOptions } from '@creva-zk/api/lace';
+import type { LaceDeployOptions, LaceIdentityDeployOptions } from '@creva-zk/api/lace';
 import { causeChain } from './causeChain';
+import { identityStorePasswordProvider } from './identityStore';
 
 export function laceDeployOptions(): LaceDeployOptions {
   return {
@@ -30,3 +31,19 @@ export function laceDeployOptions(): LaceDeployOptions {
   };
 }
 
+// The identity deployment's options. Everything the backing one uses, plus
+// the one thing that deployment cannot do without: a private-state store
+// password that survives a reload.
+//
+// The identity circuit reads a signed attestation as witness-only private
+// state, and only the issuer that signed it can produce one. This deployment
+// writes that attestation; the journey build reads it back on a later page
+// load, from this same browser and this same wallet. A password generated per
+// load would leave it undecryptable and the proof with nothing to run on.
+// See identityStore.ts.
+export function laceIdentityDeployOptions(): LaceIdentityDeployOptions {
+  return {
+    ...laceDeployOptions(),
+    privateStoragePasswordProvider: identityStorePasswordProvider(),
+  };
+}

@@ -23,6 +23,9 @@ export {
   type AttestationChallenge,
   type AttestationSigner,
 } from "./signing.js";
+// The seam that keeps the signer runnable in a browser: Web Crypto for both
+// the secret key and the nonce digest, injectable for a test.
+export { webCryptoEntropy, type SignerEntropy } from "./signerEntropy.js";
 
 export type { IdentityClaim, IdentityIssuerPort } from "./identity/types.js";
 export { SyntheticIdentityIssuer } from "./identity/syntheticIdentityIssuer.js";

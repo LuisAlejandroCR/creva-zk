@@ -41,7 +41,7 @@ Three implementations, selected by `web/`'s seam (`web/src/proofPort.ts`) throug
 | `createRealBackingPort` | **Wired.** Deploys once, then calls `proveBacking` per request. |
 | `createRealIdentityPort` | **Wired.** Deploys `identity-check.compact` once, then calls `proveIdentity` per request. Answers only for the issuer key it signed with — see below. |
 | `createLaceBackingPort` | **Wired.** Joins at `contractAddress`, then calls `proveBacking`. |
-| `createLaceIdentityPort` | **Degraded.** The binding exists, but the browser-direct path has no identity contract to join. |
+| `createLaceIdentityPort` | **Wired.** Joins the identity contract the build names (`VITE_IDENTITY_CONTRACT_ADDRESS`) and calls `proveIdentity` with the issuer key the build names (`VITE_IDENTITY_ISSUER_KEY`, decimal `"x:y"`). Without both it degrades `contract_not_found` and joins nothing. The deployment itself is `deployIdentityWithLace` in `api/src/laceDeploy.ts`, reached only from the operator screen. |
 
 ### Deploy once, join many
 

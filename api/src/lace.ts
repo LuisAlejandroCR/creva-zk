@@ -17,10 +17,14 @@ export {
 } from "./laceProofPort.js";
 export {
   deployBackingWithLace,
+  deployIdentityWithLace,
   DEFAULT_DEPLOY_TIMEOUT_MS,
   DEPLOY_STEP,
+  IDENTITY_DEPLOY_STEP,
   type LaceDeployOptions,
   type LaceDeployment,
+  type LaceIdentityDeployOptions,
+  type LaceIdentityDeployment,
 } from "./laceDeploy.js";
 export { DEFAULT_COLLATERAL_AMOUNT, TIER_PROVEN_BY_CLEARED_BACKING } from "./backingClaim.js";
 export { DEFAULT_LACE_NETWORK_ID, type ConnectorHost, type LaceConnection } from "./laceWallet.js";
