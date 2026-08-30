@@ -1,7 +1,7 @@
 anchoring/README.md
-Contrato del workspace de anclaje: el esquema de compromiso cegado y el puerto
-agnóstico de cadena con sus dos adaptadores. Lo que llega a una cadena externa
-es un compromiso al desenlace, nunca el desenlace, y nunca nada de identidad.
+Contract for the anchoring workspace: the blinded commitment scheme and the
+chain-agnostic port with its two adapters. What reaches an external chain is a
+commitment to the outcome, never the outcome, and never anything about identity.
 
 # `@creva-zk/anchoring`
 

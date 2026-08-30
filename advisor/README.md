@@ -1,7 +1,7 @@
 advisor/README.md
-Contrato del workspace del asesor: qué posee, qué no, y por qué el modelo solo
-ve el tramo derivado. La regla que gobierna este directorio es que ningún dato
-financiero privado sale del dispositivo hacia un modelo alojado.
+Contract for the advisor workspace: what it owns, what it does not, and why the
+model only ever sees the derived tier. The rule that governs this directory is
+that no private financial value leaves the device for a hosted model.
 
 # `@creva-zk/advisor`
 

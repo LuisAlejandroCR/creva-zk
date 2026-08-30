@@ -256,53 +256,52 @@ made with. No screen decides an outcome for itself.
     which `style-controls.spec.ts` pins. `render.spec.ts` pins that the four
     proof states resolve to four different archetypes.
 
-17. **Micro-momentos dentro de la espera.** Mientras una prueba corre sale un
-    popover de la franja de navegación — el mismo gesto que `icon-button-tip` —
-    que dice una cosa y se va solo. No es una tarjeta ni un modal, no pide
-    interacción y no tiene botón de cerrar.
+17. **Micro-moments inside the wait.** While a proof runs, a popover emerges
+    from the navigation strip — the same gesture as `icon-button-tip` — which
+    says one thing and leaves on its own. It is not a card and not a modal, it
+    asks for no interaction, and it has no close button.
 
-    **El momento pertenece a la espera, no al paso.** Se arma cuando el estado
-    pasa a `generating` y se desarma cuando llega la respuesta. Ningún momento
-    lo dispara un toque, y ninguno alarga el recorrido: una señal que la
-    respuesta alcanzó a adelantar se descarta en vez de mostrarse tarde.
-    `test/momentView.spec.ts` lo fija en las dos direcciones.
+    **The moment belongs to the wait, not to the step.** It is armed when the
+    state turns `generating` and disarmed when the answer arrives. No moment is
+    triggered by a tap, and none lengthens the journey: a cue the answer
+    managed to overtake is discarded rather than shown late.
+    `test/momentView.spec.ts` pins this in both directions.
 
-    **Cuatro pasos, dos esperas.** El recorrido sólo hace esperar dos veces —
-    la prueba de identidad y la de respaldo, unos 23.7 s cada una — así que el
-    arco de cuatro tiempos se reparte dentro de esas dos. Momentos 1 y 2 en la
-    espera de identidad, 3 en la de respaldo, y 4 al aterrizar la respuesta:
-    decir "listo" con la barra en 81 % sería la única mentira que esta pantalla
-    nunca ha dicho.
+    **Four beats, two waits.** The journey only makes her wait twice — the
+    identity proof and the backing proof, about 23.7 s each — so the four-beat
+    arc is distributed across those two. Moments 1 and 2 in the identity wait,
+    3 in the backing wait, and 4 as the answer lands: saying "done" with the
+    bar at 81 % would be the one lie this screen has never told.
 
-    **El dibujo va primero.** Cada momento abre con un icono de línea sobre
-    chip circular — el idioma de las filas de ajustes de Creva: trazo 1.75,
-    remates redondos, `--cr-danger-text` sobre `--cr-surface-2` — y el texto es
-    su pie de foto. Los cuatro iconos son distintos: puerta, bicicleta, capas
-    ensamblándose, celebración.
+    **The drawing comes first.** Each moment opens with a line icon on a
+    circular chip — the vocabulary of Creva's settings rows: 1.75 stroke, round
+    caps, `--cr-danger-text` on `--cr-surface-2` — and the text is its caption.
+    The four icons are distinct: a door, a bicycle, layers assembling, a
+    celebration.
 
-    **Nunca se solapa con la acción.** Ancla arriba porque la franja es la
-    única parte del marco que ella no está buscando tocar. Verificado con
-    `elementFromPoint` y con intersección de rectángulos contra el CTA, el
-    anillo y el paso visible, en 320/390/768 y en los dos temas.
+    **It never overlaps the action.** It anchors at the top, because the strip
+    is the one part of the frame she is not trying to touch. Verified with
+    `elementFromPoint` and with rectangle intersection against the CTA, the
+    ring and the visible step, at 320/390/768 and in both themes.
 
-    **Tiempos.** Entra en `--cr-dur` (240 ms), se queda 3 s, sale en 240 ms.
-    Bajo `prefers-reduced-motion` aparece y desaparece sin desplazarse, con el
-    mismo tiempo en pantalla: eso es un temporizador, no movimiento.
+    **Timing.** It enters over `--cr-dur` (240 ms), stays 3 s, leaves over
+    240 ms. Under `prefers-reduced-motion` it appears and disappears without
+    travelling, with the same time on screen: that is a timer, not motion.
 
-    **Lo que falta se cuenta como avance.** El momento estructural muestra
-    dónde va en el recorrido — lo hecho junto a lo que queda — leído del estado
-    real, no de una lista inventada de papeleo. Máximo dos pendientes visibles;
-    el resto se cuenta ("+ 2 elementos más"). Por eso la pantalla de comparación
-    dejó de encabezarse "Esto es lo que no entregaste".
+    **What is missing counts as progress.** The structural moment shows where
+    she is in the journey — what is done alongside what remains — read from
+    real state, not from an invented list of paperwork. At most two pending
+    items are visible; the rest are counted ("+ 2 more items"). That is why the
+    comparison screen stopped being headed "Here is what you did not hand over".
 
-    **Una sola cifra en todo el recorrido**, y
-    `test/content/waitingMoments.spec.ts` falla si aparece una segunda. Sólo se
-    publica lo verificado en fuente primaria: ENAFIN 2024 (INEGI, comunicado
-    62/25, 28 de mayo de 2025), con URL y fecha de consulta en el módulo. Se usa
-    el verbo del comunicado, "ha tenido financiamiento", y no el de la gráfica,
-    "solicitado": haber solicitado y haber tenido no son la misma medida. Otra
-    prueba falla si aparece cualquiera de las cifras que no se pudieron
-    verificar.
+    **One single figure in the whole journey**, and
+    `test/content/waitingMoments.spec.ts` fails if a second one appears. Only
+    what is verified in a primary source is published: ENAFIN 2024 (INEGI,
+    press release 62/25, 28 May 2025), with URL and access date in the module.
+    It uses the press release's verb, "ha tenido financiamiento" (*has had
+    financing*), not the chart's "solicitado" (*applied for*): having applied
+    and having had are not the same measure. Another test fails if any of the
+    figures that could not be verified appears.
 
 ## Proof-port sources
 
