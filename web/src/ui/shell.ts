@@ -44,7 +44,7 @@ export function renderTopbar(help?: string): string {
   return `
     <div class="topbar">
       <span class="wordmark">
-        <img class="mark" src="/icons/icon-192.png" alt="" width="24" height="24" />
+        <img class="mark" src="${import.meta.env.BASE_URL}icons/icon-192.png" alt="" width="24" height="24" />
         <span>Creva ZK</span>
       </span>
       <span class="topbar-controls">

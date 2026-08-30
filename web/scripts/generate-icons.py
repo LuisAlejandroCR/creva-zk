@@ -5,6 +5,7 @@
 # image asset is taken from that repo, only the token values.
 # Requires Pillow (`pip install Pillow`); run manually, not part of the build.
 
+import math
 from pathlib import Path
 from PIL import Image, ImageDraw
 
@@ -17,9 +18,16 @@ ON_BRAND = (0xFF, 0xFF, 0xFF)
 
 SUPERSAMPLE = 4  # shapes are drawn at 4x and downsampled for clean edges
 
-# The check, in coordinates normalised to the box it is drawn in.
-CHECK_POINTS = [(0.28, 0.53), (0.435, 0.685), (0.72, 0.335)]
-CHECK_STROKE = 0.105
+# The mark is Creva's C, not a check: the same letter the product's own app
+# icon carries, so the two read as one family on a home screen. Coordinates are
+# normalised to the box it is drawn in; angles follow Pillow's convention, 0 at
+# three o'clock and growing clockwise, so the aperture sits on the right.
+# Pillow's arc grows inward from the bounding box, so this is the OUTER radius
+# of the stroke, not its centreline.
+C_RADIUS = 0.32
+C_STROKE = 0.115
+C_START_DEG = 40
+C_END_DEG = 320
 
 # Every icon is a full-bleed gradient square, opaque edge to edge. No baked
 # corner radius: the launcher (and, in the app header, a CSS border-radius)
@@ -52,24 +60,27 @@ def gradient(size):
     return image
 
 
-def check_mask(size, scale=1.0):
-    """A white-on-black mask of the check mark, antialiased by downsampling."""
+def c_mask(size, scale=1.0):
+    """A white-on-black mask of the C, antialiased by downsampling."""
     big = size * SUPERSAMPLE
     mask = Image.new("L", (big, big), 0)
     draw = ImageDraw.Draw(mask)
 
-    def place(point):
-        x, y = point
-        # Scale about the centre so the mark shrinks without drifting.
-        return ((0.5 + (x - 0.5) * scale) * big, (0.5 + (y - 0.5) * scale) * big)
+    centre = big / 2
+    radius = C_RADIUS * scale * big
+    width = C_STROKE * scale * big
+    box = [centre - radius, centre - radius, centre + radius, centre + radius]
+    draw.arc(box, C_START_DEG, C_END_DEG, fill=255, width=round(width))
 
-    points = [place(p) for p in CHECK_POINTS]
-    width = CHECK_STROKE * scale * big
-
-    for start, end in zip(points, points[1:]):
-        draw.line([start, end], fill=255, width=round(width))
-    # Round caps and joins: Pillow's line has square ends, so cap them by hand.
-    for x, y in points:
+    # Round terminals: Pillow's arc has square ends, so cap them by hand. The
+    # cap sits on the stroke's centreline — half a stroke inside the outer
+    # radius — or it bulges past the curve on one side and misses it on the
+    # other.
+    for degrees in (C_START_DEG, C_END_DEG):
+        angle = math.radians(degrees)
+        mid = radius - width / 2
+        x = centre + mid * math.cos(angle)
+        y = centre + mid * math.sin(angle)
         r = width / 2
         draw.ellipse([x - r, y - r, x + r, y + r], fill=255)
 
@@ -77,10 +88,10 @@ def check_mask(size, scale=1.0):
 
 
 def build_icon(size, mark_scale):
-    """Full-bleed gradient with the white check centred on it."""
+    """Full-bleed gradient with the white C centred on it."""
     canvas = gradient(size).convert("RGBA")
     mark = Image.new("RGBA", (size, size), ON_BRAND + (255,))
-    canvas.paste(mark, (0, 0), check_mask(size, scale=mark_scale))
+    canvas.paste(mark, (0, 0), c_mask(size, scale=mark_scale))
     return canvas
 
 

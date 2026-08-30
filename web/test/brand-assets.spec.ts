@@ -160,7 +160,7 @@ describe('manifest.webmanifest', () => {
 
   it('declares every icon this repo ships, including a maskable one', () => {
     const sources = manifest.icons.map((icon: { src: string }) => icon.src);
-    for (const name of ICONS) expect(sources).toContain(`/icons/${name}`);
+    for (const name of ICONS) expect(sources).toContain(`./icons/${name}`);
 
     const purposes = manifest.icons.map((icon: { purpose: string }) => icon.purpose);
     expect(purposes).toContain('maskable');
