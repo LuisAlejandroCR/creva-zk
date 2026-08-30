@@ -60,11 +60,18 @@ const SAFE_CIRCUIT_ID = /^[A-Za-z0-9_-]+$/;
 // instead of read. Every failure throws, which is what ZKConfigProvider's
 // contract expects — the ports above catch and degrade.
 export class FetchZkConfigProvider<K extends string> extends ZKConfigProvider<K> {
-  constructor(
-    readonly baseUrl: string,
-    private readonly fetchImpl: typeof fetch,
-  ) {
+  readonly baseUrl: string;
+  private readonly fetchImpl: typeof fetch;
+
+  constructor(baseUrl: string, fetchImpl: typeof fetch) {
     super();
+    this.baseUrl = baseUrl;
+    // Bound on the way in. The browser's fetch is a method of the global
+    // object and throws "Illegal invocation" when its `this` is anything
+    // else — and holding it in a field means every call site would supply
+    // this provider as `this`. An injected fake is bound to itself, which
+    // is what a fake expects.
+    this.fetchImpl = fetchImpl.bind(globalThis);
   }
 
   private async fetchArtifact(subDir: string, circuitId: K, ext: string): Promise<Uint8Array> {
