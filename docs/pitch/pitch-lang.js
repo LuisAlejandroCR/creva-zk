@@ -20,8 +20,8 @@
     'Y un resultado<br>que contradijo la hipótesis.': 'And a result<br>that contradicted the hypothesis.',
     'Cuando algo falta': 'When something is missing',
     'Decirlo, en vez de<br>inventarse una respuesta.': 'Say so, instead of<br>inventing an answer.',
-    'Trabajo previo, declarado': 'Prior work, declared',
-    'Qué existía antes<br>y qué se escribió aquí.': 'What existed before<br>and what was written here.',
+    'Originalidad': 'Originality',
+    'Todo esto se construyó<br>este fin de semana.': 'All of this was built<br>this weekend.',
     'Identidad': 'Identity',
     'Respaldo': 'Backing',
     'PRUEBA 1': 'PROOF 1',
@@ -58,8 +58,8 @@
      'This repository asserted that verifying a signature inside the circuit would make the identity proof slower. That was an argument, not a measurement. The measurement disagreed.'],
     ['Toda dependencia externa devuelve',
      'Every external dependency returns a typed result, never an exception. And none of these screens says she failed — because nobody checked anything.'],
-    ['Entregado al track <b>Integrate Midnight</b>',
-     'Submitted to the <b>Integrate Midnight</b> track, where prior work is allowed when declared. Creva, the platform, already existed: this repository <b>contains none of its code</b> and consumes it as an external system, behind a single adapter. What was written during the event is the Compact circuit, the witnesses, the Midnight client, the interface and the anchoring port.']
+    ['Esta entrega no contiene trabajo previo',
+     '<b>This submission contains no prior work.</b> Every line in this repository was written during the event, and the repository was created for it: the Compact circuit, the witnesses, the Midnight client, the interface and the anchoring port. Creva, the platform, existed before and is a separate product — this repository <b>contains none of its code</b> and consumes it as an external system, behind a single adapter.']
   ];
 
   // Sustituciones parciales: el número se queda, la etiqueta cambia.

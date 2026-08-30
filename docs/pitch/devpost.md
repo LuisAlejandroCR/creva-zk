@@ -48,11 +48,12 @@ the external chain is unreachable, the port returns a typed degraded
 result, never a throw and never an invented receipt
 (`anchoring/src/types.ts`).
 
-## Prior-work declaration
+## Originality: everything here was built this weekend
 
 Verbatim from `README.md`:
 
-> Submitted to the **Integrate Midnight** track, where prior work is allowed when declared.
+> **This submission contains no prior work.** Every line in this repository was written during the
+> event, and the repository was created for it. Submitted to the **Integrate Midnight** track.
 >
 > - **What existed before:** Creva, a financial platform for women entrepreneurs in Mexico. This
 >   repository contains **none of its code**; it consumes Creva as an external system through its

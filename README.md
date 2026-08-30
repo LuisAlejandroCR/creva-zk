@@ -34,11 +34,13 @@ public predicate, and disclose **only the outcome**.
 - [`advisor/`](advisor/README.md) — local tier advisor for the Integrate Midnight AI track.
 - [`web/`](web/README.md) — the installable PWA shell.
 
-### Prior work declaration
+### Originality: everything here was built this weekend
 
-Submitted to the **Integrate Midnight** track, where prior work is allowed when declared.
+**This submission contains no prior work.** Every line in this repository was written during the
+event; the repository itself was created for it. Submitted to the **Integrate Midnight** track.
 
-- **What existed before:** Creva, a financial platform for women entrepreneurs in Mexico. This
+- **What is NOT in this repository:** Creva, a financial platform for women entrepreneurs in
+  Mexico, existed before the event and is a separate product. This
   repository contains **none of its code**; it consumes Creva as an external system through its
   public API, behind a single adapter.
 - **What was written during the event:** everything in this repository — the Compact circuit, the
@@ -130,12 +132,13 @@ circuito, evaluar un predicado público, y divulgar **solo el desenlace**.
 - [`advisor/`](advisor/README.md) — asesor local de tramo para el track Integrate Midnight AI.
 - [`web/`](web/README.md) — la shell de la PWA instalable.
 
-### Declaración de trabajo previo
+### Originalidad: todo esto se construyó este fin de semana
 
-Entregado al track **Integrate Midnight**, donde el trabajo previo se permite si se declara.
+**Esta entrega no contiene trabajo previo.** Cada línea de este repositorio se escribió durante el
+evento; el repositorio se creó para él. Entregado al track **Integrate Midnight**.
 
-- **Lo que existía antes:** Creva, una plataforma financiera para mujeres emprendedoras en México.
-  Este repositorio **no contiene una línea de su código**: la consume como sistema externo por su
+- **Lo que NO está en este repositorio:** Creva, una plataforma financiera para mujeres
+  emprendedoras en México, existía antes del evento y es un producto aparte. Este repositorio **no contiene una línea de su código**: la consume como sistema externo por su
   API pública, detrás de un único adaptador.
 - **Lo que se escribió durante el evento:** todo lo que hay en este repositorio — el circuito
   Compact, los witnesses, el cliente de Midnight, la interfaz y el puerto de anclaje.
