@@ -1306,6 +1306,10 @@ h1 {
    reaching for: the primary action is far below it at every width, so nothing
    she needs in order to continue is ever behind this.
 
+   It lives inside a wait. It is armed when a proof starts and dropped when
+   the answer lands, so it is never a notification about something she already
+   finished.
+
    The host is fixed and its position is measured from the strip at show time
    (momentView.ts), so a change to the strip's height cannot leave this
    floating in the wrong place. */
@@ -1319,12 +1323,9 @@ h1 {
 }
 
 .progress-moment {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
   max-width: min(19rem, 100%);
-  padding: 0.55rem 0.7rem;
-  border-radius: 12px;
+  padding: 0.7rem 0.8rem 0.75rem;
+  border-radius: 14px;
   border: 1px solid var(--cr-border);
   background: var(--cr-surface-1);
   box-shadow: var(--cr-shadow-brand-sm);
@@ -1337,16 +1338,44 @@ h1 {
   animation: cr-moment-leave var(--cr-dur) var(--cr-ease) both;
 }
 
-/* The glyph never carries the meaning on its own: the eyebrow or the title
-   beside it says the same thing in words. */
-.moment-mark {
-  flex: none;
-  font-size: 0.8rem;
-  line-height: 1.5;
+/* The icon leads. It is the first thing on the card and it states the moment
+   before a word of the copy is read — the same chip the settings rows use: a
+   soft circle with a line glyph on it. */
+.moment-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 0.5rem;
+  border-radius: 50%;
+  background: var(--cr-surface-2);
   /* --cr-crimson is the brand ink and measures 2.91:1 on --cr-surface-1 in
-     the ink palette, under AA. --cr-danger-text is the same hue resolved per
-     theme and clears both. See DESIGN.md, "Las tres prohibiciones". */
+     the ink palette — under the 3:1 a graphic that carries meaning needs.
+     --cr-danger-text is the same hue resolved per theme and clears both.
+     See DESIGN.md, "Las tres prohibiciones". */
   color: var(--cr-danger-text);
+}
+
+.moment-art svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* One eased gesture per icon, played once: the way in draws through the door,
+   the bicycle rolls, the last course arrives, the check lands. */
+.moment-art-move {
+  animation: cr-art-move var(--cr-dur-slow) var(--cr-ease) both;
+}
+
+.moment-art[data-visual='assembling'] .moment-art-move {
+  animation: cr-art-drop var(--cr-dur-slow) var(--cr-ease) both;
+}
+
+.moment-art-rays {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cr-art-rays var(--cr-dur-slow) var(--cr-ease) both;
 }
 
 .moment-copy {
@@ -1366,24 +1395,77 @@ h1 {
 
 .moment-title {
   font-family: var(--font-playfair);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   font-weight: 800;
   line-height: 1.25;
   color: var(--cr-text);
 }
 
+/* 0.7rem is not a taste: it is the largest size at which the longest sentence
+   this component may ever carry — the ENAFIN measure, 93 characters, whose
+   wording is fixed by the source and cannot be shortened — still sits on two
+   lines in a 288px popover at a 320px viewport. At 0.72rem it runs to three.
+   Measured in the real popover, not estimated. */
 .moment-body {
-  font-size: 0.75rem;
-  line-height: 1.35;
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
   color: var(--cr-text-muted);
 }
 
 .moment-source {
-  margin-top: 0.15rem;
+  margin-top: 0.25rem;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--cr-text-muted);
+}
+
+/* Where she is in the journey, and the reason this component exists at all:
+   what is finished is shown beside what is left, so the moment reads as
+   progress rather than as a list of things she failed to hand over. */
+.moment-checklist {
+  display: grid;
+  gap: 0.22rem;
+  margin: 0.55rem 0 0;
+  padding: 0.5rem 0 0;
+  border-top: 1px solid var(--cr-border);
+  list-style: none;
+}
+
+.moment-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  /* --cr-text-secondary measures 4.44:1 on --cr-surface-1 in the ink palette,
+     under AA at this size; --cr-text-muted clears it in both themes. */
+  color: var(--cr-text-muted);
+}
+
+.moment-check-mark {
+  flex: none;
+  width: 0.9rem;
+  text-align: center;
+}
+
+.moment-check[data-state='done'] .moment-check-mark {
+  color: var(--cr-success-text);
+}
+
+.moment-check[data-state='active'] .moment-check-mark {
+  color: var(--cr-danger-text);
+}
+
+.moment-check[data-state='done'] .moment-check-label,
+.moment-check[data-state='active'] .moment-check-label {
+  color: var(--cr-text);
+  font-weight: 700;
+}
+
+.moment-check--more {
+  padding-left: 1.3rem;
 }
 
 @keyframes cr-moment-enter {
@@ -1394,6 +1476,21 @@ h1 {
 @keyframes cr-moment-leave {
   from { opacity: 1; transform: none; }
   to   { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes cr-art-move {
+  from { opacity: 0; transform: translateX(-3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-art-drop {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cr-art-rays {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1416,7 +1513,10 @@ h1 {
      under the eye. It still gets its full time on screen — that is a timer,
      not motion. */
   .progress-moment,
-  .progress-moment[data-leaving='true'] {
+  .progress-moment[data-leaving='true'],
+  .moment-art-move,
+  .moment-art[data-visual='assembling'] .moment-art-move,
+  .moment-art-rays {
     animation: none !important;
   }
 

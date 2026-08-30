@@ -256,34 +256,52 @@ made with. No screen decides an outcome for itself.
     which `style-controls.spec.ts` pins. `render.spec.ts` pins that the four
     proof states resolve to four different archetypes.
 
-17. **Micro-momentos de progreso.** Al completar un paso sale un popover de la
-    franja de navegación — el mismo gesto que `icon-button-tip` — que dice lo
-    que acaba de lograr y se va solo. No es una tarjeta ni un modal, no pide
-    interacción y no tiene botón de cerrar. El copy vive entero en
-    `src/content/financialFacts.ts`; `src/ui/progressMoment.ts` sólo renderiza
-    lo que ese módulo le pasa, y `src/momentView.ts` lo ancla midiendo la
-    franja en vez de con una constante.
+17. **Micro-momentos dentro de la espera.** Mientras una prueba corre sale un
+    popover de la franja de navegación — el mismo gesto que `icon-button-tip` —
+    que dice una cosa y se va solo. No es una tarjeta ni un modal, no pide
+    interacción y no tiene botón de cerrar.
+
+    **El momento pertenece a la espera, no al paso.** Se arma cuando el estado
+    pasa a `generating` y se desarma cuando llega la respuesta. Ningún momento
+    lo dispara un toque, y ninguno alarga el recorrido: una señal que la
+    respuesta alcanzó a adelantar se descarta en vez de mostrarse tarde.
+    `test/momentView.spec.ts` lo fija en las dos direcciones.
+
+    **Cuatro pasos, dos esperas.** El recorrido sólo hace esperar dos veces —
+    la prueba de identidad y la de respaldo, unos 23.7 s cada una — así que el
+    arco de cuatro tiempos se reparte dentro de esas dos. Momentos 1 y 2 en la
+    espera de identidad, 3 en la de respaldo, y 4 al aterrizar la respuesta:
+    decir "listo" con la barra en 81 % sería la única mentira que esta pantalla
+    nunca ha dicho.
+
+    **El dibujo va primero.** Cada momento abre con un icono de línea sobre
+    chip circular — el idioma de las filas de ajustes de Creva: trazo 1.75,
+    remates redondos, `--cr-danger-text` sobre `--cr-surface-2` — y el texto es
+    su pie de foto. Los cuatro iconos son distintos: puerta, bicicleta, capas
+    ensamblándose, celebración.
 
     **Nunca se solapa con la acción.** Ancla arriba porque la franja es la
-    única parte del marco que ella no está buscando tocar; la acción principal
-    queda muy por debajo en todo ancho. Verificado con `elementFromPoint`
-    sobre el centro del CTA y con intersección de rectángulos, en 320/390/768
-    y en los dos temas: 18 de 18 despejados.
+    única parte del marco que ella no está buscando tocar. Verificado con
+    `elementFromPoint` y con intersección de rectángulos contra el CTA, el
+    anillo y el paso visible, en 320/390/768 y en los dos temas.
 
     **Tiempos.** Entra en `--cr-dur` (240 ms), se queda 3 s, sale en 240 ms.
     Bajo `prefers-reduced-motion` aparece y desaparece sin desplazarse, con el
     mismo tiempo en pantalla: eso es un temporizador, no movimiento.
 
-    **La cadencia.** Paso 1 cifra, paso 2 ánimo, paso 3 el punto estructural
-    sin cifra, paso 4 celebración. **Una sola cifra en todo el recorrido**, y
-    `test/content/financialFacts.spec.ts` falla si aparece una segunda.
+    **Lo que falta se cuenta como avance.** El momento estructural muestra
+    dónde va en el recorrido — lo hecho junto a lo que queda — leído del estado
+    real, no de una lista inventada de papeleo. Máximo dos pendientes visibles;
+    el resto se cuenta ("+ 2 elementos más"). Por eso la pantalla de comparación
+    dejó de encabezarse "Esto es lo que no entregaste".
 
-    **Las cifras.** Sólo se publica lo verificado en fuente primaria. Hoy es
-    una: ENAFIN 2024 (INEGI, comunicado 62/25, 28 de mayo de 2025), con URL y
-    fecha de consulta en el módulo. Se usa el verbo del texto del comunicado,
-    "ha tenido financiamiento", y no el de la gráfica, "solicitado": haber
-    solicitado y haber tenido no son la misma medida. Una prueba lo pinea, y
-    otra falla si aparece cualquiera de las cifras que no se pudieron
+    **Una sola cifra en todo el recorrido**, y
+    `test/content/waitingMoments.spec.ts` falla si aparece una segunda. Sólo se
+    publica lo verificado en fuente primaria: ENAFIN 2024 (INEGI, comunicado
+    62/25, 28 de mayo de 2025), con URL y fecha de consulta en el módulo. Se usa
+    el verbo del comunicado, "ha tenido financiamiento", y no el de la gráfica,
+    "solicitado": haber solicitado y haber tenido no son la misma medida. Otra
+    prueba falla si aparece cualquiera de las cifras que no se pudieron
     verificar.
 
 ## Proof-port sources
@@ -426,11 +444,6 @@ characters, no `0x` — see `assertIsContractAddress` in
 
 Her wallet then signs exactly one thing: her own proof.
 
-No Docker to run that on? There is a second, operator-only way to get the same address: the
-deployment tool behind `VITE_LACE_DEPLOY=1` (or `?deploy=1`), which deploys once from the browser
-with the operator's own wallet and prints the address to copy. It is off by default, never runs on
-load, and is not part of the user journey — see `docs/DESPLIEGUE-LACE.md`.
-
 ### Which network id
 
 `VITE_LACE_NETWORK_ID` defaults to `preprod`, and that is read off the
@@ -515,27 +528,6 @@ The raw cause behind every one of them goes to the browser console (the seam
 in `src/proofPort.ts` supplies the only logger this app installs) and never
 into the reason itself, which is a fixed string precisely so it cannot carry
 an endpoint or a stack fragment onto the screen.
-
-### Presupuestos de tiempo (cada paso externo tiene tope)
-
-Un externo que nunca responde no rechaza: se queda callado, y la pantalla se
-queda contando. Por eso cada paso de la cadena browser-direct gasta un
-presupuesto y, al agotarlo, devuelve el degradado que ya le corresponde. Las
-constantes viven en `api/src/timeouts.ts`, junto al ayudante `withTimeout`
-que las gasta, y la prueba en sí **no** lleva tope: tarda ~23,7 s y en un
-teléfono más, así que cortarla sería inventar un fallo.
-
-| Paso externo | Constante | Presupuesto | Degradado |
-| --- | --- | --- | --- |
-| `wallet.connect()` | `DEFAULT_WALLET_CONNECT_TIMEOUT_MS` | 120 s | `wallet_locked` |
-| `getConnectionStatus()`, `getConfiguration()`, `getShieldedAddresses()` | `DEFAULT_WALLET_QUERY_TIMEOUT_MS` | 10 s | `wallet_locked` |
-| Sonda al servidor de pruebas | `DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS` | 3 s | `proof_server_unreachable` |
-| Unirse al contrato | `DEFAULT_JOIN_TIMEOUT_MS` | 20 s | `contract_not_found` |
-| La prueba (`proveBacking`) | — | sin tope | — |
-
-El diálogo de Lace es el único con minutos en lugar de segundos: ahí hay una
-persona leyendo y aprobando, y un tope corto convertiría una autorización
-lenta en un fallo falso. Los demás son viajes de ida y vuelta entre máquinas.
 
 ### Configuration
 

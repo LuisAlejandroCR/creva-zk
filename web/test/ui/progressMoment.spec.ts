@@ -1,50 +1,130 @@
 // progressMoment.spec.ts
-// The popover's markup contract: it announces politely, it carries nothing
-// interactive, and its glyph is never the only thing saying what it means.
+// The popover's markup contract: the visual leads, it announces politely, it
+// carries nothing interactive, and the checklist stays orientation rather
+// than growing into a dashboard.
 
 import { describe, expect, it } from 'vitest';
-import { renderProgressMoment, renderProgressMomentHost } from '../../src/ui/progressMoment';
-import { PROGRESS_MOMENTS, momentForStep } from '../../src/content/financialFacts';
+import {
+  MAX_PENDING_SHOWN,
+  renderProgressMoment,
+  renderProgressMomentHost,
+  type MomentChecklistItem,
+} from '../../src/ui/progressMoment';
+import { PROGRESS_MOMENTS, momentByOrder } from '../../src/content/waitingMoments';
 
-const everyMoment = PROGRESS_MOMENTS.map((moment) => [moment.step, moment] as const);
+const JOURNEY: readonly MomentChecklistItem[] = [
+  { label: 'Quién eres', state: 'done' },
+  { label: 'Tu respaldo', state: 'active' },
+  { label: 'Qué compartiste', state: 'pending' },
+  { label: 'Tu resultado', state: 'pending' },
+];
 
-describe('renderProgressMoment', () => {
-  it.each(everyMoment)('step %i announces once, politely', (_step, moment) => {
-    const html = renderProgressMoment(moment);
-    expect(html).toContain('role="status"');
-    expect(html).toContain('aria-live="polite"');
-    // assertive would cut her off mid-sentence for something she can ignore.
-    expect(html).not.toContain('assertive');
+describe('the popover announces without interrupting', () => {
+  it.each(PROGRESS_MOMENTS.map((moment) => [moment.order, moment] as const))(
+    'moment %i',
+    (_order, moment) => {
+      const html = renderProgressMoment(moment, JOURNEY);
+      expect(html).toContain('role="status"');
+      expect(html).toContain('aria-live="polite"');
+      // Polite or nothing: this never cuts across what she is reading.
+      expect(html).not.toContain('assertive');
+    },
+  );
+});
+
+describe('the popover takes no interaction at all', () => {
+  it.each(PROGRESS_MOMENTS.map((moment) => [moment.order, moment] as const))(
+    'moment %i offers nothing to tap',
+    (_order, moment) => {
+      const html = renderProgressMoment(moment, JOURNEY);
+      expect(html).not.toMatch(/<(button|a|input|select|textarea)\b/);
+      expect(html).not.toContain('tabindex');
+      expect(html).not.toMatch(/cerrar|descartar|saber más|ver más/i);
+    },
+  );
+});
+
+describe('the visual leads', () => {
+  it.each(PROGRESS_MOMENTS.map((moment) => [moment.order, moment] as const))(
+    'moment %i opens with its icon, ahead of every word',
+    (_order, moment) => {
+      const html = renderProgressMoment(moment, JOURNEY);
+      expect(html).toContain(`data-visual="${moment.visual}"`);
+      expect(html.indexOf('moment-art')).toBeLessThan(html.indexOf('moment-eyebrow'));
+    },
+  );
+
+  it('hides the icon from screen readers, because the title already says it', () => {
+    const html = renderProgressMoment(momentByOrder(1)!, JOURNEY);
+    expect(html).toMatch(/class="moment-art"[^>]*aria-hidden="true"/);
   });
 
-  it.each(everyMoment)('step %i holds nothing she could or would have to touch', (_step, moment) => {
-    const html = renderProgressMoment(moment);
-    // No close button, no link, no focusable anything: the moment takes no
-    // interaction, and nothing she needs in order to continue is inside it.
-    expect(html).not.toMatch(/<(button|a|input|select|textarea)\b/i);
-    expect(html).not.toContain('tabindex');
-    expect(html).not.toMatch(/cerrar|descartar|saber más/i);
+  it('draws the icons in the product idiom: line, round caps, no fill', () => {
+    for (const moment of PROGRESS_MOMENTS) {
+      const html = renderProgressMoment(moment, JOURNEY);
+      expect(html).toContain('stroke="currentColor"');
+      expect(html).toContain('stroke-linecap="round"');
+      expect(html).toContain('stroke-linejoin="round"');
+      expect(html).toContain('fill="none"');
+    }
   });
+});
 
-  it.each(everyMoment)('step %i never lets the glyph carry the meaning alone', (_step, moment) => {
-    const html = renderProgressMoment(moment);
-    // The glyph is hidden from the accessibility tree precisely because the
-    // words beside it already say it.
-    expect(html).toMatch(/class="moment-mark" aria-hidden="true"/);
-    expect(html).toContain(moment.title);
+describe('the source appears only where a figure does', () => {
+  it('carries the citation on the one moment that states a number', () => {
+    expect(renderProgressMoment(momentByOrder(1)!, JOURNEY)).toContain('INEGI · ENAFIN 2024');
+    for (const order of [2, 3, 4]) {
+      expect(renderProgressMoment(momentByOrder(order)!, JOURNEY)).not.toContain('moment-source');
+    }
   });
+});
 
-  it('renders the source only where the copy states a figure', () => {
-    expect(renderProgressMoment(momentForStep(1)!)).toContain('INEGI · ENAFIN 2024');
-    for (const step of [2, 3, 4]) {
-      expect(renderProgressMoment(momentForStep(step)!)).not.toContain('moment-source');
+describe('the checklist orients rather than documents', () => {
+  it('appears on the structural moment and nowhere else', () => {
+    expect(renderProgressMoment(momentByOrder(3)!, JOURNEY)).toContain('moment-checklist');
+    for (const order of [1, 2, 4]) {
+      expect(renderProgressMoment(momentByOrder(order)!, JOURNEY)).not.toContain('moment-checklist');
     }
   });
 
-  it('mounts one host for the whole flow', () => {
-    const host = renderProgressMomentHost();
-    expect(host).toContain('id="progress-moment-host"');
-    // Empty on mount: a popover only exists once a step has been completed.
-    expect(host).toMatch(/<div[^>]*><\/div>/);
+  it('shows what is finished beside what is left, so it reads as progress', () => {
+    const html = renderProgressMoment(momentByOrder(3)!, JOURNEY);
+    expect(html).toContain("data-state=\"done\"");
+    expect(html).toContain("data-state=\"pending\"");
+    expect(html).toContain('Quién eres');
+    expect(html).toContain('Tu resultado');
+  });
+
+  it('counts the overflow instead of listing it', () => {
+    const long: readonly MomentChecklistItem[] = [
+      { label: 'Uno', state: 'done' },
+      { label: 'Dos', state: 'pending' },
+      { label: 'Tres', state: 'pending' },
+      { label: 'Cuatro', state: 'pending' },
+      { label: 'Cinco', state: 'pending' },
+    ];
+    const html = renderProgressMoment(momentByOrder(3)!, long);
+    expect([...html.matchAll(/data-state="pending"/g)]).toHaveLength(MAX_PENDING_SHOWN);
+    expect(html).toContain('+ 2 elementos más');
+    expect(html).not.toContain('Cuatro');
+  });
+
+  it('says "elemento" in the singular when only one is hidden', () => {
+    const long: readonly MomentChecklistItem[] = [
+      { label: 'Uno', state: 'pending' },
+      { label: 'Dos', state: 'pending' },
+      { label: 'Tres', state: 'pending' },
+    ];
+    expect(renderProgressMoment(momentByOrder(3)!, long)).toContain('+ 1 elemento más');
+  });
+
+  it('leaves the moment alone when the journey hands it nothing', () => {
+    expect(renderProgressMoment(momentByOrder(3)!, [])).not.toContain('moment-checklist');
+  });
+});
+
+describe('the host', () => {
+  it('mounts empty, so nothing is on screen before a wait starts', () => {
+    expect(renderProgressMomentHost()).toMatch(/<div class="progress-moment-host" id="[^"]+"><\/div>/);
   });
 });

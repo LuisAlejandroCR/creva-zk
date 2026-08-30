@@ -30,7 +30,9 @@ export interface CompareContent {
 
 export function buildCompareContent(): CompareContent {
   return {
-    h1: 'Esto es lo que no entregaste',
+    // Framed around what she still holds, not around what she failed to
+    // hand over: the same screen, read as progress rather than as a shortfall.
+    h1: 'Lo que sigue siendo tuyo',
     intro: 'A la izquierda, lo que se pide siempre. A la derecha, lo que diste hoy.',
     leftTitle: 'Como se pide siempre',
     items: [

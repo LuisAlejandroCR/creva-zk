@@ -9,12 +9,13 @@ import type { Tier } from './domain/tier';
 import type { ProofState } from './domain/proofState';
 import { STUB_LATENCY_MS, idleProof } from './domain/proofState';
 import {
+  SYNTHETIC_ISSUER_KEY,
   SYNTHETIC_REQUESTED_LIMIT,
   SYNTHETIC_TAX_ID_HASH,
   backingHolds,
   identityHolds,
 } from './domain/demoInputs';
-import { activePortSource, identityIssuerKey, selectBackingPort, selectIdentityPort } from './proofPort';
+import { activePortSource, selectBackingPort, selectIdentityPort } from './proofPort';
 import { runProof } from './proofRun';
 import { buildIdentityContent } from './screens/identityContent';
 import { buildBackingContent } from './screens/backingContent';
@@ -23,9 +24,8 @@ import { buildOffersContent } from './screens/offersContent';
 import { renderCompareScreen, renderOffersScreen, renderProofScreen } from './render';
 import { buildStepProgress, type StepProgress } from './domain/journeyProgress';
 import { applyWaitProgress, type WaitPatch } from './waitView';
-import { createMomentTimer, type MomentTimer } from './momentView';
-import { momentForStep } from './content/financialFacts';
-import { PROGRESS_MOMENT_HOST_ID } from './ui';
+import { createMomentScheduler, type MomentScheduler } from './momentView';
+import { PROGRESS_MOMENT_HOST_ID, type MomentChecklistItem } from './ui';
 import { parseHelpRoute } from './help/helpRoute';
 import { renderHelpArticle, renderHelpCategory, renderHelpIndex } from './help/helpRender';
 
@@ -140,21 +140,21 @@ export function mountApp(root: HTMLElement): void {
   // ticker, and simply stops drawing. A proof started before she left is
   // still running when she comes back.
   let showingHelp = false;
-  // Which steps have already had their moment. A moment marks a completion,
-  // so a re-render — or coming back from the help centre — must never replay
-  // one she has already seen.
-  const momentsShown = new Set<number>();
-  const momentHost = document.getElementById(PROGRESS_MOMENT_HOST_ID);
-  const moments: MomentTimer | undefined = momentHost ? createMomentTimer(momentHost) : undefined;
-
-  // The step whose completion earned it, 1-based, matching STEP_NAMES order.
-  function celebrate(step: number): void {
-    if (momentsShown.has(step)) return;
-    const moment = momentForStep(step);
-    if (moment === undefined) return;
-    momentsShown.add(step);
-    moments?.show(moment);
+  // Where she is in the journey, in the journey's own words. The structural
+  // moment shows this instead of a list of paperwork nobody asked her for:
+  // every row is real state, so nothing on it is invented.
+  function journeyChecklist(): readonly MomentChecklistItem[] {
+    const current = STEP_NAMES.findIndex(([name]) => name === state.step);
+    return STEP_NAMES.map(([, label], index) => ({
+      label,
+      state: index < current ? 'done' : index === current ? 'active' : 'pending',
+    }));
   }
+
+  const momentHost = document.getElementById(PROGRESS_MOMENT_HOST_ID);
+  const moments: MomentScheduler | undefined = momentHost
+    ? createMomentScheduler(momentHost, { checklist: journeyChecklist })
+    : undefined;
 
   function stopTicking(): void {
     if (tickHandle !== undefined) clearInterval(tickHandle);
@@ -194,18 +194,23 @@ export function mountApp(root: HTMLElement): void {
         kind === 'identity'
           ? { ...state, identity: next as ProofState<boolean> }
           : { ...state, backing: next as ProofState<Tier> };
-      if (next.phase !== 'generating') stopTicking();
+      // The moments belong to the processing period, so they are armed the
+      // instant it is entered and dropped the instant it is left. Nothing
+      // here is triggered by a tap.
+      if (next.phase === 'generating') {
+        moments?.startWait(kind);
+      } else {
+        stopTicking();
+        moments?.endWait(kind, next.phase === 'ready' ? 'ready' : 'unanswered');
+      }
       render();
-      // A proof that came back yes is that step finished. Degraded or failed
-      // is not, and gets no celebration.
-      if (next.phase === 'ready') celebrate(kind === 'identity' ? 1 : 2);
     };
 
     const run =
       kind === 'identity'
         ? runProof<boolean>({
             call: () =>
-              selectIdentityPort().checkIdentity(identityIssuerKey(), SYNTHETIC_TAX_ID_HASH),
+              selectIdentityPort().checkIdentity(SYNTHETIC_ISSUER_KEY, SYNTHETIC_TAX_ID_HASH),
             holds: identityHolds,
             emit,
             minimumMs: stubHold(),
@@ -251,17 +256,13 @@ export function mountApp(root: HTMLElement): void {
       if (state.step === 'compare') {
         state = { ...state, step: 'offers' };
         render();
-        celebrate(3);
-        // The end of the journey, and the only moment about having arrived
-        // rather than about having advanced.
-        celebrate(4);
         return;
       }
 
       // offers: start over
       generation += 1;
       stopTicking();
-      momentsShown.clear();
+      moments?.reset();
       state = initialState();
       render();
     });
