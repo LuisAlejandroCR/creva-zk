@@ -55,31 +55,37 @@ Three implementations, selected by `web/`'s seam (`web/src/proofPort.ts`) throug
 
 `callProveBacking` takes a `FoundBacking`, not a `DeployedBacking`: a deployment is a found
 contract, so one call path serves the process that deployed and the browser that joined.
-`joinBacking` bounds its own wait (`DEFAULT_JOIN_TIMEOUT_MS`, 20s) because
-`findDeployedContract` waits on `watchForDeployTxData`, and an address with nothing at it never
-answers "no" — it simply never answers. A malformed address, an empty one, an indexer that never
-answers and a contract whose verifier keys do not match this build are all one thing to the user
-— `contract_not_found` — and the raw cause goes to the logger.
+
+`joinBacking` bounds its own wait (`DEFAULT_JOIN_TIMEOUT_MS`, 20s) because `findDeployedContract`
+waits on `watchForDeployTxData`, and an address with nothing at it never answers "no" — it simply
+never answers.
+
+A malformed address, an empty one, an indexer that never answers and a contract whose verifier keys
+do not match this build are all one thing to the user — `contract_not_found` — and the raw cause
+goes to the logger.
 
 The browser joining rather than deploying is a product decision, not a plumbing one: deploying in
 the page would cost her the ~19s *and* a signature on a deployment that is not hers. See
 [`web/README.md`](../web/README.md).
 
-`proveBacking` answers a `Boolean`: the collateral cleared the requested limit, or it did not.
-It carries no tier ladder — that is `backing-tier.compact`'s `proveBackingTier`. So a cleared
-proof is reported as **the lowest tier the proof actually supports**, `bronze`
+`proveBacking` answers a `Boolean`: the collateral cleared the requested limit, or it did not. It
+carries no tier ladder — that is `backing-tier.compact`'s `proveBackingTier`.
+
+So a cleared proof is reported as **the lowest tier the proof actually supports**, `bronze`
 (`TIER_PROVEN_BY_CLEARED_BACKING`), and a proof that does not clear as `none`. Reporting `silver`
 to match the stub would be claiming more than the circuit proved.
 
 ### What `proveIdentity` proves, and what it does not
 
-`identity-check.compact` has a TypeScript binding: `contract/src/identity.ts` exports the
-compiled contract and its `identityAttestation` witness, and `realIdentityPort.ts` deploys it
-and calls `proveIdentity` per request. The blocker that used to hold it back — no signer on
-Midnight's own curve — is gone: `attestation/src/signing.ts` signs **Schnorr over Jubjub** with
-the Compact runtime's own curve operations, and it obtains the challenge by calling the
-contract's `identityAttestationChallenge` pure circuit rather than reimplementing Compact's
-`transientHash` in TypeScript. Signer and verifier therefore agree by construction.
+`identity-check.compact` has a TypeScript binding: `contract/src/identity.ts` exports the compiled
+contract and its `identityAttestation` witness, and `realIdentityPort.ts` deploys it and calls
+`proveIdentity` per request. The blocker that used to hold it back — no signer on Midnight's own
+curve — is gone:
+
+`attestation/src/signing.ts` signs **Schnorr over Jubjub** with the Compact runtime's own curve
+operations, and it obtains the challenge by calling the contract's `identityAttestationChallenge`
+pure circuit rather than reimplementing Compact's `transientHash` in TypeScript. Signer and
+verifier therefore agree by construction.
 
 **The issuer is synthetic.** Creva's KYC provider signs nothing today, so the deployment issues
 its own Schnorr key and attests to a claim that belongs to nobody (`api/src/identityClaim.ts`).
@@ -138,8 +144,9 @@ process; killing the server with `SIGKILL` leaves it held until the container is
 ### One deployment, many proofs
 
 Starting the network and deploying costs roughly **19 s** on top of each proof (~23.7 s for
-backing, **23.65 s** for identity — both measured, and within noise of each other). The server pays
-that once: the deployment is memoised for the process lifetime, shared by every
+backing, **23.65 s** for identity — both measured, and within noise of each other).
+
+The server pays that once: the deployment is memoised for the process lifetime, shared by every
 request and by both ports, and concurrent first requests share one in-flight attempt rather than
 starting two networks. Nothing is deployed until the first request arrives, so the port binds
 immediately instead of after a cold start.
@@ -156,11 +163,12 @@ machine where `npm run compact:build` has not run.
 
 A **backing** proof measured **~23.7 s** (23697 ms for the clearing call, 18316 ms for the
 non-clearing one), so no default anywhere on this path may be 30 s. That number was measured on
-`backing.compact`, which does **no** in-circuit signature verification. `proveIdentity` does
-verify a Schnorr signature inside the circuit, so its proof is slower — by how much is **not
-measured**, and no number for it is stated here. The server's per-request budget is 180 s and the
-bridge port's client timeout is 120 s — both a ceiling, not a wait: a server that is down fails
-the call immediately.
+`backing.compact`, which does **no** in-circuit signature verification.
+
+`proveIdentity` does verify a Schnorr signature inside the circuit, so its proof is slower — by how
+much is **not measured**, and no number for it is stated here. The server's per-request budget is
+180 s and the bridge port's client timeout is 120 s — both a ceiling, not a wait: a server that is
+down fails the call immediately.
 
 ### With the server down
 

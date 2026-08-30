@@ -1,8 +1,9 @@
-Creva ZK's design system, written so an agent can generate consistent
-interface without opening the CSS. The source of truth is `web/src/style.css`,
-which in turn ports the tokens from `creva_finance/frontend/app/globals.css`.
-The values here were read out of that file; the contrast ratios were
-calculated, not estimated.
+Creva ZK's design system, written so an agent can generate consistent interface
+without opening the CSS.
+
+The source of truth is `web/src/style.css`, which in turn ports the tokens from
+`creva_finance/frontend/app/globals.css`. The values here were read out of that
+file; the contrast ratios were calculated, not estimated.
 
 # Design system — Creva ZK
 
@@ -43,8 +44,10 @@ washes out to pink and the light ink falls to 2.06:1.
 The light theme is the default. Dark arrives through two paths that only write
 ink, so they cannot contradict each other: the `.dark` class on the root (the
 host's mechanism) and `@media (prefers-color-scheme: dark)` for when there is
-no host. To force light on a dark system, put `.light` on the root. The two
-blocks must stay identical; `theme-mechanism.spec.ts` fails if they drift.
+no host.
+
+To force light on a dark system, put `.light` on the root. The two blocks must
+stay identical; `theme-mechanism.spec.ts` fails if they drift.
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
@@ -71,9 +74,10 @@ Background and border are identical in both themes; only the ink changes.
 The backgrounds are translucent (`rgba`, alpha 0.10–0.15), so they **compose
 with whatever is underneath**. A semantic ink on its own tint stays in the same
 hue family and usually falls below AA: on those tints the ink goes neutral
-(`--cr-text`) and the tint carries the meaning. That already happened with
-`.disclaimer` (4.27:1), `.compare-counterparty` (4.30:1) and `.badge-success`
-on `--cr-surface-2` (4.47:1).
+(`--cr-text`) and the tint carries the meaning.
+
+That already happened with `.disclaimer` (4.27:1), `.compare-counterparty`
+(4.30:1) and `.badge-success` on `--cr-surface-2` (4.47:1).
 
 ## Contrast
 
@@ -239,10 +243,11 @@ chip.
 | Ink | `color: var(--cr-danger-text)` — never `--cr-crimson`, see prohibition 1 |
 
 The chip is `aria-hidden`: the title beside it already says the same thing in
-words. A glyph that carries meaning is a graphic, and WCAG 1.4.11 requires 3:1
-against its background — another reason the ink is `--cr-danger-text` and not
-the brand color: `--cr-crimson` measures 2.91:1 on `--cr-surface-1` in the dark
-theme.
+words.
+
+A glyph that carries meaning is a graphic, and WCAG 1.4.11 requires 3:1 against
+its background — another reason the ink is `--cr-danger-text` and not the brand
+color: `--cr-crimson` measures 2.91:1 on `--cr-surface-1` in the dark theme.
 
 The icons are drawn in this repository. No icon library is imported.
 

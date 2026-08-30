@@ -7,10 +7,12 @@ commitment to the outcome, never the outcome, and never anything about identity.
 
 Owns the chain-agnostic anchoring port: a blinded sha256 commitment scheme over a `BackingOutcome`
 (tier + timestamp), and the `AnchoringPort` interface with Cardano and EVM adapters that submit a
-commitment as transaction metadata/calldata. It does not own a real chain SDK integration — both
-adapters are written against a minimal submitter interface (`CardanoTxSubmitter`,
-`EvmTxSubmitter`) and take a caller-supplied client; wiring a real one in is out of scope here. It
-also has no path for anchoring an identity outcome, by design.
+commitment as transaction metadata/calldata.
+
+It does not own a real chain SDK integration — both adapters are written against a minimal
+submitter interface (`CardanoTxSubmitter`, `EvmTxSubmitter`) and take a caller-supplied client;
+wiring a real one in is out of scope here. It also has no path for anchoring an identity outcome,
+by design.
 
 ## What it anchors
 

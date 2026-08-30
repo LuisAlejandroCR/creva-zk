@@ -7,9 +7,10 @@ that no private financial value leaves the device for a hosted model.
 
 Owns the local tier advisor for the Integrate Midnight AI track: `AdvisorPort.advise` takes exactly
 one field, the derived backing tier, and returns guidance text with `offerAvailable` always `false`
-since no lender catalogue is connected. It does not own the backing circuit, the collateral amount,
-or any hosted/third-party model call — `LocalTierPredictor` implementations may only call a local
-inference process, never a hosted API.
+since no lender catalogue is connected.
+
+It does not own the backing circuit, the collateral amount, or any hosted/third-party model call —
+`LocalTierPredictor` implementations may only call a local inference process, never a hosted API.
 
 ## Predictors
 

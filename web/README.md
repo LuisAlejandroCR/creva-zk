@@ -109,17 +109,17 @@ made with. No screen decides an outcome for itself.
    VITE_PORT_SOURCE=bridge npm run dev --workspace web  # a real proof (~23.7s, backing)
    ```
 
-   With nothing set the journey selects the stub ports and touches no
-   network; its copy and states are pinned by `test/defaultParity.spec.ts`.
-   The stub answers instantly, so it is held for `MEASURED_PROOF_MS`
-   (23 700 ms — the measured latency of one real **backing** proof, from
-   `tools/measure-proof-latency.sh`; no identity proof has been timed),
-   which is the same number the wait
-   sequence is paced against. That hold applies to the stub *only*, so a
-   real proof takes the time it takes and never has latency added to it.
-   Kill the proof server and both screens land on `degraded`;
-   `test/proofRun.spec.ts` proves that, and proves generating is entered
-   before the call and left only after it settles.
+   With nothing set the journey selects the stub ports and touches no network; its copy and
+   states are pinned by `test/defaultParity.spec.ts`.
+
+   The stub answers instantly, so it is held for `MEASURED_PROOF_MS` (23 700 ms — the measured
+   latency of one real **backing** proof, from `tools/measure-proof-latency.sh`; no identity
+   proof has been timed), which is the same number the wait sequence is paced against.
+
+   That hold applies to the stub *only*, so a real proof takes the time it takes and never has
+   latency added to it. Kill the proof server and both screens land on `degraded`;
+   `test/proofRun.spec.ts` proves that, and proves generating is entered before the call and left
+   only after it settles.
 10. **Progress, said once.** One compact treatment at the foot of the screen
     — `1 de 4` beside a track of one segment per step, the current one wider
     as well as darker so position never rests on colour alone. It used to be
@@ -148,35 +148,34 @@ made with. No screen decides an outcome for itself.
     There is no button while the work is on: a disabled "Trabajando en tu
     teléfono…" only repeated the ring.
 
-    When a step finishes it takes its check and holds it for
-    `CELEBRATION_MS` before the next arrives. With one step on screen that
-    beat is the only moment a completed step is ever seen, so it is never
-    cut; it is derived from elapsed time alone, which keeps the whole
-    sequence a pure function of the clock. A step is marked done only once
-    its successor is already running, and the last step is never marked done
-    at all — the answer has not arrived yet.
+    When a step finishes it takes its check and holds it for `CELEBRATION_MS` before the next
+    arrives.
+
+    With one step on screen that beat is the only moment a completed step is ever seen, so it is
+    never cut; it is derived from elapsed time alone, which keeps the whole sequence a pure
+    function of the clock. A step is marked done only once its successor is already running, and
+    the last step is never marked done at all — the answer has not arrived yet.
 
     The model lives in `src/domain/waitStages.ts` and is tested without
     waiting for it, including a walk of the whole run at the app's own tick
     rate.
 
-    Two things the readout will not do. It reports elapsed time only —
-    `Llevamos 21 s`, never `21 s de unos 24 s`, because the estimate is
-    precision the app cannot promise on a source whose latency it does not
-    control. And past the measured run the ring stops short of closing
-    (`MAX_PERCENT = 96`, so nothing on screen claims completion until the
-    answer lands) while the headline takes over (`Estamos terminando` / "No
-    necesitas hacer nada"): a slower proof has not failed, and claiming it
+    Two things the readout will not do. It reports elapsed time only — `Llevamos 21 s`, never `21
+    s de unos 24 s`, because the estimate is precision the app cannot promise on a source whose
+    latency it does not control.
+
+    And past the measured run the ring stops short of closing (`MAX_PERCENT = 96`, so nothing on
+    screen claims completion until the answer lands) while the headline takes over (`Estamos
+    terminando` / "No necesitas hacer nada"): a slower proof has not failed, and claiming it
     finished would be a lie.
 
-    While a proof runs the region is patched field by field
-    (`src/waitView.ts`) rather than re-rendered, so no transition is ever
-    interrupted: the headline swap, the ring, the readout and the step's
-    status all arrive in place, and a step swap inserts the arriving step
-    into the flow and lifts the departing one out of it, so the slot never
-    jumps. Under `prefers-reduced-motion` the swap happens without animating,
-    still one step at a time, and the held beat survives because it is timing
-    rather than motion.
+    While a proof runs the region is patched field by field (`src/waitView.ts`) rather than
+    re-rendered, so no transition is ever interrupted: the headline swap, the ring, the readout
+    and the step's status all arrive in place, and a step swap inserts the arriving step into the
+    flow and lifts the departing one out of it, so the slot never jumps.
+
+    Under `prefers-reduced-motion` the swap happens without animating, still one step at a time,
+    and the held beat survives because it is timing rather than motion.
 13. **Plain language, and an answer when she wants one.** Primary copy is
     written for a Mexican entrepreneur applying for a card, most of whom have
     never touched crypto. No *predicado*, *atestación*, *circuito*,
@@ -205,12 +204,12 @@ made with. No screen decides an outcome for itself.
     | `components/help/HelpLink.tsx` | `renderHelpButton()` in `src/ui/notices.ts`, 44px |
     | `test/lib/help-content.test.ts` | `test/help/helpContent.spec.ts` |
 
-    `HelpArticle` is `{ slug, question, answer, steps?, note?, resolvedBy?,
-    keywords? }` and `HelpCategory` is `{ slug, title, lead, icon, articles }`,
-    as theirs are. `answer` is one line — what she reads before deciding to
-    open anything. `keywords` is what she would type, not what we called it.
-    The content module carries no markup at all, which the tests enforce; all
-    of it lives in `helpRender.ts`.
+    `HelpArticle` is `{ slug, question, answer, steps?, note?, resolvedBy?, keywords? }` and
+    `HelpCategory` is `{ slug, title, lead, icon, articles }`, as theirs are.
+
+    `answer` is one line — what she reads before deciding to open anything. `keywords` is what
+    she would type, not what we called it. The content module carries no markup at all, which the
+    tests enforce; all of it lives in `helpRender.ts`.
 
     Three rules the tests hold:
     - **A `?` that leads nowhere fails the build**, as it does in
@@ -249,12 +248,12 @@ made with. No screen decides an outcome for itself.
     | `renderPrimaryAction` | the one action per screen, and never two |
     | `renderSystemStatus` | the install state, as a lock beside the `?` |
 
-    The tones map onto the proof phases and onto Creva's semantic families
-    exactly as they always did — `processing` → `--cr-warning-*`,
-    `success` → `--cr-success-*`, `warning` → `--cr-danger-*` (the check ran
-    and the answer is no), `error` → `--cr-info-*` (nobody could check) —
-    which `style-controls.spec.ts` pins. `render.spec.ts` pins that the four
-    proof states resolve to four different archetypes.
+    The tones map onto the proof phases and onto Creva's semantic families exactly as they always
+    did — `processing` → `--cr-warning-*`, `success` → `--cr-success-*`, `warning` →
+    `--cr-danger-*` (the check ran and the answer is no), `error` → `--cr-info-*` (nobody could
+    check) — which `style-controls.spec.ts` pins.
+
+    `render.spec.ts` pins that the four proof states resolve to four different archetypes.
 
 17. **Micro-moments inside the wait.** While a proof runs, a popover emerges
     from the navigation strip — the same gesture as `icon-button-tip` — which
@@ -347,13 +346,13 @@ mean fabricating an identity outcome, which this repository will not do.
 
 ## The browser-direct path (`VITE_PORT_SOURCE=lace`)
 
-This is the architecture the product ships: the page talks to Midnight
-itself. Lace is the wallet, the indexer and node addresses come from Lace's
-own settings, the private state lives in this browser's IndexedDB, and the
-proof is generated by **the local proof server the user configured in Lace**
-— nothing crosses a machine boundary, which is the entire privacy claim. No
-Node process of ours sits in the middle: `api/`'s proof server is the
-`bridge` source, and it is not involved here.
+This is the architecture the product ships: the page talks to Midnight itself. Lace is the
+wallet, the indexer and node addresses come from Lace's own settings, the private state lives in
+this browser's IndexedDB, and the proof is generated by **the local proof server the user
+configured in Lace** — nothing crosses a machine boundary, which is the entire privacy claim.
+
+No Node process of ours sits in the middle: `api/`'s proof server is the `bridge` source, and it
+is not involved here.
 
 ### What a reviewer must have installed
 
@@ -406,11 +405,10 @@ the page says which, in her words, and offers only `Reintentar`.
    web/public/zk/zkir/<circuitId>.bzkir
    ```
 
-   No manual copy: `scripts/copy-zk-artifacts.mjs` mirrors them out of
-   `contract/src/managed/` and runs from `npm run build` and `npm run dev`
-   in this workspace, so `npm run verify` (which compiles first) and the web
-   build both get them. See "The 2 MB the artifacts cost" below. Override the
-   base URL with `VITE_ZK_CONFIG_URL` if they are served from somewhere else.
+   No manual copy: `scripts/copy-zk-artifacts.mjs` mirrors them out of `contract/src/managed/`
+   and runs from `npm run build` and `npm run dev` in this workspace, so `npm run verify` (which
+   compiles first) and the web build both get them. See "The 2 MB the artifacts cost" below.
+   Override the base URL with `VITE_ZK_CONFIG_URL` if they are served from somewhere else.
 8. **Node 24.11.1+ and `npm ci`** at the repository root, as for any other
    source.
 
@@ -426,11 +424,10 @@ VITE_BACKING_CONTRACT_ADDRESS=<64 hex chars> \
 
 ### Deploy it once
 
-The browser joins a contract; it does not deploy one. Deploying in the page
-would cost her the ~19s the Node path pays **and** ask her to sign a
-deployment that is not hers — so the wait would be ~43s instead of ~24s for
-work she did not ask for and does not own. The deployment is a one-off,
-done from the CLI by whoever sets the demo up:
+The browser joins a contract; it does not deploy one. Deploying in the page would cost her the
+~19s the Node path pays **and** ask her to sign a deployment that is not hers — so the wait would
+be ~43s instead of ~24s for work she did not ask for and does not own. The deployment is a
+one-off, done from the CLI by whoever sets the demo up:
 
 ```bash
 npm run demo --workspace api   # deploys, then proves twice; prints the address
@@ -445,19 +442,18 @@ Her wallet then signs exactly one thing: her own proof.
 
 ### Which network id
 
-`VITE_LACE_NETWORK_ID` defaults to `preprod`, and that is read off the
-installed packages rather than guessed. The well-known set is declared in
-`@midnight-ntwrk/wallet-sdk-abstractions/dist/NetworkId.js` — `mainnet`,
-`testnet`, `devnet`, `qanet`, `undeployed`, `preview`, `preprod` — and
-`@midnight-ntwrk/testkit-js`'s `PreprodTestEnvironment` reports exactly
-`preprod`. `testnet` is a different member of that set, not a synonym, which
-is why this default changed.
+`VITE_LACE_NETWORK_ID` defaults to `preprod`, and that is read off the installed packages rather
+than guessed.
 
-What no installed package can say is which member **Lace Midnight Preview**
-reports; it may well report `preview`. So the value the wallet actually sends
-is logged on every connection, from both `getConnectionStatus()` and
-`getConfiguration()`, and the override is an environment variable rather than
-a code edit.
+The well-known set is declared in `@midnight-ntwrk/wallet-sdk-abstractions/dist/NetworkId.js` —
+`mainnet`, `testnet`, `devnet`, `qanet`, `undeployed`, `preview`, `preprod` — and
+`@midnight-ntwrk/testkit-js`'s `PreprodTestEnvironment` reports exactly `preprod`. `testnet` is a
+different member of that set, not a synonym, which is why this default changed.
+
+What no installed package can say is which member **Lace Midnight Preview** reports; it may well
+report `preview`. So the value the wallet actually sends is logged on every connection, from both
+`getConnectionStatus()` and `getConfiguration()`, and the override is an environment variable
+rather than a code edit.
 
 ### The 2 MB the artifacts cost
 
@@ -497,11 +493,12 @@ the journey does not need them to render.
 ### Budget the wait
 
 A measured **backing** proof costs ~23.7s (`tools/PROOF-LATENCY.md`, measured on
-`backing.compact`, which does no in-circuit signature verification). The identity
-proof does verify a signature in-circuit, so it costs more — how much more is not
-measured, and no number for it is stated. `generating` is a first-class screen
-state with a live elapsed-time readout for exactly that reason, and on this source
-its copy names where the proof is being generated.
+`backing.compact`, which does no in-circuit signature verification).
+
+The identity proof does verify a signature in-circuit, so it costs more — how much more is not
+measured, and no number for it is stated. `generating` is a first-class screen state with a live
+elapsed-time readout for exactly that reason, and on this source its copy names where the proof
+is being generated.
 
 ### The five ways this path degrades
 
@@ -542,43 +539,39 @@ loads `vite-plugin-wasm` and targets `es2022` (native top-level await). The
 lace port is behind a dynamic import (`src/lacePort.ts`) and lands in its own
 chunk, fetched only when a proof is started.
 
-Rollup walks a dynamic import's module graph *before* it eliminates the dead
-branch around it, so a guard alone is not enough: on every other source the
-config also aliases `@creva-zk/api/lace` to `src/laceUnavailable.ts` and
-leaves the WASM plugin out. Without that alias a stub build emits 11 MB of
-WebAssembly nothing references. With it:
+Rollup walks a dynamic import's module graph *before* it eliminates the dead branch around it, so
+a guard alone is not enough: on every other source the config also aliases `@creva-zk/api/lace`
+to `src/laceUnavailable.ts` and leaves the WASM plugin out. Without that alias a stub build emits
+11 MB of WebAssembly nothing references. With it:
 
 | Build | `dist/` |
 | --- | --- |
 | default | 215 kB — 32.5 kB of JS (11.1 kB gzipped), one chunk, no WASM, no lace chunk |
 | `VITE_PORT_SOURCE=lace` | megabytes — a lace chunk plus the ledger's WASM |
 
-Measured with `npx vite build` in this workspace. The default build emits a
-single JS chunk and 31 modules; `grep` for `laceProofPort`, `dapp-connector`
-or `browser-level` in it returns nothing. Joining the contract added 1.1 kB
-raw / 0.3 kB gzipped to it — the fifth degraded reason's copy, its help
-article, and the console logger — and no chunk.
+Measured with `npx vite build` in this workspace. The default build emits a single JS chunk and
+31 modules; `grep` for `laceProofPort`, `dapp-connector` or `browser-level` in it returns
+nothing. Joining the contract added 1.1 kB raw / 0.3 kB gzipped to it — the fifth degraded
+reason's copy, its help article, and the console logger — and no chunk.
 
-The size on the lace source is inherent to proving in the page, and it is now
-the *only* build that carries the compiled circuit: `contract.ts` reaches
-`contract/src/managed/`, so **`VITE_PORT_SOURCE=lace` builds require
-`npm run compact:build` first**, as does typechecking this workspace. The
-default build does not — the alias above keeps that module out of its graph
-entirely.
+The size on the lace source is inherent to proving in the page, and it is now the *only* build
+that carries the compiled circuit:
+
+`contract.ts` reaches `contract/src/managed/`, so **`VITE_PORT_SOURCE=lace` builds require `npm
+run compact:build` first**, as does typechecking this workspace. The default build does not — the
+alias above keeps that module out of its graph entirely.
 
 ## Out of scope
 
-The default (`stub`) journey makes no real contract calls, uses no wallet,
-and makes no network calls beyond the existing service worker's shell
-caching. `npm run verify` cannot pass in this environment (no compact
-toolchain, no Docker) — see the session report for what that leaves
+The default (`stub`) journey makes no real contract calls, uses no wallet, and makes no network
+calls beyond the existing service worker's shell caching. `npm run verify` cannot pass in this
+environment (no compact toolchain, no Docker) — see the session report for what that leaves
 unverified.
 
-The browser-direct path has never been run end to end: there is no browser,
-no Lace, no proof server and no Compact toolchain in the environment it was
-written in. It is unit-tested against a fake dapp connector, a fake fetch and
-fake join/call seams, and the default build is measured. What a human still
-has to confirm, with Lace in front of them:
+The browser-direct path has never been run end to end: there is no browser, no Lace, no proof
+server and no Compact toolchain in the environment it was written in. It is unit-tested against a
+fake dapp connector, a fake fetch and fake join/call seams, and the default build is measured.
+What a human still has to confirm, with Lace in front of them:
 
 - The network id Lace Midnight Preview reports. The default is `preprod`,
   read off the installed packages; if the console prints `preview`, set

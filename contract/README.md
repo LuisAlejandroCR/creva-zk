@@ -6,11 +6,13 @@ the generated APIs — those live in `api/` and `web/`.
 
 # `@creva-zk/contract`
 
-Two predicates are compiled here. `backing.compact` compares a private collateral amount against
-a public requested limit and discloses only the outcome. `identity-check.compact` verifies a
-signed attestation inside the circuit and discloses a single boolean. Both are bound to
-TypeScript: `src/index.ts` for backing, `src/identity.ts` for identity — separate modules because
-the two generated contracts export the same names, so only one of them can be re-exported flat.
+Two predicates are compiled here. `backing.compact` compares a private collateral amount against a
+public requested limit and discloses only the outcome. `identity-check.compact` verifies a signed
+attestation inside the circuit and discloses a single boolean.
+
+Both are bound to TypeScript: `src/index.ts` for backing, `src/identity.ts` for identity — separate
+modules because the two generated contracts export the same names, so only one of them can be
+re-exported flat.
 
 `backing-tier.compact` compiles, but has **no** compiled-contract binding yet, so
 `proveBackingTier` is not reachable from TypeScript.
@@ -46,6 +48,7 @@ So both are exported as **pure circuits**, and the issuer calls them:
 
 Only the concrete instantiations get a TypeScript binding — Compact emits one for a circuit with no
 remaining type parameters, which is why each predicate pins the generic pair at its own claim type.
+
 `schnorrVerify` computes its own challenge by calling `schnorrChallenge`, so there is exactly one
 definition of the challenge in the system and the two sides agree by construction rather than by
 two copies of a formula kept in step by hand.
@@ -85,9 +88,10 @@ Requires the Compact toolchain pinned at `0.31.1` (see the root README for why).
 
 In-circuit signature verification is not free, and the three circuits make the cost visible.
 `backing.compact` verifies no signature and its prover key is 149 kB; `backing-tier.compact` does
-and its key is 688 kB; `identity-check.compact` does and its key is 1.35 MB. Measured with `du` on
-the compiled output, 2026-08-29 — the same numbers the build copies to `web/public/zk`, tabulated
-in [`web/README.md`](../web/README.md).
+and its key is 688 kB; `identity-check.compact` does and its key is 1.35 MB.
+
+Measured with `du` on the compiled output, 2026-08-29 — the same numbers the build copies to
+`web/public/zk`, tabulated in [`web/README.md`](../web/README.md).
 
 A 9x larger prover key does **not** buy a slower proof, which is the opposite of what this
 repository predicted before measuring. `proveIdentity` — attestation verified in-circuit — took

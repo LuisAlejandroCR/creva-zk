@@ -1,8 +1,10 @@
 How to deploy the backing contract from the browser, with the Lace wallet of
 whoever is running the demo, when there is no machine with Docker on hand to
-run `npm run demo --workspace api`. This is an operator tool: it is used once,
-it costs tDUST from your own wallet, and it creates a new contract every time
-it runs. The user never sees this screen and cannot reach it.
+run `npm run demo --workspace api`.
+
+This is an operator tool: it is used once, it costs tDUST from your own wallet,
+and it creates a new contract every time it runs. The user never sees this
+screen and cannot reach it.
 
 # Deploying the contract from Lace
 
@@ -64,10 +66,11 @@ In order, and each step can fail on its own:
 The time budget for the whole deployment is five minutes
 (`DEFAULT_DEPLOY_TIMEOUT_MS` in `api/src/timeouts.ts`): longer than the proof
 (~19 s), longer than the two minutes a person is given to read the signing
-dialog, plus the network's confirmation. If it runs out, the screen says
-`deploy_failed` — and warns you to check whether the contract deployed before
-paying for another one, because a transaction already sent can still confirm
-later.
+dialog, plus the network's confirmation.
+
+If it runs out, the screen says `deploy_failed` — and warns you to check
+whether the contract deployed before paying for another one, because a
+transaction already sent can still confirm later.
 
 ## What to do with the address
 

@@ -1,9 +1,11 @@
 Measured proof latency for the backing circuit, and the root cause of the
 "expected instance of StateValue" failure that blocked every circuit call for
-five rounds. The cause was a duplicated WASM runtime in node_modules, not the
-circuit and not the api/ wiring. Both circuits are now measured here, and the
-result contradicts what this repository predicted: verifying a signature inside
-the circuit did not make the proof slower.
+five rounds.
+
+The cause was a duplicated WASM runtime in node_modules, not the circuit and not
+the api/ wiring. Both circuits are now measured here, and the result contradicts
+what this repository predicted: verifying a signature inside the circuit did not
+make the proof slower.
 
 # Proof latency
 
@@ -13,11 +15,12 @@ the circuit did not make the proof slower.
 no in-circuit signature verification: it reads one witness, compares it to a
 public argument and discloses the outcome.
 
-`proveIdentity` (`identity-check.compact`) is wired to TypeScript and runs —
-see `api/README.md` — but it verifies a Schnorr-over-Jubjub signature *inside*
-the proof, which `backing.compact` never does. Its latency is therefore
-higher, and it has **not** been measured. No number below applies to it, and
-none is quoted for it anywhere in this repository.
+`proveIdentity` (`identity-check.compact`) is wired to TypeScript and runs — see
+`api/README.md` — but it verifies a Schnorr-over-Jubjub signature *inside* the
+proof, which `backing.compact` never does.
+
+Its latency is therefore higher, and it has **not** been measured. No number
+below applies to it, and none is quoted for it anywhere in this repository.
 
 ## The numbers
 
