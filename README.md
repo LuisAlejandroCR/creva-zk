@@ -83,11 +83,12 @@ Once the circuit is compiled, `npm run demo` deploys `backing.compact` on the lo
 proof latency in milliseconds for each call.
 
 **Measured: ~23.7 s per *backing* proof**, on top of a ~52 s environment cold start and a ~19.5 s
-deploy. Reproduced independently through
-[`example-bboard`](https://github.com/midnightntwrk/example-bboard)'s own harness with
-`npm run measure`. See [`tools/PROOF-LATENCY.md`](tools/PROOF-LATENCY.md) for both runs
-and for the duplicated-WASM-runtime bug that blocked every circuit call until it was
-pinned in `overrides`.
+deploy.
+
+Reproduced independently through
+[`example-bboard`](https://github.com/midnightntwrk/example-bboard)'s own harness with `npm run
+measure`. See [`tools/PROOF-LATENCY.md`](tools/PROOF-LATENCY.md) for both runs and for the
+duplicated-WASM-runtime bug that blocked every circuit call until it was pinned in `overrides`.
 
 ### What is measured, and what is not
 

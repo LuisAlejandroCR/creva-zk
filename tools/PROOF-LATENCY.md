@@ -154,9 +154,10 @@ The key size is real and is paid at first load; the wait is not.
 
 **An unknown issuer aborts rather than answering.** 245 ms — two orders of
 magnitude below a proof — because `verifyAttestation` asserts inside the circuit
-and the call never reaches the prover. It comes back degraded, never as
-`value: false`. "I cannot tell who signed this" and "she does not match" are
-different answers, and the port keeps them apart.
+and the call never reaches the prover.
+
+It comes back degraded, never as `value: false`. "I cannot tell who signed this"
+and "she does not match" are different answers, and the port keeps them apart.
 
 The 77.6 s cold start is higher than the ~52 s recorded for backing above. It
 was not isolated: Docker had just started on this machine, so image and

@@ -87,19 +87,21 @@ operations, and it obtains the challenge by calling the contract's `identityAtte
 pure circuit rather than reimplementing Compact's `transientHash` in TypeScript. Signer and
 verifier therefore agree by construction.
 
-**The issuer is synthetic.** Creva's KYC provider signs nothing today, so the deployment issues
-its own Schnorr key and attests to a claim that belongs to nobody (`api/src/identityClaim.ts`).
-What is *not* synthetic is the verification: `verifyAttestation` runs inside the circuit on
-every proof. An attestation signed by a different issuer makes the circuit **abort**, and that
-comes back as a typed **degraded** result — never as `false`. "Nobody could check" and "the
-check ran and the answer is no" stay two different answers.
+**The issuer is synthetic.** Creva's KYC provider signs nothing today, so the deployment issues its
+own Schnorr key and attests to a claim that belongs to nobody (`api/src/identityClaim.ts`). What is
+*not* synthetic is the verification:
+
+`verifyAttestation` runs inside the circuit on every proof. An attestation signed by a different
+issuer makes the circuit **abort**, and that comes back as a typed **degraded** result — never as
+`false`. "Nobody could check" and "the check ran and the answer is no" stay two different answers.
 
 **The issuer key is per process, and nothing serves it over HTTP.** `realIdentityIssuerKey()`
 returns the key the deployment signed with, but it is only reachable in-process (via
-`@creva-zk/api/real`); `POST /proof/identity` takes an issuer key and hands none back. So a
-`bridge` caller holding a hard-coded key — which is what `web/` sends — hits the abort case and
-sees `degraded`. Fixing that means either pinning `issuerSecretKey` on both sides or serving the
-key; neither is done, and this file will not pretend otherwise.
+`@creva-zk/api/real`); `POST /proof/identity` takes an issuer key and hands none back.
+
+So a `bridge` caller holding a hard-coded key — which is what `web/` sends — hits the abort case
+and sees `degraded`. Fixing that means either pinning `issuerSecretKey` on both sides or serving
+the key; neither is done, and this file will not pretend otherwise.
 
 `proveBackingTier` is still not reachable from TypeScript: `backing-tier.compact` has no
 compiled-contract binding yet. That is a plumbing gap now, not a missing signer.
@@ -137,9 +139,11 @@ VITE_PORT_SOURCE=bridge npm run dev --workspace web
 
 **Only one process may run at a time.** The private-state store is a LevelDB that takes an
 exclusive lock, and the server holds it for as long as it runs — do not run `npm run demo` (or a
-second server) alongside it. A second process degrades rather than sharing it. `SIGINT`/`SIGTERM`
-close the listener and then tear the deployment down, so the lock is released for the next
-process; killing the server with `SIGKILL` leaves it held until the container is reaped.
+second server) alongside it.
+
+A second process degrades rather than sharing it. `SIGINT`/`SIGTERM` close the listener and then
+tear the deployment down, so the lock is released for the next process; killing the server with
+`SIGKILL` leaves it held until the container is reaped.
 
 ### One deployment, many proofs
 

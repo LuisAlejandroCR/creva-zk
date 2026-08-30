@@ -260,11 +260,10 @@ made with. No screen decides an outcome for itself.
     says one thing and leaves on its own. It is not a card and not a modal, it
     asks for no interaction, and it has no close button.
 
-    **The moment belongs to the wait, not to the step.** It is armed when the
-    state turns `generating` and disarmed when the answer arrives. No moment is
-    triggered by a tap, and none lengthens the journey: a cue the answer
-    managed to overtake is discarded rather than shown late.
-    `test/momentView.spec.ts` pins this in both directions.
+    **The moment belongs to the wait, not to the step.** It is armed when the state turns
+    `generating` and disarmed when the answer arrives. No moment is triggered by a tap, and none
+    lengthens the journey: a cue the answer managed to overtake is discarded rather than shown
+    late. `test/momentView.spec.ts` pins this in both directions.
 
     **Four beats, two waits.** The journey only makes her wait twice — the
     identity proof and the backing proof, about 23.7 s each — so the four-beat
@@ -272,11 +271,10 @@ made with. No screen decides an outcome for itself.
     3 in the backing wait, and 4 as the answer lands: saying "done" with the
     bar at 81 % would be the one lie this screen has never told.
 
-    **The drawing comes first.** Each moment opens with a line icon on a
-    circular chip — the vocabulary of Creva's settings rows: 1.75 stroke, round
-    caps, `--cr-danger-text` on `--cr-surface-2` — and the text is its caption.
-    The four icons are distinct: a door, a bicycle, layers assembling, a
-    celebration.
+    **The drawing comes first.** Each moment opens with a line icon on a circular chip — the
+    vocabulary of Creva's settings rows: 1.75 stroke, round caps, `--cr-danger-text` on
+    `--cr-surface-2` — and the text is its caption. The four icons are distinct: a door, a
+    bicycle, layers assembling, a celebration.
 
     **It never overlaps the action.** It anchors at the top, because the strip
     is the one part of the frame she is not trying to touch. Verified with
@@ -287,20 +285,20 @@ made with. No screen decides an outcome for itself.
     240 ms. Under `prefers-reduced-motion` it appears and disappears without
     travelling, with the same time on screen: that is a timer, not motion.
 
-    **What is missing counts as progress.** The structural moment shows where
-    she is in the journey — what is done alongside what remains — read from
-    real state, not from an invented list of paperwork. At most two pending
-    items are visible; the rest are counted ("+ 2 more items"). That is why the
-    comparison screen stopped being headed "Here is what you did not hand over".
+    **What is missing counts as progress.** The structural moment shows where she is in the
+    journey — what is done alongside what remains — read from real state, not from an invented
+    list of paperwork.
 
-    **One single figure in the whole journey**, and
-    `test/content/waitingMoments.spec.ts` fails if a second one appears. Only
-    what is verified in a primary source is published: ENAFIN 2024 (INEGI,
-    press release 62/25, 28 May 2025), with URL and access date in the module.
-    It uses the press release's verb, "ha tenido financiamiento" (*has had
-    financing*), not the chart's "solicitado" (*applied for*): having applied
-    and having had are not the same measure. Another test fails if any of the
-    figures that could not be verified appears.
+    At most two pending items are visible; the rest are counted ("+ 2 more items"). That is why
+    the comparison screen stopped being headed "Here is what you did not hand over".
+
+    **One single figure in the whole journey**, and `test/content/waitingMoments.spec.ts` fails
+    if a second one appears. Only what is verified in a primary source is published: ENAFIN 2024
+    (INEGI, press release 62/25, 28 May 2025), with URL and access date in the module.
+
+    It uses the press release's verb, "ha tenido financiamiento" (*has had financing*), not the
+    chart's "solicitado" (*applied for*): having applied and having had are not the same measure.
+    Another test fails if any of the figures that could not be verified appears.
 
 ## Proof-port sources
 
@@ -382,16 +380,15 @@ the page says which, in her words, and offers only `Reintentar`.
    docker compose -f ../api/proof-server-local.yml up
    ```
 
-   **It must answer cross-origin requests from the page's origin**
-   (`http://localhost:5173` by default). The probe is a real cross-origin
-   `GET` carrying `Content-Type: application/octet-stream` — not a
-   safelisted value, so the browser preflights exactly as it will for the
-   prover's own `POST /check` and `POST /prove`. A server that rejects CORS
-   therefore fails the probe rather than passing it and dying ~20s later
-   inside the prover. The rejection itself is a bare `TypeError` to a page,
-   indistinguishable from a dead port, so the error is logged to the console
-   — `local proof server probe failed` — and the screen says the honest,
-   coarser thing.
+   **It must answer cross-origin requests from the page's origin** (`http://localhost:5173` by
+   default). The probe is a real cross-origin `GET` carrying `Content-Type:
+   application/octet-stream` — not a safelisted value, so the browser preflights exactly as it
+   will for the prover's own `POST /check` and `POST /prove`.
+
+   A server that rejects CORS therefore fails the probe rather than passing it and dying ~20s
+   later inside the prover. The rejection itself is a bare `TypeError` to a page,
+   indistinguishable from a dead port, so the error is logged to the console — `local proof
+   server probe failed` — and the screen says the honest, coarser thing.
 6. **The backing contract, deployed once, and its address in the build.**
    The browser JOINS it; it never deploys. → `contract_not_found`. See
    "Deploy it once" below.

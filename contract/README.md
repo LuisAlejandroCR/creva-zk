@@ -94,10 +94,11 @@ Measured with `du` on the compiled output, 2026-08-29 — the same numbers the b
 `web/public/zk`, tabulated in [`web/README.md`](../web/README.md).
 
 A 9x larger prover key does **not** buy a slower proof, which is the opposite of what this
-repository predicted before measuring. `proveIdentity` — attestation verified in-circuit — took
-**23.65 s**; `proveBacking`, which verifies no signature, took **23.7 s**. Within noise of each
-other. Measured 2026-08-29 with `npm run demo:identity`; see
-[`tools/PROOF-LATENCY.md`](../tools/PROOF-LATENCY.md) for both runs.
+repository predicted before measuring.
+
+`proveIdentity` — attestation verified in-circuit — took **23.65 s**; `proveBacking`, which
+verifies no signature, took **23.7 s**. Within noise of each other. Measured 2026-08-29 with `npm
+run demo:identity`; see [`tools/PROOF-LATENCY.md`](../tools/PROOF-LATENCY.md) for both runs.
 
 The cost that in-circuit verification does impose is the key size, and therefore the first-load
 weight of the PWA — not the wait the applicant sees.
