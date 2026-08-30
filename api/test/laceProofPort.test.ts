@@ -5,8 +5,11 @@
 // stack, and the last step JOINS a contract at a supplied address rather than
 // deploying one. No browser, no Lace, no proof server and no compiled circuit
 // are involved — this exercises the seam's contract, not a real proof.
+//
+// The last block covers the case a rejection never reaches: an external that
+// NEVER answers. Those run on fake timers, one per step of the chain.
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { validatePassword } from "@midnight-ntwrk/midnight-js-utils";
 import type { ConnectedAPI, Configuration, InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
 import {
@@ -20,6 +23,14 @@ import { TIER_PROVEN_BY_CLEARED_BACKING } from "../src/backingClaim.js";
 import { DEFAULT_LACE_NETWORK_ID, selectWallet, type ConnectorHost } from "../src/laceWallet.js";
 import { ephemeralStoragePassword, FetchZkConfigProvider } from "../src/laceProviders.js";
 import type { JubjubPoint } from "../src/proofPort.js";
+import {
+  DEFAULT_JOIN_TIMEOUT_MS,
+  DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS,
+  DEFAULT_WALLET_CONNECT_TIMEOUT_MS,
+  DEFAULT_WALLET_QUERY_TIMEOUT_MS,
+  TIMED_OUT,
+  withTimeout,
+} from "../src/timeouts.js";
 
 // Synthetic public arguments only — no real issuer key, no real tax ID.
 const SYNTHETIC_ISSUER_KEY: JubjubPoint = { x: 1n, y: 2n };
@@ -45,20 +56,37 @@ interface FakeWalletOptions {
   readonly configurationNetworkId?: string;
   readonly disconnected?: boolean;
   readonly addressesReject?: boolean;
+  // Each of these makes one wallet call never settle — no answer, no
+  // rejection — which is what a wedged extension actually does.
+  readonly connectHangs?: boolean;
+  readonly statusHangs?: boolean;
+  readonly configurationHangs?: boolean;
+  readonly addressesHang?: boolean;
+}
+
+// A promise that never settles, which no catch and no retry can rescue.
+function never<T>(): Promise<T> {
+  return new Promise<T>(() => undefined);
 }
 
 function fakeWallet(options: FakeWalletOptions = {}): InitialAPI {
   const connectedNetworkId = options.connectedNetworkId ?? DEFAULT_LACE_NETWORK_ID;
   const connected = {
-    getConnectionStatus: async () =>
-      options.disconnected === true
+    getConnectionStatus: async () => {
+      if (options.statusHangs === true) return never<never>();
+      return options.disconnected === true
         ? ({ status: "disconnected" } as const)
-        : ({ status: "connected", networkId: connectedNetworkId } as const),
-    getConfiguration: async () => ({
-      ...CONFIGURATION,
-      networkId: options.configurationNetworkId ?? connectedNetworkId,
-    }),
+        : ({ status: "connected", networkId: connectedNetworkId } as const);
+    },
+    getConfiguration: async () => {
+      if (options.configurationHangs === true) return never<never>();
+      return {
+        ...CONFIGURATION,
+        networkId: options.configurationNetworkId ?? connectedNetworkId,
+      };
+    },
     getShieldedAddresses: async () => {
+      if (options.addressesHang === true) return never<never>();
       if (options.addressesReject === true) throw new Error("permission not granted");
       return {
         shieldedAddress: "synthetic",
@@ -74,6 +102,8 @@ function fakeWallet(options: FakeWalletOptions = {}): InitialAPI {
     icon: "data:image/svg+xml;base64,",
     apiVersion: "4.0.1",
     connect: async () => {
+      // Neither Authorize nor Cancel: the dialog that never comes back.
+      if (options.connectHangs === true) return never<never>();
       if (options.connectRejects === true) throw new Error("wallet is locked");
       return connected;
     },
@@ -443,5 +473,131 @@ describe("FetchZkConfigProvider", () => {
     const fetchImpl = vi.fn(async () => new Response("not found", { status: 404 })) as unknown as typeof fetch;
     const provider = new FetchZkConfigProvider<"proveBacking">("/zk", fetchImpl);
     await expect(provider.getProverKey("proveBacking")).rejects.toThrow(/404/);
+  });
+});
+
+// One test per external step of the chain. Every one of them uses a promise
+// that NEVER settles — no rejection to catch, no error to log — and asserts
+// the step gives up inside its own budget with the degraded reason that
+// already belongs to it. Fake timers, so the suite spends no real seconds.
+describe("an external that never answers still ends the screen", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Reads whether a port call has settled without awaiting it, so a test can
+  // ask the question one tick before the budget and one tick after.
+  function track<T>(promise: Promise<T>): { settled: boolean; value?: T } {
+    const state: { settled: boolean; value?: T } = { settled: false };
+    void promise.then((value) => {
+      state.settled = true;
+      state.value = value;
+    });
+    return state;
+  }
+
+  async function degradesAt(
+    port: Promise<unknown>,
+    budgetMs: number,
+    reason: string,
+    step = "checkBacking",
+  ): Promise<void> {
+    const state = track(port);
+
+    await vi.advanceTimersByTimeAsync(budgetMs - 1);
+    expect(state.settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(state.settled).toBe(true);
+    expect(state.value).toEqual({ status: "degraded", degraded: { step, reason } });
+  }
+
+  it("wallet.connect that never returns is wallet_locked, inside the dialog's budget", async () => {
+    vi.useFakeTimers();
+    const port = createLaceBackingPort(options({ connectorHost: host(fakeWallet({ connectHangs: true })) }));
+
+    await degradesAt(port.checkBacking(3_000n), DEFAULT_WALLET_CONNECT_TIMEOUT_MS, "wallet_locked");
+  });
+
+  it("getConnectionStatus that never returns is wallet_locked, inside the query budget", async () => {
+    vi.useFakeTimers();
+    const port = createLaceBackingPort(options({ connectorHost: host(fakeWallet({ statusHangs: true })) }));
+
+    await degradesAt(port.checkBacking(3_000n), DEFAULT_WALLET_QUERY_TIMEOUT_MS, "wallet_locked");
+  });
+
+  it("getConfiguration that never returns is wallet_locked, inside the query budget", async () => {
+    vi.useFakeTimers();
+    const port = createLaceBackingPort(options({ connectorHost: host(fakeWallet({ configurationHangs: true })) }));
+
+    await degradesAt(port.checkBacking(3_000n), DEFAULT_WALLET_QUERY_TIMEOUT_MS, "wallet_locked");
+  });
+
+  it("getShieldedAddresses that never returns is wallet_locked, inside the query budget", async () => {
+    vi.useFakeTimers();
+    const port = createLaceBackingPort(options({ connectorHost: host(fakeWallet({ addressesHang: true })) }));
+
+    await degradesAt(port.checkBacking(3_000n), DEFAULT_WALLET_QUERY_TIMEOUT_MS, "wallet_locked");
+  });
+
+  it("a proof server that accepts the connection and never answers is proof_server_unreachable", async () => {
+    vi.useFakeTimers();
+    // Deliberately ignores the abort signal: a socket that is open and
+    // silent is not the same as a refused connection, and only the second
+    // bound in probeProofServer ends this one.
+    const silent = vi.fn(() => never<Response>()) as unknown as typeof fetch;
+    const port = createLaceBackingPort(options({ fetchImpl: silent }));
+
+    await degradesAt(port.checkBacking(3_000n), DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS, "proof_server_unreachable");
+  });
+
+  it("the same silence on the identity port ends on its own step", async () => {
+    vi.useFakeTimers();
+    const silent = vi.fn(() => never<Response>()) as unknown as typeof fetch;
+    const port = createLaceIdentityPort(options({ fetchImpl: silent }));
+
+    await degradesAt(
+      port.checkIdentity(SYNTHETIC_ISSUER_KEY, SYNTHETIC_TAX_ID_HASH),
+      DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS,
+      "proof_server_unreachable",
+      "checkIdentity",
+    );
+  });
+
+  it("a join that never answers is contract_not_found, on the budget joinBacking spends", async () => {
+    vi.useFakeTimers();
+    // joinBacking owns that budget and already spends it through withTimeout
+    // (see api/src/contract.ts); here it stands in for the compiled circuit,
+    // which is a build artifact this suite deliberately never needs.
+    const joinBudget = DEFAULT_JOIN_TIMEOUT_MS;
+    const join = vi.fn(async (...args: unknown[]) => {
+      const budget = (args[4] as number | undefined) ?? joinBudget;
+      const found = await withTimeout(never<unknown>(), budget);
+      return (found === TIMED_OUT
+        ? { status: "degraded", degraded: { step: "join", reason: "contract_not_found" } }
+        : { status: "ok", value: found }) as never;
+    });
+    const port = createLaceBackingPort(
+      options({ contractAddress: SYNTHETIC_CONTRACT_ADDRESS, join, call: fakeCall(true) }),
+    );
+
+    await degradesAt(port.checkBacking(3_000n), joinBudget, "contract_not_found");
+  });
+
+  it("puts NO budget on the proof itself: a slow prover is not a failure", async () => {
+    vi.useFakeTimers();
+    const call = vi.fn(() => never<never>());
+    const port = createLaceBackingPort(
+      options({ contractAddress: SYNTHETIC_CONTRACT_ADDRESS, join: fakeJoin(), call: call as never }),
+    );
+    const state = track(port.checkBacking(3_000n));
+
+    // Ten minutes: many times the ~23.7s a proof costs here and longer than
+    // any budget above. Cutting the proof off would invent a failure out of
+    // a wait that was going to succeed.
+    await vi.advanceTimersByTimeAsync(10 * 60 * 1_000);
+
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(state.settled).toBe(false);
   });
 });

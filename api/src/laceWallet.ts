@@ -4,8 +4,14 @@
 // into its own typed degraded reason — absent, locked, wrong network — so
 // the screens can tell the three apart. Imports nothing from node:.
 
-import type { Configuration, ConnectedAPI, InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
+import type { Configuration, ConnectedAPI, ConnectionStatus, InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
 import type { PortLogger } from "./portLogger.js";
+import {
+  DEFAULT_WALLET_CONNECT_TIMEOUT_MS,
+  DEFAULT_WALLET_QUERY_TIMEOUT_MS,
+  TIMED_OUT,
+  withTimeout,
+} from "./timeouts.js";
 import type { ApiDegraded, ApiResult } from "./types.js";
 
 // Where a wallet installs its connector. `window` is `globalThis` in a
@@ -44,6 +50,10 @@ export interface LaceWalletOptions {
   readonly connectorHost?: ConnectorHost;
   /** Where the network id the wallet reports is written. Silent by default. */
   readonly logger?: PortLogger;
+  /** How long the Lace authorization dialog may stay open before it counts as no answer. */
+  readonly walletConnectTimeoutMs?: number;
+  /** How long each wallet query (status, configuration, addresses) may take. */
+  readonly walletQueryTimeoutMs?: number;
 }
 
 export interface LaceConnection {
@@ -96,16 +106,35 @@ export async function connectLaceWallet(step: string, options: LaceWalletOptions
 
   const logger = options.logger;
 
+  const connectBudget = options.walletConnectTimeoutMs ?? DEFAULT_WALLET_CONNECT_TIMEOUT_MS;
+  const queryBudget = options.walletQueryTimeoutMs ?? DEFAULT_WALLET_QUERY_TIMEOUT_MS;
+
   let connected: ConnectedAPI;
   try {
-    connected = await wallet.connect(expectedNetworkId);
+    // A wallet that never opens its dialog, or opens one that neither
+    // Authorize nor Cancel resolves, never settles this promise — so the
+    // wait is bounded and comes back as the same wallet_locked a rejection
+    // would give: a wallet is installed and it handed us no usable
+    // connection.
+    const connectQuery: Promise<ConnectedAPI> = wallet.connect(expectedNetworkId);
+    const connectResult = await withTimeout(connectQuery, connectBudget);
+    if (connectResult === TIMED_OUT) {
+      logger?.error?.({ timeoutMs: connectBudget, rdns: wallet.rdns }, "wallet.connect never answered");
+      return degraded(step, "wallet_locked");
+    }
+    connected = connectResult;
   } catch (error) {
     logger?.error?.({ err: error, rdns: wallet.rdns }, "wallet.connect rejected");
     return degraded(step, "wallet_locked");
   }
 
   try {
-    const status = await connected.getConnectionStatus();
+    const statusQuery: Promise<ConnectionStatus> = connected.getConnectionStatus();
+    const status = await withTimeout(statusQuery, queryBudget);
+    if (status === TIMED_OUT) {
+      logger?.error?.({ timeoutMs: queryBudget }, "getConnectionStatus never answered");
+      return degraded(step, "wallet_locked");
+    }
     // Logged before it is judged, and whatever it says. Which identifier a
     // given Lace build reports is the one thing this path cannot settle from
     // the installed packages, so a human with the wallet in front reads it
@@ -132,7 +161,13 @@ export async function connectLaceWallet(step: string, options: LaceWalletOptions
 
   let configuration: Configuration;
   try {
-    configuration = await connected.getConfiguration();
+    const configurationQuery: Promise<Configuration> = connected.getConfiguration();
+    const configurationResult = await withTimeout(configurationQuery, queryBudget);
+    if (configurationResult === TIMED_OUT) {
+      logger?.error?.({ timeoutMs: queryBudget }, "getConfiguration never answered");
+      return degraded(step, "wallet_locked");
+    }
+    configuration = configurationResult;
   } catch (error) {
     logger?.error?.({ err: error }, "getConfiguration rejected");
     return degraded(step, "wallet_locked");

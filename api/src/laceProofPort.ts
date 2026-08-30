@@ -24,6 +24,7 @@ import { connectLaceWallet, degraded, type LaceConnection, type LaceWalletOption
 import { createLaceProviders, type LaceProviderOptions } from "./laceProviders.js";
 import { DEFAULT_COLLATERAL_AMOUNT, TIER_PROVEN_BY_CLEARED_BACKING } from "./backingClaim.js";
 import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
+import { DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS, TIMED_OUT, withTimeout } from "./timeouts.js";
 
 // Type-only, so nothing here loads the compiled contract at module scope.
 // Every shape below is read off that module rather than restated, so the two
@@ -41,10 +42,9 @@ type BackingPrivateState = ReturnType<ContractModule["createBackingPrivateState"
 // who pointed Lace somewhere else is still proved against their choice.
 export const DEFAULT_LOCAL_PROOF_SERVER_URL = "http://localhost:6300";
 
-// A reachability probe, not a proof: this is bounded far below the ~23.7s a
-// real proof costs, because a server that is not listening should fail the
-// screen immediately rather than after half a minute of nothing.
-export const DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS = 3_000;
+// Every budget on this path lives in timeouts.js, next to the helper that
+// spends it. Re-exported because callers of this port already look here.
+export { DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS };
 
 // The content type httpClientProofProvider posts /check and /prove with
 // (see its dist/index.mjs: makeHttpRequest sets it on every request). It is
@@ -100,11 +100,22 @@ export async function probeProofServer(
   const controller = new AbortController();
   const timer: ReturnType<typeof setTimeout> = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await doFetch(url, {
-      method: "GET",
-      headers: { "Content-Type": PROOF_REQUEST_CONTENT_TYPE },
-      signal: controller.signal,
-    });
+    // Two bounds, not one. The abort is the real cancellation — it stops the
+    // request rather than just stopping the wait — but it only ends this
+    // wait if the fetch honours the signal, and the same budget through
+    // withTimeout ends it even when nothing ever settles that promise.
+    const response = await withTimeout(
+      doFetch(url, {
+        method: "GET",
+        headers: { "Content-Type": PROOF_REQUEST_CONTENT_TYPE },
+        signal: controller.signal,
+      }),
+      timeoutMs,
+    );
+    if (response === TIMED_OUT) {
+      logger.error?.({ timeoutMs, proofServerUrl: url }, "local proof server never answered the probe");
+      return false;
+    }
     logger.info({ proofServerUrl: url, status: response.status }, "local proof server answered the probe");
     return true;
   } catch (error) {
@@ -238,17 +249,17 @@ export function createLaceBackingPort(options: LaceOptions = {}): BackingProofPo
   const logger = options.logger ?? noopLogger;
   return {
     async checkBacking(requestedLimit: bigint): Promise<ApiResult<Tier>> {
-      const stack = await prepareLaceStack<CircuitId, PrivateStateId, BackingPrivateState>("checkBacking", options);
-      if (stack.status === "degraded") {
-        logger.info({ reason: stack.degraded.reason }, "lace backing port preflight degraded");
-        return stack;
-      }
+      // The preflight is inside the catch too: every layer below degrades
+      // rather than throwing, and this is the backstop for one that breaks
+      // that contract. Nothing reaches the caller as an exception.
       try {
+        const stack = await prepareLaceStack<CircuitId, PrivateStateId, BackingPrivateState>("checkBacking", options);
+        if (stack.status === "degraded") {
+          logger.info({ reason: stack.degraded.reason }, "lace backing port preflight degraded");
+          return stack;
+        }
         return await proveBacking("checkBacking", requestedLimit, options, stack.value.providers, logger);
       } catch (error) {
-        // contract.ts degrades rather than throwing; this is for a provider
-        // that breaks that contract, which must still never reach the caller
-        // as an exception.
         logger.error?.({ err: error }, "the browser-direct backing call threw instead of degrading");
         return degraded("checkBacking", "call_failed");
       }
@@ -265,7 +276,15 @@ export function createLaceIdentityPort(options: LaceOptions = {}): IdentityProof
   const logger = options.logger ?? noopLogger;
   return {
     async checkIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
-      const stack = await prepareLaceStack("checkIdentity", options);
+      let stack: ApiResult<LaceStack<string, string, unknown>>;
+      try {
+        stack = await prepareLaceStack("checkIdentity", options);
+      } catch (error) {
+        // Same backstop the backing port keeps: a layer that throws instead
+        // of degrading must not surface as an exception to the screen.
+        logger.error?.({ err: error }, "the browser-direct identity preflight threw instead of degrading");
+        return degraded("checkIdentity", "call_failed");
+      }
       if (stack.status === "degraded") {
         logger.info({ reason: stack.degraded.reason }, "lace identity port preflight degraded");
         return stack;

@@ -31,8 +31,10 @@ import type {
   FinalizedTransaction,
   TransactionId,
 } from "@midnight-ntwrk/midnight-js-protocol/ledger";
+import type { ConnectedAPI } from "@midnight-ntwrk/dapp-connector-api";
 import type { LaceConnection } from "./laceWallet.js";
 import { degraded } from "./laceWallet.js";
+import { DEFAULT_WALLET_QUERY_TIMEOUT_MS, TIMED_OUT, withTimeout } from "./timeouts.js";
 import type { ApiResult } from "./types.js";
 
 // Where the compiled circuit's artifacts are served from, relative to the
@@ -114,6 +116,10 @@ function browserLevelFactory(dbName: string): DatabaseLevel {
   return new BrowserLevel<string, string>(dbName) as unknown as DatabaseLevel;
 }
 
+// Read off the connector rather than restated, so a change in the wallet
+// API is a compile error here instead of a silent mismatch.
+type ShieldedAddresses = Awaited<ReturnType<ConnectedAPI["getShieldedAddresses"]>>;
+
 export interface LaceProviderOptions {
   /** Base URL the compiled circuit's prover/verifier keys and ZKIR are served from. */
   readonly zkConfigBaseUrl?: string;
@@ -125,6 +131,8 @@ export interface LaceProviderOptions {
   readonly levelFactory?: LevelFactory;
   /** Injectable so a caller can supply a password that survives a reload. */
   readonly privateStoragePasswordProvider?: () => string | Promise<string>;
+  /** How long the wallet may take to hand over its addresses. */
+  readonly walletQueryTimeoutMs?: number;
 }
 
 // The wallet provider is the dapp connector: balancing and submission both
@@ -192,8 +200,15 @@ export async function createLaceProviders<CircuitId extends string, PrivateState
   let coinPublicKey: CoinPublicKey;
   let encryptionPublicKey: EncPublicKey;
   let accountId: string;
+  const queryBudget = options.walletQueryTimeoutMs ?? DEFAULT_WALLET_QUERY_TIMEOUT_MS;
   try {
-    const addresses = await connection.connected.getShieldedAddresses();
+    // Bounded like every other wallet query: a connector that answers
+    // neither yes nor no is the same wallet_locked as one that refuses.
+    const addressQuery: Promise<ShieldedAddresses> = connection.connected.getShieldedAddresses();
+    const addresses = await withTimeout(addressQuery, queryBudget);
+    if (addresses === TIMED_OUT) {
+      return degraded(step, "wallet_locked");
+    }
     coinPublicKey = parseCoinPublicKeyToHex(addresses.shieldedCoinPublicKey, connection.networkId);
     encryptionPublicKey = parseEncPublicKeyToHex(addresses.shieldedEncryptionPublicKey, connection.networkId);
     // Scopes the local store to this wallet. levelPrivateStateProvider hashes
@@ -208,20 +223,28 @@ export async function createLaceProviders<CircuitId extends string, PrivateState
     doFetch,
   );
 
-  return {
-    status: "ok",
-    value: {
-      privateStateProvider: levelPrivateStateProvider<PrivateStateId, PrivateState>({
-        privateStoragePasswordProvider: options.privateStoragePasswordProvider ?? ephemeralStoragePassword,
-        accountId,
-        cryptoBackend: "webcrypto",
-        levelFactory: options.levelFactory ?? browserLevelFactory,
-      }),
-      publicDataProvider: indexerPublicDataProvider(connection.configuration.indexerUri, connection.configuration.indexerWsUri),
-      zkConfigProvider,
-      proofProvider: httpClientProofProvider(options.proofServerUrl, zkConfigProvider),
-      walletProvider: createLaceWalletProvider(connection, coinPublicKey, encryptionPublicKey),
-      midnightProvider: createLaceMidnightProvider(connection),
-    },
-  };
+  // Constructing the providers is local work, but it is somebody else's
+  // constructor: an indexer URI the wallet reported malformed, or an
+  // IndexedDB the browser refuses to open, would throw right here. This
+  // function is contracted never to throw, so it degrades instead.
+  try {
+    return {
+      status: "ok",
+      value: {
+        privateStateProvider: levelPrivateStateProvider<PrivateStateId, PrivateState>({
+          privateStoragePasswordProvider: options.privateStoragePasswordProvider ?? ephemeralStoragePassword,
+          accountId,
+          cryptoBackend: "webcrypto",
+          levelFactory: options.levelFactory ?? browserLevelFactory,
+        }),
+        publicDataProvider: indexerPublicDataProvider(connection.configuration.indexerUri, connection.configuration.indexerWsUri),
+        zkConfigProvider,
+        proofProvider: httpClientProofProvider(options.proofServerUrl, zkConfigProvider),
+        walletProvider: createLaceWalletProvider(connection, coinPublicKey, encryptionPublicKey),
+        midnightProvider: createLaceMidnightProvider(connection),
+      },
+    };
+  } catch {
+    return degraded(step, "environment_unavailable");
+  }
 }
