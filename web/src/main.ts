@@ -7,6 +7,10 @@
 // everything around its own headline. What stays out here is the service
 // worker registration and the status it reports.
 
+// First import in the app, deliberately: it installs the Buffer global the
+// Midnight SDK needs before any module that might reach for it loads.
+import './nodeGlobals';
+
 import { failedStatus, readyStatus, setPwaStatus, unsupportedStatus, type PwaStatus } from './pwa-status';
 import { renderProgressMomentHost } from './ui';
 import { mountApp } from './app';

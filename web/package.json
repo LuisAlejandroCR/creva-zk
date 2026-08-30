@@ -11,7 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@creva-zk/api": "*"
+    "@creva-zk/api": "*",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
