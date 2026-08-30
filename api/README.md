@@ -137,8 +137,9 @@ process; killing the server with `SIGKILL` leaves it held until the container is
 
 ### One deployment, many proofs
 
-Starting the network and deploying costs roughly **19 s** on top of each backing proof (~23.7 s
-measured; the identity proof's latency is not measured — see below). The server pays that once: the deployment is memoised for the process lifetime, shared by every
+Starting the network and deploying costs roughly **19 s** on top of each proof (~23.7 s for
+backing, **23.65 s** for identity — both measured, and within noise of each other). The server pays
+that once: the deployment is memoised for the process lifetime, shared by every
 request and by both ports, and concurrent first requests share one in-flight attempt rather than
 starting two networks. Nothing is deployed until the first request arrives, so the port binds
 immediately instead of after a cold start.

@@ -89,7 +89,11 @@ and its key is 688 kB; `identity-check.compact` does and its key is 1.35 MB. Mea
 the compiled output, 2026-08-29 — the same numbers the build copies to `web/public/zk`, tabulated
 in [`web/README.md`](../web/README.md).
 
-That extra work is also why an identity proof takes **longer** than a backing one. The ~23.7 s
-figure in `tools/PROOF-LATENCY.md` was measured on `backing.compact` only. How much longer the
-identity proof takes **has not been measured**, and no number for it is stated anywhere in this
-repository.
+A 9x larger prover key does **not** buy a slower proof, which is the opposite of what this
+repository predicted before measuring. `proveIdentity` — attestation verified in-circuit — took
+**23.65 s**; `proveBacking`, which verifies no signature, took **23.7 s**. Within noise of each
+other. Measured 2026-08-29 with `npm run demo:identity`; see
+[`tools/PROOF-LATENCY.md`](../tools/PROOF-LATENCY.md) for both runs.
+
+The cost that in-circuit verification does impose is the key size, and therefore the first-load
+weight of the PWA — not the wait the applicant sees.

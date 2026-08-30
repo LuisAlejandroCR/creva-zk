@@ -1,8 +1,9 @@
 Measured proof latency for the backing circuit, and the root cause of the
 "expected instance of StateValue" failure that blocked every circuit call for
 five rounds. The cause was a duplicated WASM runtime in node_modules, not the
-circuit and not the api/ wiring. Every number in this file was taken on
-backing.compact; the identity circuit is not measured here.
+circuit and not the api/ wiring. Both circuits are now measured here, and the
+result contradicts what this repository predicted: verifying a signature inside
+the circuit did not make the proof slower.
 
 # Proof latency
 
@@ -126,3 +127,35 @@ npm run demo        # via our own api/ workspace
 Both need Docker running and `compact` on PATH; `npm run measure` also needs
 example-bboard checked out (`BBOARD_REF=`, default
 `/root/midnight-refs/example-bboard`).
+
+
+## The identity circuit
+
+Measured 2026-08-29 on the same machine, with `npm run demo:identity`, which
+deploys `identity-check.compact` holding a signed attestation as witness-only
+private state and calls `proveIdentity` twice.
+
+| Step | Wall clock |
+| --- | --- |
+| Network cold start + deploy | 77.6 s |
+| `proveIdentity` — issuer known, tax ID matches | **23.65 s** → `{ status: ok, value: true }` |
+| `proveIdentity` — issuer unknown | **0.245 s** → `{ status: degraded, reason: call_failed }` |
+
+Two things this settles.
+
+**In-circuit signature verification did not cost proving time.** 23.65 s against
+`proveBacking`'s 23.7 s, on a prover key nine times larger (1.35 MB against
+149 kB). Before this run, `contract/README.md` asserted identity would be
+slower; it was an argument, not a measurement, and the measurement disagreed.
+The key size is real and is paid at first load; the wait is not.
+
+**An unknown issuer aborts rather than answering.** 245 ms — two orders of
+magnitude below a proof — because `verifyAttestation` asserts inside the circuit
+and the call never reaches the prover. It comes back degraded, never as
+`value: false`. "I cannot tell who signed this" and "she does not match" are
+different answers, and the port keeps them apart.
+
+The 77.6 s cold start is higher than the ~52 s recorded for backing above. It
+was not isolated: Docker had just started on this machine, so image and
+container warm-up are inside that number. Treat it as an upper bound, not a
+comparison.
