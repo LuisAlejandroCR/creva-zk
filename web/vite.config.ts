@@ -11,6 +11,10 @@ export default defineConfig(({ mode }) => {
   const laceBuild = loadEnv(mode, process.cwd(), 'VITE_').VITE_PORT_SOURCE === 'lace';
 
   return {
+    // GitHub Pages serves a project site under /<repo>/, so every asset URL has
+    // to carry that prefix. Overridable, because the same build has to work
+    // from a plain file server and from localhost.
+    base: process.env.VITE_BASE ?? '/',
     // Rollup walks a dynamic import's module graph before it eliminates the
     // dead branch around it, so on any other source the ledger's WebAssembly
     // would still be resolved, transformed and emitted — 11 MB nothing

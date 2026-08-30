@@ -69,7 +69,10 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register('/sw.js');
+    // Resolved against the deployed base, not the domain root: a project page
+    // on GitHub Pages lives under /<repo>/, where an absolute '/sw.js' is a 404
+    // and the app silently loses its offline promise.
+    await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
     applyStatus(readyStatus());
   } catch {
     applyStatus(failedStatus());
