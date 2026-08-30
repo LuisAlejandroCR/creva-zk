@@ -170,9 +170,27 @@ a{color:var(--gold)}
   font-size:.95rem;color:var(--muted);background:rgba(196,30,58,.03)}
 footer{padding:3rem var(--pad) 4rem;border-top:1px solid var(--line);background:var(--ink)}
 footer p{font-size:.85rem;color:var(--muted)}
+
+/* ── conmutador de idioma ── */
+.lang{position:fixed;top:1.1rem;right:1.1rem;z-index:50;display:flex;gap:2px;
+  padding:3px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(255,255,255,.82);backdrop-filter:blur(10px);
+  box-shadow:0 8px 28px rgba(26,22,19,.10)}
+.lang button{appearance:none;border:0;cursor:pointer;border-radius:999px;
+  padding:.42rem .82rem;font:650 .74rem/1 ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.08em;color:var(--muted);background:transparent;
+  transition:background var(--mid) var(--ease),color var(--mid) var(--ease)}
+.lang button[aria-pressed="true"]{background:var(--gold);color:#fff}
+.lang button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media (max-width:520px){.lang{top:.7rem;right:.7rem}}
 </style>
 </head>
 <body>
+
+<div class="lang" role="group" aria-label="Idioma / Language">
+  <button type="button" data-lang="es" aria-pressed="true">ES</button>
+  <button type="button" data-lang="en" aria-pressed="false">EN</button>
+</div>
 
 <section id="hero">
   <div class="bed"><div class="aurora" aria-hidden="true"></div></div>
@@ -403,5 +421,6 @@ footer p{font-size:.85rem;color:var(--muted)}
   targets.forEach(function (el) { io.observe(el); });
 })();
 </script>
+<script src="pitch-lang.js"></script>
 </body>
 </html>
