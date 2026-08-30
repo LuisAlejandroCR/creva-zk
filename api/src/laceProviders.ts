@@ -11,6 +11,8 @@ import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-p
 import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
 import { levelPrivateStateProvider, type DatabaseLevel, type LevelFactory } from "@midnight-ntwrk/midnight-js-level-private-state-provider";
 import { parseCoinPublicKeyToHex, parseEncPublicKeyToHex, toHex } from "@midnight-ntwrk/midnight-js-utils";
+import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+import type { PortLogger } from "./portLogger.js";
 import {
   createProverKey,
   createVerifierKey,
@@ -133,6 +135,8 @@ export interface LaceProviderOptions {
   readonly privateStoragePasswordProvider?: () => string | Promise<string>;
   /** How long the wallet may take to hand over its addresses. */
   readonly walletQueryTimeoutMs?: number;
+  /** Raw provider errors go here, never into a degraded result. */
+  readonly logger?: PortLogger;
 }
 
 // The wallet provider is the dapp connector: balancing and submission both
@@ -197,6 +201,19 @@ export async function createLaceProviders<CircuitId extends string, PrivateState
     return degraded(step, "environment_unavailable");
   }
 
+  // The SDK keeps the network id in a module-level global, and several
+  // providers read it back through getNetworkId(), which THROWS when it was
+  // never set. The Node path gets it set by testkit; nothing sets it in a
+  // browser, so it has to be set here — before any provider is built — or
+  // the first one to look it up fails and the whole stack degrades as if the
+  // wallet were locked.
+  try {
+    setNetworkId(connection.networkId);
+  } catch (error) {
+    options.logger?.error?.({ err: error, networkId: connection.networkId }, "setNetworkId refused the wallet's network id");
+    return degraded(step, "wallet_wrong_network");
+  }
+
   let coinPublicKey: CoinPublicKey;
   let encryptionPublicKey: EncPublicKey;
   let accountId: string;
@@ -214,7 +231,11 @@ export async function createLaceProviders<CircuitId extends string, PrivateState
     // Scopes the local store to this wallet. levelPrivateStateProvider hashes
     // it before it reaches a storage path, and it is a public key either way.
     accountId = addresses.shieldedCoinPublicKey;
-  } catch {
+  } catch (error) {
+    // Covers both the query and the two address parses. A bech32 prefix that
+    // does not match the network is a parse failure, not a locked wallet, so
+    // the raw error is logged: without it this reason is unreadable.
+    options.logger?.error?.({ err: error }, "could not read or parse the wallet's shielded addresses");
     return degraded(step, "wallet_locked");
   }
 
@@ -244,7 +265,8 @@ export async function createLaceProviders<CircuitId extends string, PrivateState
         midnightProvider: createLaceMidnightProvider(connection),
       },
     };
-  } catch {
+  } catch (error) {
+    options.logger?.error?.({ err: error }, "building the Lace providers threw");
     return degraded(step, "environment_unavailable");
   }
 }
