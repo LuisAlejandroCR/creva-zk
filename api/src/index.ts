@@ -22,3 +22,5 @@ export {
   DEFAULT_BRIDGE_URL,
   type BridgeOptions,
 } from "./bridgeProofPort.js";
+
+export { DEMO_TAX_ID_HEX } from "./identityDemo.js";

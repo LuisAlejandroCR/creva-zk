@@ -22,10 +22,11 @@ export interface IdentitySignedPayload {
   readonly claim: IdentityClaimBytes;
 }
 
-// Synthetic demo tax-ID hash. 32 bytes of a fixed, obviously-invented
-// pattern rather than a hash of anything: no real RFC is involved, and none
-// can be recovered from it.
-export const DEFAULT_TAX_ID_HEX = "c4e7a".padEnd(64, "0");
+// Synthetic demo tax-ID hash, owned by identityDemo.ts so the browser reads
+// the same 32 bytes this deployment attests to. Re-exported under the name
+// the ports already import.
+export { DEMO_TAX_ID_HEX as DEFAULT_TAX_ID_HEX } from "./identityDemo.js";
+import { DEMO_TAX_ID_HEX as DEFAULT_TAX_ID_HEX } from "./identityDemo.js";
 
 // Bytes<32>. Rejects anything that is not exactly 32 bytes of hex rather
 // than padding it, because a silently padded hash would clear a predicate

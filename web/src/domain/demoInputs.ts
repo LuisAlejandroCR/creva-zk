@@ -18,7 +18,10 @@ export const SYNTHETIC_ISSUER_KEY: JubjubPoint = {
   x: 28336281903124990867587793011069573392383982287722241916350956173377953689573n,
   y: 39385640392217313770878525135509063452020585410343666726093009378539878503883n,
 };
-export const SYNTHETIC_TAX_ID_HASH = 'cd'.repeat(32);
+// Imported, never restated: the deployed contract attests to exactly these
+// 32 bytes, and a second copy here would drift into a screen that says the
+// identity does not match when nothing is wrong but the demo data.
+export { DEMO_TAX_ID_HEX as SYNTHETIC_TAX_ID_HASH } from '@creva-zk/api';
 
 // The limit the demo asks for. The stub port clears anything at or under
 // 3000 as "silver", which is the tier the journey has always shown.
