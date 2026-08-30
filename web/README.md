@@ -528,6 +528,7 @@ an endpoint or a stack fragment onto the screen.
 | --- | --- | --- |
 | `VITE_LACE_NETWORK_ID` | `testnet` | The network id the wallet must report; anything else is `wallet_wrong_network`. Set this if your Lace build reports a different string for preprod. |
 | `VITE_ZK_CONFIG_URL` | `/zk` | Base URL the circuit artifacts are served from. |
+| `VITE_BASE` | `/` | Path the site is served under. GitHub Pages serves a project site at `/<repo>/`, so a deploy needs `VITE_BASE=/creva-zk/` — that is what `npm run build:pages` sets. Read by `vite.config.ts` from `process.env`, so a `.env` file cannot carry it. |
 
 ### Build note
 

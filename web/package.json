@@ -8,7 +8,8 @@
     "build": "node scripts/copy-zk-artifacts.mjs && tsc -p tsconfig.json --noEmit && vite build",
     "zk:copy": "node scripts/copy-zk-artifacts.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:pages": "VITE_BASE=/creva-zk/ npm run build"
   },
   "dependencies": {
     "@creva-zk/api": "*",
