@@ -20,6 +20,7 @@ import {
   type Contract as GeneratedContract,
 } from "../../contract/src/index.js";
 import type { PortLogger } from "./portLogger.js";
+import { DEFAULT_JOIN_TIMEOUT_MS, TIMED_OUT, withTimeout } from "./timeouts.js";
 import type { ApiDegraded, ApiResult } from "./types.js";
 
 export type { BackingPrivateState };
@@ -40,12 +41,10 @@ export type DeployedBacking = DeployedContract<BackingContract>;
 // serves the CLI that deployed and the browser that joined.
 export type FoundBacking = FoundContract<BackingContract>;
 
-// findDeployedContract's first step is watchForDeployTxData, which waits for
-// a deployment that may never appear: an address with nothing at it does not
-// answer "no", it simply never answers. So the wait is bounded here. This is
-// several times an indexer round trip and still far below the ~23.7s a proof
-// costs, because a wrong address should fail the screen quickly.
-export const DEFAULT_JOIN_TIMEOUT_MS = 20_000;
+// Budgets and the bounded-wait helper live in timeouts.js, which the
+// browser-direct path shares. Re-exported here because this is where callers
+// of joinBacking already look for it.
+export { DEFAULT_JOIN_TIMEOUT_MS };
 
 export interface CallOutcome {
   readonly cleared: boolean;
@@ -111,6 +110,11 @@ export async function joinBacking(
 
 // Calls proveBacking(requestedLimit) and reads the resulting public ledger.
 // Never throws — a proving or submission failure comes back degraded.
+//
+// DELIBERATELY UNBOUNDED. A real proof takes ~23.7s here and longer on a
+// phone; a budget on the proof itself would invent a failure out of a wait
+// that was going to succeed. What is bounded is reaching the proof server
+// (see probeProofServer), never waiting for the proof.
 export async function callProveBacking(
   deployed: FoundBacking,
   requestedLimit: bigint,
@@ -126,26 +130,6 @@ export async function callProveBacking(
   } catch (error) {
     logger.error?.({ err: error }, "proveBacking call failed");
     return degraded("call", "call_failed");
-  }
-}
-
-// Distinguishable from any value the work could resolve with, which a
-// timestamp or `undefined` would not be.
-const TIMED_OUT: unique symbol = Symbol("timed out");
-
-// Bounds a wait that has no other way to end. The losing promise is left
-// running — there is no cancellation to reach for here — so its eventual
-// rejection is swallowed rather than left to surface as an unhandled one.
-async function withTimeout<T>(work: Promise<T>, timeoutMs: number): Promise<T | typeof TIMED_OUT> {
-  void work.catch(() => undefined);
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
-    timer = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
-  });
-  try {
-    return await Promise.race([work, expiry]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
   }
 }
 

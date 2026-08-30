@@ -511,6 +511,27 @@ in `src/proofPort.ts` supplies the only logger this app installs) and never
 into the reason itself, which is a fixed string precisely so it cannot carry
 an endpoint or a stack fragment onto the screen.
 
+### Presupuestos de tiempo (cada paso externo tiene tope)
+
+Un externo que nunca responde no rechaza: se queda callado, y la pantalla se
+queda contando. Por eso cada paso de la cadena browser-direct gasta un
+presupuesto y, al agotarlo, devuelve el degradado que ya le corresponde. Las
+constantes viven en `api/src/timeouts.ts`, junto al ayudante `withTimeout`
+que las gasta, y la prueba en sí **no** lleva tope: tarda ~23,7 s y en un
+teléfono más, así que cortarla sería inventar un fallo.
+
+| Paso externo | Constante | Presupuesto | Degradado |
+| --- | --- | --- | --- |
+| `wallet.connect()` | `DEFAULT_WALLET_CONNECT_TIMEOUT_MS` | 120 s | `wallet_locked` |
+| `getConnectionStatus()`, `getConfiguration()`, `getShieldedAddresses()` | `DEFAULT_WALLET_QUERY_TIMEOUT_MS` | 10 s | `wallet_locked` |
+| Sonda al servidor de pruebas | `DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS` | 3 s | `proof_server_unreachable` |
+| Unirse al contrato | `DEFAULT_JOIN_TIMEOUT_MS` | 20 s | `contract_not_found` |
+| La prueba (`proveBacking`) | — | sin tope | — |
+
+El diálogo de Lace es el único con minutos en lugar de segundos: ahí hay una
+persona leyendo y aprobando, y un tope corto convertiría una autorización
+lenta en un fallo falso. Los demás son viajes de ida y vuelta entre máquinas.
+
 ### Configuration
 
 | Variable | Default | Meaning |
