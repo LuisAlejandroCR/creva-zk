@@ -21,6 +21,7 @@ import { createLazyLaceBackingPort, createLazyLaceIdentityPort } from './lacePor
 import { SYNTHETIC_ISSUER_KEY } from './domain/demoInputs';
 import type { ProofState } from './domain/proofState';
 import { settleDegraded, settleFailed, settleReady } from './domain/proofState';
+import { causeChain } from './causeChain';
 
 export type PortSource = 'stub' | 'real' | 'bridge' | 'lace';
 
@@ -91,7 +92,7 @@ const LACE_OPTIONS: LaceOptions = {
   // to the console. Nothing user-facing is decided by it.
   logger: {
     info: (obj, msg) => console.info(`[creva-zk] ${msg}`, obj),
-    error: (obj, msg) => console.error(`[creva-zk] ${msg}`, obj),
+    error: (obj, msg) => console.error(`[creva-zk] ${msg}`, obj, ...causeChain(obj)),
   },
 };
 

@@ -7,6 +7,7 @@
 // NOT read VITE_BACKING_CONTRACT_ADDRESS — an address is what it produces.
 
 import type { LaceDeployOptions } from '@creva-zk/api/lace';
+import { causeChain } from './causeChain';
 
 export function laceDeployOptions(): LaceDeployOptions {
   return {
@@ -29,16 +30,3 @@ export function laceDeployOptions(): LaceDeployOptions {
   };
 }
 
-// Every `cause` under a thrown error, flattened into arguments the console
-// prints instead of eliding. Bounded so a self-referential chain cannot spin.
-function causeChain(obj: unknown): unknown[] {
-  const out: unknown[] = [];
-  let current: unknown = (obj as { err?: unknown })?.err;
-  for (let depth = 0; depth < 6 && current !== undefined && current !== null; depth += 1) {
-    const cause = (current as { cause?: unknown }).cause;
-    if (cause === undefined || cause === null) break;
-    out.push(`cause[${depth}]:`, cause);
-    current = cause;
-  }
-  return out;
-}
