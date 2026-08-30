@@ -426,6 +426,11 @@ characters, no `0x` — see `assertIsContractAddress` in
 
 Her wallet then signs exactly one thing: her own proof.
 
+No Docker to run that on? There is a second, operator-only way to get the same address: the
+deployment tool behind `VITE_LACE_DEPLOY=1` (or `?deploy=1`), which deploys once from the browser
+with the operator's own wallet and prints the address to copy. It is off by default, never runs on
+load, and is not part of the user journey — see `docs/DESPLIEGUE-LACE.md`.
+
 ### Which network id
 
 `VITE_LACE_NETWORK_ID` defaults to `preprod`, and that is read off the

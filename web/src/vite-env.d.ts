@@ -21,6 +21,12 @@ interface ImportMetaEnv {
   readonly VITE_BACKING_CONTRACT_ADDRESS?: string;
   /** Where the compiled circuit's prover/verifier keys and ZKIR are served from; defaults to /zk. */
   readonly VITE_ZK_CONFIG_URL?: string;
+  /**
+   * '1' puts the operator deployment tool on the page instead of the journey.
+   * A deployment costs tDUST and creates a new contract, so it is never on by
+   * default and never runs on load — see src/deployTool.ts.
+   */
+  readonly VITE_LACE_DEPLOY?: string;
 }
 
 interface ImportMeta {

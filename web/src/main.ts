@@ -10,6 +10,7 @@
 import { failedStatus, readyStatus, setPwaStatus, unsupportedStatus, type PwaStatus } from './pwa-status';
 import { renderProgressMomentHost } from './ui';
 import { mountApp } from './app';
+import { isDeployToolRequested } from './deployTool';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -20,7 +21,24 @@ if (app) {
   app.innerHTML = `<main class="screen" id="screen-root"></main>${renderProgressMomentHost()}`;
 
   const screenRoot = document.querySelector<HTMLElement>('#screen-root');
-  if (screenRoot) mountApp(screenRoot);
+  // The one fork in this file, and it is off unless an operator asked for it
+  // by build flag or by URL parameter. Without either, this is the same call
+  // it has always been and the deployment tool is not on the page at all —
+  // and even with it, mounting the tool deploys nothing by itself.
+  if (screenRoot) {
+    if (isDeployToolRequested(import.meta.env, window.location.search)) {
+      // Loaded only here, so an ordinary build carries none of the operator
+      // tool at all — not its screen, not its adapter, nothing. A chunk that
+      // fails to load leaves the page empty rather than silently falling
+      // back to the journey, because an operator who asked to deploy must
+      // never be handed something else instead.
+      void import('./deployMount')
+        .then((module) => module.mountDeployTool(screenRoot))
+        .catch((error: unknown) => console.error('[creva-zk] the deployment tool failed to load', error));
+    } else {
+      mountApp(screenRoot);
+    }
+  }
 }
 
 // The lock lives in the navigation strip, which every render rebuilds, so

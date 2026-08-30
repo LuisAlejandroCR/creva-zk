@@ -51,3 +51,18 @@ export const DEFAULT_WALLET_QUERY_TIMEOUT_MS = 10_000;
 // screen immediately rather than after half a minute of nothing. The proof
 // itself is never bounded — see callProveBacking.
 export const DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS = 3_000;
+
+// A deployment is the longest single wait this repository has. It is four
+// things end to end, not one: building the deploy transaction, proving it on
+// the local proof server (~19s measured for this circuit), Lace's own
+// balance-and-sign dialog with a human reading it, and then waiting for the
+// network to finalize the submitted transaction. Only the last one has no
+// upper bound of its own, and none of the four can be hurried.
+//
+// So the budget is deliberately generous: five minutes is far longer than
+// every measured part added together plus the two minutes a person is given
+// to read the signing prompt, which means anything that hits it is a
+// deployment that is never coming back, not a slow one. A tighter budget
+// would abandon a deployment that already cost tDUST and is still on its
+// way — the worst outcome this path has.
+export const DEFAULT_DEPLOY_TIMEOUT_MS = 300_000;
