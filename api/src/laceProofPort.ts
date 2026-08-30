@@ -6,6 +6,16 @@
 // unreachable, contract not found — builds the six providers in the page,
 // and then JOINS the backing contract rather than deploying one.
 //
+// The identity port works the same way: it joins the identity contract the
+// build names and calls proveIdentity with the issuer key the build names.
+// Both are needed — the circuit verifies the attestation's signature against
+// that key — and without either one it joins nothing and degrades
+// contract_not_found. The preflight still runs first, exactly as it does on
+// the backing side, so the reason that comes back always names the FIRST
+// thing to fix: a wallet that is missing is worth saying before a build
+// variable that is. See VITE_IDENTITY_CONTRACT_ADDRESS and
+// VITE_IDENTITY_ISSUER_KEY in web/src/vite-env.d.ts.
+//
 // JOIN, NEVER DEPLOY. Deploying from the browser would cost the ~19s the
 // Node path pays and would ask her to sign a deployment that is not hers.
 // The contract is deployed once from the CLI (`npm run demo --workspace
@@ -23,6 +33,11 @@ import type { PortLogger } from "./portLogger.js";
 import { connectLaceWallet, degraded, type LaceConnection, type LaceWalletOptions } from "./laceWallet.js";
 import { createLaceProviders, type LaceProviderOptions } from "./laceProviders.js";
 import { DEFAULT_COLLATERAL_AMOUNT, TIER_PROVEN_BY_CLEARED_BACKING } from "./backingClaim.js";
+// Static, like backingClaim above and for the same reason: identityClaim.ts
+// holds no compiled circuit, only the Bytes<32> decoding both sides share.
+// Reused rather than repeated — a second copy of it here would be a second
+// place for "32 bytes of hex, or nothing" to drift.
+import { taxIdBytes } from "./identityClaim.js";
 import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import { DEFAULT_PROOF_SERVER_PROBE_TIMEOUT_MS, TIMED_OUT, withTimeout } from "./timeouts.js";
 
@@ -36,6 +51,11 @@ type CallProveBacking = ContractModule["callProveBacking"];
 type CircuitId = ContractModule["BACKING_CIRCUIT_ID"];
 type PrivateStateId = ContractModule["BACKING_PRIVATE_STATE_ID"];
 type BackingPrivateState = ReturnType<ContractModule["createBackingPrivateState"]>;
+// The identity circuit's own module, type-only for the same reason.
+type IdentityModule = typeof import("./identityContract.js");
+type IdentityProviders = Parameters<IdentityModule["joinIdentity"]>[0];
+type JoinIdentity = IdentityModule["joinIdentity"];
+type CallProveIdentity = IdentityModule["callProveIdentity"];
 
 // The address Lace's own "Settings » Midnight » Local" proof server listens
 // on. Used only when the wallet does not report one of its own, so a user
@@ -62,6 +82,21 @@ export interface LaceOptions extends LaceWalletOptions, Partial<Omit<LaceProvide
    * falls back to deploying one from the browser.
    */
   readonly contractAddress?: string;
+  /**
+   * Hex address of the identity contract, deployed once by the operator tool.
+   * Without it the identity port has nothing to join, which is
+   * contract_not_found — it never falls back to deploying one.
+   */
+  readonly identityContractAddress?: string;
+  /**
+   * The issuer key `proveIdentity` is called with, as the (x, y) pair the
+   * circuit takes. The operator tool prints it beside the address, and the
+   * two travel together: the circuit verifies the attestation's signature
+   * against this key, so a build that names only the address makes every
+   * proof abort. Absent, the port degrades contract_not_found rather than
+   * paying for a proof it already knows cannot clear.
+   */
+  readonly identityIssuerKey?: JubjubPoint;
   /** The collateral this browser holds as witness-only private state. */
   readonly collateralAmount?: bigint;
   /** How long to wait for the indexer to confirm the deployment. */
@@ -72,6 +107,9 @@ export interface LaceOptions extends LaceWalletOptions, Partial<Omit<LaceProvide
   // wallet, a proof server or the compiled circuit.
   readonly join?: JoinBacking;
   readonly call?: CallProveBacking;
+  // The identity path's own seams, for the same reason.
+  readonly joinIdentity?: JoinIdentity;
+  readonly callIdentity?: CallProveIdentity;
 }
 
 const noopLogger: PortLogger = { info: () => undefined };
@@ -267,38 +305,104 @@ export function createLaceBackingPort(options: LaceOptions = {}): BackingProofPo
   };
 }
 
-// Still degraded, and not because nobody got to it: identity-check.compact
-// does have a TypeScript binding now (contract/src/identity.ts), but the
-// browser-direct path joins a contract at an address the build supplies and
-// no identity deployment address is supplied. It reaches exactly as far as
-// the backing one does; it has no second contract to join. See api/README.md.
+// Loaded on the first identity call, not at module scope, for the same
+// reason loadContract is: a build without the compiled circuit gets a typed
+// degraded result here rather than an import error.
+async function loadIdentity(logger: PortLogger): Promise<ApiResult<IdentityModule>> {
+  try {
+    return { status: "ok", value: await import("./identityContract.js") };
+  } catch (error) {
+    logger.error?.({ err: error }, "compiled identity contract is missing — run npm run compact:build");
+    return { status: "degraded", degraded: { step: "join", reason: "contract_not_compiled" } };
+  }
+}
+
+// Everything after the preflight on the identity side: join the identity
+// contract the build named and call proveIdentity with the issuer key the
+// build named. Every degraded result is re-stamped with this port's own step.
+async function proveIdentity(
+  step: string,
+  expectedTaxIdHash: string,
+  options: LaceOptions,
+  providers: IdentityProviders,
+  logger: PortLogger,
+): Promise<ApiResult<boolean>> {
+  const contractAddress = options.identityContractAddress?.trim();
+  const issuerKey = options.identityIssuerKey;
+  if (contractAddress === undefined || contractAddress === "" || issuerKey === undefined) {
+    // The two travel together or neither is usable: an address with no key
+    // makes verifyAttestation abort on every call, and a key with no address
+    // has nothing to be checked against. Both absences are the same
+    // precondition — this build was never pointed at a deployment.
+    logger.error?.(
+      { hasAddress: contractAddress !== undefined && contractAddress !== "", hasIssuerKey: issuerKey !== undefined },
+      "no identity deployment — set VITE_IDENTITY_CONTRACT_ADDRESS and VITE_IDENTITY_ISSUER_KEY",
+    );
+    return degraded(step, "contract_not_found");
+  }
+
+  let expected: Uint8Array;
+  try {
+    expected = taxIdBytes(expectedTaxIdHash);
+  } catch (error) {
+    // A malformed argument is not a degraded external system, but it is
+    // still not an exception the caller has to catch: the predicate simply
+    // cannot be stated, so nothing was decided.
+    logger.error?.({ err: error }, "expectedTaxIdHash is not a 32-byte hex string");
+    return degraded(step, "call_failed");
+  }
+
+  let join = options.joinIdentity;
+  let call = options.callIdentity;
+  if (join === undefined || call === undefined) {
+    const loaded = await loadIdentity(logger);
+    if (loaded.status === "degraded") return restep(step, loaded);
+    join ??= loaded.value.joinIdentity;
+    call ??= loaded.value.callProveIdentity;
+  }
+
+  const joined = await join(providers, contractAddress, logger, options.joinTimeoutMs);
+  if (joined.status === "degraded") return restep(step, joined);
+
+  const outcome = await call(joined.value, issuerKey, expected, logger);
+  if (outcome.status === "degraded") return restep(step, outcome);
+
+  logger.info(
+    { matched: outcome.value.matched, answered: outcome.value.answered.toString() },
+    "proveIdentity answered in the browser",
+  );
+  return { status: "ok", value: outcome.value.matched };
+}
+
+// Joins the identity contract the build names and answers with the circuit's
+// own boolean. The issuer key the SCREEN passes is deliberately ignored: the
+// browser cannot know which issuer signed the deployment's attestation, and a
+// key this app invented is not that issuer — naming one is exactly what makes
+// verifyAttestation abort. The build's key is the only one that can be right.
 export function createLaceIdentityPort(options: LaceOptions = {}): IdentityProofPort {
   const logger = options.logger ?? noopLogger;
   return {
-    async checkIdentity(issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
-      let stack: ApiResult<LaceStack<string, string, unknown>>;
+    async checkIdentity(_issuerKey: JubjubPoint, expectedTaxIdHash: string): Promise<ApiResult<boolean>> {
+      // The preflight is inside the catch too: every layer below degrades
+      // rather than throwing, and this is the backstop for one that breaks
+      // that contract. Nothing reaches the caller as an exception.
       try {
-        stack = await prepareLaceStack("checkIdentity", options);
+        const stack = await prepareLaceStack<string, string, unknown>("checkIdentity", options);
+        if (stack.status === "degraded") {
+          logger.info({ reason: stack.degraded.reason }, "lace identity port preflight degraded");
+          return stack;
+        }
+        return await proveIdentity(
+          "checkIdentity",
+          expectedTaxIdHash,
+          options,
+          stack.value.providers as unknown as IdentityProviders,
+          logger,
+        );
       } catch (error) {
-        // Same backstop the backing port keeps: a layer that throws instead
-        // of degrading must not surface as an exception to the screen.
-        logger.error?.({ err: error }, "the browser-direct identity preflight threw instead of degrading");
+        logger.error?.({ err: error }, "the browser-direct identity call threw instead of degrading");
         return degraded("checkIdentity", "call_failed");
       }
-      if (stack.status === "degraded") {
-        logger.info({ reason: stack.degraded.reason }, "lace identity port preflight degraded");
-        return stack;
-      }
-      logger.info(
-        {
-          issuerKeyX: issuerKey.x.toString(),
-          issuerKeyY: issuerKey.y.toString(),
-          expectedTaxIdHash,
-          proofServerUrl: stack.value.proofServerUrl,
-        },
-        "lace identity port reached a complete browser provider stack; no identity contract address to join",
-      );
-      return degraded("checkIdentity", "call_failed");
     },
   };
 }

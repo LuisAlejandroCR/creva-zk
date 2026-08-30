@@ -510,7 +510,7 @@ the screen names the first thing to fix.
 | `wallet_locked` | "Cartera bloqueada" | Unlock it and authorise the site |
 | `wallet_wrong_network` | "Red equivocada" | Switch Lace to Midnight preprod |
 | `proof_server_unreachable` | "El servidor local no responde" | Start the proof server on `:6300` |
-| `contract_not_found` | "Falta un dato de esta app" | Set `VITE_BACKING_CONTRACT_ADDRESS` |
+| `contract_not_found` | "Falta un dato de esta app" | Set `VITE_BACKING_CONTRACT_ADDRESS`; for the identity port, `VITE_IDENTITY_CONTRACT_ADDRESS` **and** `VITE_IDENTITY_ISSUER_KEY` |
 
 Every other reason — `call_failed` included — keeps the shipped "Nadie pudo
 revisarlo" copy. `call_failed` is where a real failure *after* the
@@ -529,6 +529,15 @@ an endpoint or a stack fragment onto the screen.
 | `VITE_LACE_NETWORK_ID` | `testnet` | The network id the wallet must report; anything else is `wallet_wrong_network`. Set this if your Lace build reports a different string for preprod. |
 | `VITE_ZK_CONFIG_URL` | `/zk` | Base URL the circuit artifacts are served from. |
 | `VITE_BASE` | `/` | Path the site is served under. GitHub Pages serves a project site at `/<repo>/`, so a deploy needs `VITE_BASE=/creva-zk/` — that is what `npm run build:pages` sets. Read by `vite.config.ts` from `process.env`, so a `.env` file cannot carry it. |
+| `VITE_IDENTITY_CONTRACT_ADDRESS` | unset | Address of the identity contract the port JOINS. Unset, the identity port degrades `contract_not_found`. |
+| `VITE_IDENTITY_ISSUER_KEY` | unset | The key `proveIdentity` verifies the attestation's signature against, as `"x:y"` with **both coordinates in decimal** — never a compressed point. Unset or malformed, the identity port degrades `contract_not_found`. |
+
+Both identity variables come off the operator deployment screen together; see
+[`docs/LACE-DEPLOY.md`](../docs/LACE-DEPLOY.md).
+
+With the address but no key the circuit aborts on the signature check, which reads on screen as
+"not yet" about an identity that was in fact valid — so the port refuses to join rather than pay
+for a proof that cannot clear.
 
 ### Build note
 

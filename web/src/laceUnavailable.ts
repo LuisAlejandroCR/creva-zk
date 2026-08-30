@@ -5,7 +5,7 @@
 // emit 11 MB of the ledger's WebAssembly that nothing references.
 
 import type { ApiResult, BackingProofPort, IdentityProofPort, Tier } from '@creva-zk/api';
-import type { LaceDeployment } from '@creva-zk/api/lace';
+import type { LaceDeployment, LaceIdentityDeployment } from '@creva-zk/api/lace';
 
 // Unreachable at runtime: the seam only asks for a lace port when
 // VITE_PORT_SOURCE is 'lace', which is the same condition that swaps this
@@ -23,8 +23,12 @@ export function createLaceIdentityPort(): IdentityProofPort {
   return { checkIdentity: async () => unavailable<boolean>('checkIdentity') };
 }
 
-// The operator deployment stands in the same way, and for the same reason:
+// The operator deployments stand in the same way, and for the same reason:
 // on any source but 'lace' there is no ledger in the bundle to deploy with.
 export async function deployBackingWithLace(): Promise<ApiResult<LaceDeployment>> {
   return unavailable<LaceDeployment>('deployBacking');
+}
+
+export async function deployIdentityWithLace(): Promise<ApiResult<LaceIdentityDeployment>> {
+  return unavailable<LaceIdentityDeployment>('deployIdentity');
 }

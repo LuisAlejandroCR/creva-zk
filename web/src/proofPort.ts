@@ -11,6 +11,7 @@ import {
   createBridgeIdentityPort,
   createStubBackingPort,
   createStubIdentityPort,
+  parseIssuerKey,
 } from '@creva-zk/api';
 // Not from '@creva-zk/api': the real port runs the circuit in-process and
 // reaches Docker and node:, so it is not in that entry at all. A browser
@@ -19,6 +20,7 @@ import { createRealBackingPort, createRealIdentityPort } from './realUnavailable
 import type { LaceOptions } from '@creva-zk/api/lace';
 import { createLazyLaceBackingPort, createLazyLaceIdentityPort } from './lacePort';
 import { SYNTHETIC_ISSUER_KEY } from './domain/demoInputs';
+import { identityStorePasswordProvider } from './identityStore';
 import type { ProofState } from './domain/proofState';
 import { settleDegraded, settleFailed, settleReady } from './domain/proofState';
 import { causeChain } from './causeChain';
@@ -96,6 +98,43 @@ const LACE_OPTIONS: LaceOptions = {
   },
 };
 
+// The identity port's own options: the backing ones plus the two values that
+// name an identity deployment. Pure and argument-taking rather than reading
+// import.meta.env inline, so "a build that names neither joins nothing" is
+// testable directly — the same reason deployTool.ts is written this way.
+//
+//   the identity contract's address, which the port JOINS, and
+//   the issuer key proveIdentity verifies the attestation's signature
+//   against, parsed from decimal "x:y".
+//
+// Both come off the operator deployment screen together, and a value that
+// does not parse is treated as absent: the port then degrades
+// `contract_not_found` before any join is attempted, which is exactly what
+// the backing path does without its own address.
+//
+// The private-state store gets a password that survives a reload, and only
+// here: the attestation the operator's deployment wrote is what a later proof
+// reads back, and an ephemeral password would leave it undecryptable. See
+// identityStore.ts.
+export interface IdentityEnv {
+  readonly VITE_IDENTITY_CONTRACT_ADDRESS?: string;
+  readonly VITE_IDENTITY_ISSUER_KEY?: string;
+}
+
+export function buildIdentityLaceOptions(env: IdentityEnv | undefined, base: LaceOptions): LaceOptions {
+  const issuerKey = parseIssuerKey(env?.VITE_IDENTITY_ISSUER_KEY);
+  return {
+    ...base,
+    ...(env?.VITE_IDENTITY_CONTRACT_ADDRESS === undefined
+      ? {}
+      : { identityContractAddress: env.VITE_IDENTITY_CONTRACT_ADDRESS }),
+    ...(issuerKey === undefined ? {} : { identityIssuerKey: issuerKey }),
+    privateStoragePasswordProvider: identityStorePasswordProvider(),
+  };
+}
+
+const IDENTITY_LACE_OPTIONS: LaceOptions = buildIdentityLaceOptions(import.meta.env, LACE_OPTIONS);
+
 export function selectBackingPort(): BackingProofPort {
   switch (PORT_SOURCE) {
     case 'real':
@@ -118,6 +157,11 @@ export function selectBackingPort(): BackingProofPort {
 // goes over as a marker that no browser-side key applies; the bridge port
 // replaces it and never sends it.
 //
+// The browser-direct path names none either, and for the same reason: the
+// issuer that signed the deployment's attestation is named by the build
+// (VITE_IDENTITY_ISSUER_KEY) and the port uses that, ignoring whatever the
+// screen hands it. A key this app invented would make the circuit abort.
+//
 // Every other source proves against the synthetic issuer this demo ships,
 // which is the key its own synthetic attestation was signed under.
 const NO_BROWSER_ISSUER_KEY: JubjubPoint = { x: 0n, y: 0n };
@@ -133,7 +177,7 @@ export function selectIdentityPort(): IdentityProofPort {
     case 'bridge':
       return createBridgeIdentityPort(BRIDGE_OPTIONS);
     case 'lace':
-      return createLazyLaceIdentityPort(LACE_OPTIONS);
+      return createLazyLaceIdentityPort(IDENTITY_LACE_OPTIONS);
     default:
       return createStubIdentityPort();
   }
